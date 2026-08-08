@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#FFFFFF"><title>Notes — capture</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
+<style>
+:root{--bg:#FFFFFF;--ink:#1C1C1E;--ink-soft:#5A5A5E;--ink-faint:#AEAEB2;--rule:#E7E7EA;--rule-2:#F1F1F3;
+  --cbrule:#C7C7CC;--accent:#E5A50A;--accent-soft:#FBF1D8;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+.wrap{max-width:620px;margin:0 auto;height:100dvh;display:flex;flex-direction:column;border-left:1px solid var(--rule);border-right:1px solid var(--rule)}
+.top{display:flex;align-items:center;gap:8px;padding:14px 22px;flex:0 0 auto;border-bottom:1px solid var(--rule-2)}
+.top .date{font-family:var(--mono);font-size:12px;color:var(--ink-faint);letter-spacing:.01em}
+.vtag{font-family:var(--mono);font-size:11px;color:var(--ink-soft);border:1px solid var(--rule);border-radius:5px;padding:2px 8px;margin-left:10px}
+.top a{margin-left:auto;color:var(--ink-faint);text-decoration:none;font-size:13px;font-weight:600}
+
+.doc{flex:1;overflow-y:auto;padding:22px 24px 40px;cursor:text}
+.blk{display:flex;gap:10px;align-items:flex-start;padding:3px 0}
+.blk .mk{flex:0 0 auto;margin-top:4px;width:20px;display:flex;justify-content:center}
+.blk[data-type="text"] .mk{display:none}
+.blk .mk.bul{color:var(--ink-faint);font-weight:400;font-size:17px;line-height:1}
+.blk .mk.cb{width:19px;height:19px;border-radius:50%;border:1.5px solid var(--cbrule);cursor:pointer;display:grid;place-items:center;transition:.13s}
+.blk .mk.cb:hover{border-color:var(--accent)}
+.blk.done .mk.cb{background:var(--accent);border-color:var(--accent)}
+.blk.done .mk.cb::after{content:"✓";color:#fff;font-size:12px;font-weight:700}
+.blk .btx{flex:1;outline:none;font-size:17px;line-height:1.55;min-height:27px;word-break:break-word;color:var(--ink)}
+.blk.done .btx{color:var(--ink-faint);text-decoration:line-through}
+.blk.tt .btx{font-size:23px;font-weight:700;letter-spacing:-.01em;line-height:1.25;min-height:32px}
+.blk .btx:empty::before{content:attr(data-ph);color:var(--ink-faint);pointer-events:none}
+.blk.tt .btx:empty::before{color:#C7C7CC}
+.divider{height:1px;background:var(--rule);margin:20px 0}
+
+.bar{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:9px 16px calc(9px + env(safe-area-inset-bottom));border-top:1px solid var(--rule)}
+.fmt{width:38px;height:34px;border:1px solid var(--rule);border-radius:8px;background:#fff;color:var(--ink-soft);font-size:15px;cursor:pointer;display:grid;place-items:center}
+.fmt:hover{border-color:var(--accent);color:var(--accent)}
+.new{margin-left:auto;display:inline-flex;align-items:center;gap:6px;background:var(--ink);color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:600;padding:9px 16px;cursor:pointer}
+.new:active{transform:scale(.98)}
+</style></head>
+<body>
+<div class="wrap">
+  <div class="top"><span class="date" id="date"></span><span class="vtag">Notes · v9</span><a href="./f-designs.html">designs ↗</a></div>
+  <div class="doc" id="doc"></div>
+  <div class="bar">
+    <button class="fmt" id="bBul" title="Bullet">•</button>
+    <button class="fmt" id="bTask" title="Task">☐</button>
+    <button class="new" id="bNew" title="New (divider + fresh line)">＋ New</button>
+  </div>
+</div>
+<script>
+const doc=document.getElementById("doc");
+document.getElementById("date").textContent=new Date().toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"});
+
+function makeBlock(type,text,indent,title){
+  const blk=document.createElement("div");blk.className="blk"+(title?" tt":"");blk.dataset.type=type||"text";blk.dataset.indent=indent||0;
+  blk.innerHTML='<span class="mk"></span><div class="btx" contenteditable="true" spellcheck="false"></div>';
+  const btx=blk.querySelector(".btx");if(text)btx.textContent=text;
+  applyIndent(blk);renderMarker(blk);
+  btx.addEventListener("keydown",e=>onKey(e,blk,btx));
+  btx.addEventListener("input",()=>{shortcut(blk,btx);updatePh()});
+  return blk;
+}
+function applyIndent(blk){blk.style.marginLeft=(parseInt(blk.dataset.indent||0)*22)+"px"}
+function setIndent(blk,d){const v=Math.max(0,Math.min(6,parseInt(blk.dataset.indent||0)+d));blk.dataset.indent=v;applyIndent(blk)}
+function renderMarker(blk){const mk=blk.querySelector(".mk");mk.className="mk";mk.innerHTML="";
+  if(blk.dataset.type==="bullet"){mk.classList.add("bul");mk.textContent="•"}
+  else if(blk.dataset.type==="task"){mk.classList.add("cb");mk.onclick=()=>blk.classList.toggle("done")}}
+function setType(blk,type){blk.dataset.type=type;blk.classList.remove("done");if(type!=="text")blk.classList.remove("tt");renderMarker(blk);updatePh()}
+function shortcut(blk,btx){
+  if(blk.dataset.type!=="text")return;const t=btx.textContent;
+  if(/^[-*]\s/.test(t)){btx.textContent=t.replace(/^[-*]\s/,"");setType(blk,"bullet");placeCaretEnd(btx)}
+  else if(/^(\[\]|\[ \]|\(\))\s/.test(t)){btx.textContent=t.replace(/^(\[\]|\[ \]|\(\))\s/,"");setType(blk,"task");placeCaretEnd(btx)}}
+function onKey(e,blk,btx){
+  if(e.key==="Tab"){e.preventDefault();setIndent(blk,e.shiftKey?-1:1);return}
+  if(e.key==="Enter"){e.preventDefault();
+    if(blk.dataset.type!=="text"&&!btx.textContent.trim()){setType(blk,"text");updatePh();return}
+    const nb=makeBlock(blk.dataset.type==="task"?"task":blk.dataset.type==="bullet"?"bullet":"text","",parseInt(blk.dataset.indent||0),false);
+    blk.after(nb);placeCaret(nb.querySelector(".btx"));updatePh();return}
+  if(e.key==="Backspace"&&!btx.textContent&&caretStart(btx)){
+    if(blk.dataset.type!=="text"){e.preventDefault();setType(blk,"text");updatePh();return}
+    const prev=blk.previousElementSibling;
+    if(prev&&prev.classList.contains("divider")){e.preventDefault();const before=prev.previousElementSibling;blk.remove();prev.remove();if(before&&before.querySelector)placeCaretEnd(before.querySelector(".btx"));updatePh();return}
+    if(prev&&prev.classList.contains("blk")){e.preventDefault();const p=prev.querySelector(".btx");blk.remove();placeCaretEnd(p);updatePh();return}}}
+function caretStart(el){const s=getSelection();return s.rangeCount&&s.getRangeAt(0).collapsed&&s.anchorOffset===0}
+function placeCaret(el){el.focus();const r=document.createRange();r.selectNodeContents(el);r.collapse(true);const s=getSelection();s.removeAllRanges();s.addRange(r)}
+function placeCaretEnd(el){el.focus();const r=document.createRange();r.selectNodeContents(el);r.collapse(false);const s=getSelection();s.removeAllRanges();s.addRange(r)}
+function updatePh(){const blks=[...doc.querySelectorAll(".blk")];blks.forEach(b=>{const btx=b.querySelector(".btx");let ph="";
+  if(!btx.textContent){if(b.classList.contains("tt"))ph=(blks.length===1?"Start a note…":"Title");else if(b.dataset.type==="bullet")ph="list";else if(b.dataset.type==="task")ph="to-do";}
+  btx.setAttribute("data-ph",ph)})}
+function closestBlk(node){while(node&&node!==doc){if(node.classList&&node.classList.contains("blk"))return node;node=node.parentNode}return null}
+function addType(type){const sel=getSelection();let cur=sel.anchorNode?closestBlk(sel.anchorNode):null;
+  if(!cur)cur=doc.querySelector(".blk:last-child");
+  if(cur){if(!cur.querySelector(".btx").textContent.trim()){setType(cur,type);placeCaret(cur.querySelector(".btx"))}
+    else{const nb=makeBlock(type,"",parseInt(cur.dataset.indent||0),false);cur.after(nb);placeCaret(nb.querySelector(".btx"))}}
+  updatePh()}
+document.getElementById("bBul").onclick=()=>addType("bullet");
+document.getElementById("bTask").onclick=()=>addType("task");
+document.getElementById("bNew").onclick=()=>{
+  const div=document.createElement("div");div.className="divider";doc.appendChild(div);
+  const b=makeBlock("text","",0,true);doc.appendChild(b);placeCaret(b.querySelector(".btx"));updatePh();doc.scrollTop=doc.scrollHeight;};
+doc.addEventListener("mousedown",e=>{if(e.target===doc){const last=doc.querySelector(".blk:last-child");if(last){e.preventDefault();placeCaretEnd(last.querySelector(".btx"))}}});
+
+doc.appendChild(makeBlock("text","",0,true));updatePh();doc.querySelector(".btx").focus();
+</script>
+</body></html>
