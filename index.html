@@ -11,6 +11,7 @@
   --ink:#20242A; --ink-soft:#5F6670; --ink-faint:#A2A8B0;
   --rule:#E9E9E3; --rule-2:#F1F1EC;
   --accent:#3B6DF5; --accent-soft:#ECF1FE; --accent-ink:#2b56c9; --done:#12B76A;
+  --amber:#B4530F; --amber-soft:#FBECD9;
   --shadow:0 1px 2px rgba(20,24,28,.05),0 10px 30px rgba(20,24,28,.07);
   --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,sans-serif;
   --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
@@ -18,11 +19,15 @@
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--ground);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;line-height:1.5}
 .wrap{max-width:900px;margin:0 auto;padding:44px 22px 70px}
-.head{text-align:center;margin-bottom:34px}
+.head{text-align:center;margin-bottom:30px}
 .head .k{font-size:12px;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);font-weight:700}
 .head h1{font-family:var(--serif);font-size:30px;font-weight:600;margin:8px 0 8px;letter-spacing:-.01em}
 .head p{color:var(--ink-soft);font-size:15.5px;max-width:52ch;margin:0 auto}
 .head p b{color:var(--ink)}
+
+.divider{display:flex;align-items:center;gap:14px;margin:38px 2px 22px}
+.divider span{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint);white-space:nowrap}
+.divider::before,.divider::after{content:"";height:1px;background:var(--rule);flex:1}
 
 .cols{display:grid;grid-template-columns:1fr 1fr;gap:24px}
 @media(max-width:720px){.cols{grid-template-columns:1fr}}
@@ -30,47 +35,44 @@ body{background:var(--ground);color:var(--ink);font-family:var(--sans);-webkit-f
 .col .label{display:flex;align-items:baseline;gap:9px;margin-bottom:4px;padding:0 2px}
 .col .label .v{font-size:12px;font-weight:800;color:var(--accent);letter-spacing:.05em}
 .col .label h2{font-size:17px;font-weight:650}
+.col .label .src{margin-left:auto;font-size:10.5px;font-weight:700;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.04em}
 .col .note{font-size:13px;color:var(--ink-soft);padding:0 2px 12px}
 
-/* the app frame */
 .frame{position:relative;background:var(--panel-2);border:1px solid var(--rule);border-radius:18px;
   height:360px;box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column}
 .fbar{padding:12px 14px 6px;flex:0 0 auto}
 .ftitle{font-family:var(--serif);font-size:14px;font-weight:600;color:var(--ink);margin:0 2px 2px;display:flex;align-items:center;gap:6px}
 .ftitle .sm{margin-left:auto;font-family:var(--sans);font-size:10.5px;color:var(--ink-faint);font-weight:600}
-.flist{flex:1;overflow-y:auto;padding:4px 12px 12px}
+.flist{flex:1;overflow-y:auto;padding:4px 12px 12px;position:relative}
 .li{display:flex;gap:10px;align-items:flex-start;padding:9px 4px;border-bottom:1px solid var(--rule-2)}
 .li:last-child{border:none}
 .li .d{width:16px;height:16px;border-radius:50%;border:1.7px solid var(--ink-faint);flex:0 0 auto;margin-top:1px}
-.li .t{font-size:14px;color:var(--ink);word-break:break-word}
+.li .t{font-size:14px;color:var(--ink);word-break:break-word;outline:none;flex:1}
 .li.fresh{animation:pop .3s ease}
 @keyframes pop{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.chips{display:flex;gap:5px;margin-top:5px;flex-wrap:wrap}
+.chip{font-size:11px;font-weight:600;padding:2px 7px;border-radius:20px}
+.chip.due{border:1px solid var(--rule);color:var(--ink-soft)}
+.chip.pri{background:var(--amber-soft);color:var(--amber)}
+.chip.tag{background:var(--accent-soft);color:var(--accent-ink)}
 
-/* A — always-there bar */
-.abar{display:flex;align-items:center;gap:9px;background:var(--panel);border:1px solid var(--rule);
-  border-radius:11px;padding:11px 13px;transition:.15s;margin:2px 2px 2px}
+.emptyline{color:var(--ink-faint);font-family:var(--serif);font-style:italic;font-size:14px;padding:16px 6px}
+
+/* A bar */
+.abar{display:flex;align-items:center;gap:9px;background:var(--panel);border:1px solid var(--rule);border-radius:11px;padding:11px 13px;transition:.15s;margin:2px}
 .abar:focus-within{border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
 .abar .p{width:18px;height:18px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font-size:14px;flex:0 0 auto}
-.abar input{border:none;outline:none;background:none;flex:1;font-size:14.5px;color:var(--ink);font-family:var(--sans)}
+.abar input{border:none;outline:none;background:none;flex:1;font-size:14.5px;color:var(--ink)}
 .abar input::placeholder{color:var(--ink-faint)}
 
-/* B — empty at rest, + reveals a field */
-.brest{flex:1;display:flex;flex-direction:column}
+/* B reveal */
 .bempty{flex:1;display:grid;place-items:center;color:var(--ink-faint)}
-.addbtn{display:inline-flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--rule);
-  color:var(--ink-soft);font-family:var(--sans);font-size:14px;font-weight:600;padding:10px 16px;border-radius:24px;
-  cursor:pointer;box-shadow:var(--shadow);transition:.15s}
-.addbtn:hover{border-color:var(--accent);color:var(--accent)}
-.addbtn .pp{width:18px;height:18px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font-size:14px}
-.bfab{position:absolute;right:14px;bottom:14px;width:46px;height:46px;border-radius:50%;background:var(--accent);
-  color:#fff;border:none;font-size:24px;cursor:pointer;box-shadow:var(--shadow);display:grid;place-items:center;transition:.15s;z-index:3}
-.bfab:hover{transform:scale(1.05)}
+.bfab,.cfab{position:absolute;right:14px;bottom:14px;width:46px;height:46px;border-radius:50%;background:var(--accent);color:#fff;border:none;font-size:24px;cursor:pointer;box-shadow:var(--shadow);display:grid;place-items:center;transition:transform .12s,opacity .15s;z-index:3;touch-action:none}
+.bfab:hover,.cfab:hover{transform:scale(1.05)}
 .bfab.hide{opacity:0;pointer-events:none;transform:scale(.7)}
-.overlay{position:absolute;inset:0;background:rgba(30,34,40,.14);backdrop-filter:blur(2px);display:flex;
-  align-items:center;justify-content:center;padding:22px;opacity:0;pointer-events:none;transition:.16s;z-index:4}
+.overlay{position:absolute;inset:0;background:rgba(30,34,40,.14);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;padding:22px;opacity:0;pointer-events:none;transition:.16s;z-index:4}
 .overlay.on{opacity:1;pointer-events:auto}
-.obox{width:100%;background:var(--panel);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);
-  padding:16px 16px;transform:translateY(8px) scale(.98);transition:.16s}
+.obox{width:100%;background:var(--panel);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);padding:16px;transform:translateY(8px) scale(.98);transition:.16s}
 .overlay.on .obox{transform:none}
 .obox .lbl{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);font-weight:700;margin-bottom:8px}
 .obox input{width:100%;border:none;outline:none;font-family:var(--serif);font-size:18px;color:var(--ink);background:none}
@@ -78,8 +80,21 @@ body{background:var(--ground);color:var(--ink);font-family:var(--sans);-webkit-f
 .obox .hint{font-size:11.5px;color:var(--ink-faint);margin-top:10px;display:flex;gap:14px}
 .obox .hint b{color:var(--ink-soft);font-weight:600}
 
-.flash{position:absolute;left:50%;top:14px;transform:translateX(-50%) translateY(-10px);background:var(--done);color:#fff;
-  font-size:12px;font-weight:650;padding:5px 12px;border-radius:20px;opacity:0;transition:.22s;z-index:6;pointer-events:none}
+/* C magic plus */
+.insline{height:2px;background:var(--accent);border-radius:2px;margin:0 4px;box-shadow:0 0 0 3px var(--accent-soft);display:none}
+.ghost{position:fixed;z-index:60;background:var(--accent);color:#fff;font-size:12px;font-weight:650;padding:6px 12px;border-radius:20px;box-shadow:var(--shadow);pointer-events:none;opacity:.95;transform:translate(-50%,-50%)}
+
+/* D smart bar */
+.dpreview{padding:0 14px 8px;min-height:26px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.dpreview .lead{font-size:11.5px;color:var(--ink-faint)}
+
+/* E voice */
+.mic{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);width:58px;height:58px;border-radius:50%;background:var(--accent);color:#fff;border:none;display:grid;place-items:center;font-size:24px;cursor:pointer;box-shadow:var(--shadow);z-index:3;transition:.15s}
+.mic.rec{background:var(--amber);animation:pulse 1.1s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(180,83,15,.4)}70%{box-shadow:0 0 0 16px rgba(180,83,15,0)}100%{box-shadow:0 0 0 0 rgba(180,83,15,0)}}
+.micstate{position:absolute;left:0;right:0;bottom:84px;text-align:center;font-size:12.5px;color:var(--ink-soft);font-style:italic}
+
+.flash{position:absolute;left:50%;top:14px;transform:translateX(-50%) translateY(-10px);background:var(--done);color:#fff;font-size:12px;font-weight:650;padding:5px 12px;border-radius:20px;opacity:0;transition:.22s;z-index:6;pointer-events:none}
 .flash.on{opacity:1;transform:translateX(-50%)}
 
 .foot{text-align:center;margin-top:34px;color:var(--ink-soft);font-size:14px}
@@ -90,89 +105,211 @@ body{background:var(--ground);color:var(--ink);font-family:var(--sans);-webkit-f
 <div class="wrap">
   <div class="head">
     <div class="k">Entry point · feel test</div>
-    <h1>Which one gets out of your way?</h1>
-    <p>Same capture, two entry points. Type a few things into each. <b>The only question: which disappears when you're not using it?</b></p>
+    <h1>How a thought gets in</h1>
+    <p>Same capture, different doors. Type (or speak) into each. <b>Which one feels cleanest and gets out of your way?</b></p>
   </div>
 
   <div class="cols">
-    <!-- A -->
     <div class="col">
-      <div class="label"><span class="v">A</span><h2>Always there</h2></div>
-      <div class="note">A quiet bar pinned at the top. Nothing to open — just type and press enter.</div>
-      <div class="frame" id="frameA">
-        <div class="flash" id="flashA">Captured ✓</div>
-        <div class="fbar">
-          <div class="ftitle">Capture <span class="sm">A</span></div>
-          <div class="abar">
-            <span class="p">+</span>
-            <input id="inpA" autocomplete="off" spellcheck="false" placeholder="Capture anything…">
-          </div>
+      <div class="label"><span class="v">A</span><h2>Always there</h2><span class="src">TickTick</span></div>
+      <div class="note">A quiet bar pinned at the top. Nothing to open — type, enter, done.</div>
+      <div class="frame" id="fA">
+        <div class="flash" id="flA">Captured ✓</div>
+        <div class="fbar"><div class="ftitle">Capture <span class="sm">A</span></div>
+          <div class="abar"><span class="p">+</span><input id="inpA" autocomplete="off" spellcheck="false" placeholder="Capture anything…"></div>
         </div>
-        <div class="flist" id="listA"></div>
+        <div class="flist" id="lA"></div>
       </div>
     </div>
 
-    <!-- B -->
     <div class="col">
-      <div class="label"><span class="v">B</span><h2>One tap, then gone</h2></div>
-      <div class="note">At rest it's just your stuff. Tap + (or press <b>C</b>) for a clean field; it vanishes after.</div>
-      <div class="frame" id="frameB">
-        <div class="flash" id="flashB">Captured ✓</div>
+      <div class="label"><span class="v">B</span><h2>One tap, then gone</h2><span class="src">Things 3</span></div>
+      <div class="note">At rest it's just your stuff. Tap + (or press <b>B</b>) for a clean field; it vanishes after.</div>
+      <div class="frame" id="fB">
+        <div class="flash" id="flB">Captured ✓</div>
         <div class="fbar"><div class="ftitle">Capture <span class="sm">B</span></div></div>
-        <div class="brest">
-          <div class="flist" id="listB"></div>
-        </div>
-        <button class="bfab" id="fabB" title="Capture (C)">+</button>
-        <div class="overlay" id="ovB">
-          <div class="obox">
-            <div class="lbl">New capture</div>
-            <input id="inpB" autocomplete="off" spellcheck="false" placeholder="a task, a thought, a someday…">
-            <div class="hint"><span><b>↵</b> save</span><span><b>esc</b> close</span></div>
-          </div>
-        </div>
+        <div class="flist" id="lB"></div>
+        <button class="bfab" id="fabB" title="Capture (B)">+</button>
+        <div class="overlay" id="ovB"><div class="obox">
+          <div class="lbl">New capture</div>
+          <input id="inpB" autocomplete="off" spellcheck="false" placeholder="a task, a thought, a someday…">
+          <div class="hint"><span><b>↵</b> save</span><span><b>esc</b> close</span></div>
+        </div></div>
       </div>
     </div>
   </div>
 
-  <div class="foot"><b>Tell me which felt cleaner.</b> Then we lock the entry point and move to the next component.</div>
+  <div class="divider"><span>More — the signature moves</span></div>
+
+  <div class="cols">
+    <div class="col">
+      <div class="label"><span class="v">C</span><h2>Magic Plus — drop it in place</h2><span class="src">Things 3</span></div>
+      <div class="note">Tap + to add — or <b>drag the +</b> into the list to drop a new item exactly where it belongs.</div>
+      <div class="frame" id="fC">
+        <div class="flash" id="flC">Captured ✓</div>
+        <div class="fbar"><div class="ftitle">Capture <span class="sm">C</span></div></div>
+        <div class="flist" id="lC"></div>
+        <button class="cfab" id="fabC" title="Tap to add · drag to place">+</button>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="label"><span class="v">D</span><h2>Smart bar — it reads what you type</h2><span class="src">TickTick</span></div>
+      <div class="note">Type naturally; it quietly detects dates, priority (<b>!</b>) and lists (<b>#</b>) — no menus.</div>
+      <div class="frame" id="fD">
+        <div class="flash" id="flD">Captured ✓</div>
+        <div class="fbar"><div class="ftitle">Capture <span class="sm">D</span></div>
+          <div class="abar"><span class="p">+</span><input id="inpD" autocomplete="off" spellcheck="false" placeholder="e.g. call mom friday ! #home"></div>
+        </div>
+        <div class="dpreview" id="prevD"><span class="lead">Try: <b>book dentist tomorrow !</b></span></div>
+        <div class="flist" id="lD"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cols" style="margin-top:24px">
+    <div class="col">
+      <div class="label"><span class="v">E</span><h2>Just speak it</h2><span class="src">TickTick</span></div>
+      <div class="note">Tap the mic, say it out loud, done — fully hands-free. Uses your browser's speech if you allow it.</div>
+      <div class="frame" id="fE">
+        <div class="flash" id="flE">Captured ✓</div>
+        <div class="fbar"><div class="ftitle">Capture <span class="sm">E</span></div></div>
+        <div class="flist" id="lE"></div>
+        <div class="micstate" id="stE"></div>
+        <button class="mic" id="micE" title="Hold to speak">🎙</button>
+      </div>
+    </div>
+    <div class="col" style="display:flex;align-items:center">
+      <div style="padding:18px;color:var(--ink-soft);font-size:14px">
+        <p style="margin-bottom:10px"><b style="color:var(--ink)">The real question stays the same:</b> once the novelty fades, which door do you actually want open every day?</p>
+        <p>My read: <b style="color:var(--ink)">A or B</b> is the everyday home; <b style="color:var(--ink)">D</b>'s smart parsing rides on top of whichever we pick; <b style="color:var(--ink)">C</b> and <b style="color:var(--ink)">E</b> are delightful extras, not the foundation.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot"><b>Tell me which door feels right</b> — and whether the smart-parse (D) should be baked into it. Then we lock the entry point.</div>
 </div>
 
 <script>
-function mk(list){return list.map(t=>({t,fresh:false}))}
-let A=mk([]); let B=mk([]);
-
-function renderA(){const el=document.getElementById("listA");el.innerHTML="";
-  if(!A.length){el.innerHTML='<div style="color:var(--ink-faint);font-family:var(--serif);font-style:italic;font-size:14px;padding:18px 6px">Nothing yet — the bar’s waiting up top.</div>';return}
-  A.forEach(o=>{const d=document.createElement("div");d.className="li"+(o.fresh?" fresh":"");d.innerHTML='<span class="d"></span><span class="t"></span>';
-    d.querySelector(".t").textContent=o.t;el.appendChild(d);o.fresh=false})}
-function renderB(){const el=document.getElementById("listB");el.innerHTML="";
-  if(!B.length){el.innerHTML='<div class="bempty"><span style="font-family:var(--serif);font-style:italic;font-size:15px">A calm, empty page.</span></div>';return}
-  B.forEach(o=>{const d=document.createElement("div");d.className="li"+(o.fresh?" fresh":"");d.innerHTML='<span class="d"></span><span class="t"></span>';
-    d.querySelector(".t").textContent=o.t;el.appendChild(d);o.fresh=false})}
-
+function row(text,chips){
+  const d=document.createElement("div");d.className="li fresh";
+  d.innerHTML='<span class="d"></span><div style="flex:1"><div class="t"></div></div>';
+  d.querySelector(".t").textContent=text;
+  if(chips&&chips.length){const c=document.createElement("div");c.className="chips";
+    chips.forEach(ch=>{const s=document.createElement("span");s.className="chip "+ch.k;s.textContent=ch.t;c.appendChild(s)});
+    d.querySelector("div[style]").appendChild(c)}
+  return d;
+}
+function emptyMsg(el,txt){el.innerHTML='<div class="emptyline">'+txt+'</div>'}
 function flash(id){const f=document.getElementById(id);f.classList.add("on");setTimeout(()=>f.classList.remove("on"),900)}
+function prepend(listId,node){const el=document.getElementById(listId);if(el.querySelector(".emptyline"))el.innerHTML="";el.prepend(node)}
 
-// A
-const inpA=document.getElementById("inpA");
-inpA.addEventListener("keydown",e=>{if(e.key==="Enter"){const v=inpA.value.trim();if(!v)return;
-  A.unshift({t:v,fresh:true});inpA.value="";renderA();flash("flashA")}});
+/* A */
+emptyMsg(document.getElementById("lA"),"Nothing yet — the bar’s waiting up top.");
+document.getElementById("inpA").addEventListener("keydown",e=>{if(e.key==="Enter"){const v=e.target.value.trim();if(!v)return;
+  prepend("lA",row(v));e.target.value="";flash("flA")}});
 
-// B
-const inpB=document.getElementById("inpB"),ov=document.getElementById("ovB"),fab=document.getElementById("fabB");
-function openB(){ov.classList.add("on");fab.classList.add("hide");setTimeout(()=>inpB.focus(),60)}
-function closeB(){ov.classList.remove("on");fab.classList.remove("hide");inpB.value=""}
-fab.onclick=openB;
-ov.addEventListener("click",e=>{if(e.target===ov)closeB()});
-inpB.addEventListener("keydown",e=>{
-  if(e.key==="Enter"){const v=inpB.value.trim();if(!v){closeB();return}B.unshift({t:v,fresh:true});inpB.value="";renderB();flash("flashB");
-    // stay open for a rapid second capture, but blur focus feel: close for cleanliness
-    closeB()}
-  if(e.key==="Escape")closeB()});
-document.addEventListener("keydown",e=>{
-  if(e.target===inpA||e.target===inpB)return;
-  if(e.key.toLowerCase()==="c"){e.preventDefault();openB()}});
+/* B */
+emptyMsg(document.getElementById("lB"),"A calm, empty page.");
+const inpB=document.getElementById("inpB"),ovB=document.getElementById("ovB"),fabB=document.getElementById("fabB");
+function openB(){ovB.classList.add("on");fabB.classList.add("hide");setTimeout(()=>inpB.focus(),60)}
+function closeB(){ovB.classList.remove("on");fabB.classList.remove("hide");inpB.value=""}
+fabB.onclick=openB;ovB.addEventListener("click",e=>{if(e.target===ovB)closeB()});
+inpB.addEventListener("keydown",e=>{if(e.key==="Enter"){const v=inpB.value.trim();if(!v){closeB();return}prepend("lB",row(v));flash("flB");closeB()}if(e.key==="Escape")closeB()});
 
-renderA();renderB();
+/* C — magic plus: tap to add, drag to place */
+const lC=document.getElementById("lC"),fabC=document.getElementById("fabC");
+["Draft the launch post","Book the dentist","Water the plants"].forEach(t=>lC.appendChild(row(t)));
+lC.querySelectorAll(".li").forEach(li=>li.classList.remove("fresh"));
+function addEditableAt(container,index){
+  const d=row("");d.classList.add("fresh");const t=d.querySelector(".t");t.contentEditable="true";
+  const kids=container.querySelectorAll(".li");
+  if(index>=kids.length)container.appendChild(d);else container.insertBefore(d,kids[index]);
+  t.focus();
+  t.onblur=()=>{if(!t.textContent.trim())d.remove();};
+  t.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();if(t.textContent.trim()){flash("flC");t.blur()}else d.remove()}};
+  return d;
+}
+let dragging=false,moved=false,ghost=null,insline=null;
+fabC.addEventListener("pointerdown",e=>{
+  e.preventDefault();dragging=true;moved=false;fabC.setPointerCapture(e.pointerId);
+});
+fabC.addEventListener("pointermove",e=>{
+  if(!dragging)return;
+  if(!moved&&Math.abs(e.movementX)+Math.abs(e.movementY)<2)return;
+  moved=true;
+  if(!ghost){ghost=document.createElement("div");ghost.className="ghost";ghost.textContent="+ new item";document.body.appendChild(ghost);
+    insline=document.createElement("div");insline.className="insline";}
+  ghost.style.left=e.clientX+"px";ghost.style.top=e.clientY+"px";
+  const r=lC.getBoundingClientRect();
+  if(e.clientX>r.left&&e.clientX<r.right&&e.clientY>r.top&&e.clientY<r.bottom){
+    const kids=[...lC.querySelectorAll(".li")];let idx=kids.length;
+    for(let i=0;i<kids.length;i++){const rr=kids[i].getBoundingClientRect();if(e.clientY<rr.top+rr.height/2){idx=i;break}}
+    insline.style.display="block";
+    if(idx>=kids.length)lC.appendChild(insline);else lC.insertBefore(insline,kids[idx]);
+    insline.dataset.idx=idx;
+  }else if(insline){insline.style.display="none"}
+});
+fabC.addEventListener("pointerup",e=>{
+  if(!dragging)return;dragging=false;
+  if(moved){
+    let idx=insline&&insline.style.display!=="none"?parseInt(insline.dataset.idx):0;
+    if(ghost){ghost.remove();ghost=null}if(insline){insline.remove();insline=null}
+    addEditableAt(lC,idx);
+  }else{ addEditableAt(lC,0); }
+});
+
+/* D — smart parse */
+const inpD=document.getElementById("inpD"),prevD=document.getElementById("prevD");
+emptyMsg(document.getElementById("lD"),"Type below — watch it read the details.");
+function parse(t){
+  let text=t,chips=[];const low=t.toLowerCase();
+  const days=["today","tomorrow","monday","tuesday","wednesday","thursday","friday","saturday","sunday"];
+  for(const d of days){if(new RegExp("\\b"+d+"\\b").test(low)){chips.push({k:"due",t:d[0].toUpperCase()+d.slice(1)});text=text.replace(new RegExp("\\b"+d+"\\b","ig"),"");break}}
+  if(/(^|\s)!(\s|$)|!$/.test(t)||/\bimportant\b/i.test(t)){chips.push({k:"pri",t:"! Priority"});text=text.replace(/!/g,"").replace(/\bimportant\b/ig,"")}
+  const tag=t.match(/#(\w+)/);if(tag){chips.push({k:"tag",t:"# "+tag[1]});text=text.replace(/#\w+/,"")}
+  text=text.replace(/\s{2,}/g," ").trim();
+  return{text:text||t,chips};
+}
+inpD.addEventListener("input",()=>{
+  const v=inpD.value.trim();
+  if(!v){prevD.innerHTML='<span class="lead">Try: <b>book dentist tomorrow !</b></span>';return}
+  const p=parse(v);
+  prevD.innerHTML='<span class="lead">Adds:</span>';
+  const nameSpan=document.createElement("span");nameSpan.style.fontSize="12.5px";nameSpan.style.color="var(--ink)";nameSpan.style.fontWeight="600";nameSpan.textContent=p.text;prevD.appendChild(nameSpan);
+  p.chips.forEach(ch=>{const s=document.createElement("span");s.className="chip "+ch.k;s.textContent=ch.t;prevD.appendChild(s)});
+});
+inpD.addEventListener("keydown",e=>{if(e.key==="Enter"){const v=inpD.value.trim();if(!v)return;const p=parse(v);
+  prepend("lD",row(p.text,p.chips));inpD.value="";prevD.innerHTML='<span class="lead">Try: <b>book dentist tomorrow !</b></span>';flash("flD")}});
+
+/* E — voice */
+const micE=document.getElementById("micE"),stE=document.getElementById("stE"),lE=document.getElementById("lE");
+emptyMsg(lE,"Tap the mic and say something.");
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+let rec=null,recording=false;
+function addVoice(text){prepend("lE",row(text));flash("flE")}
+if(SR){
+  micE.onclick=()=>{
+    if(recording){rec.stop();return}
+    rec=new SR();rec.lang="en-US";rec.interimResults=true;rec.maxAlternatives=1;
+    recording=true;micE.classList.add("rec");stE.textContent="Listening…";
+    let finalT="";
+    rec.onresult=ev=>{let interim="";for(let i=ev.resultIndex;i<ev.results.length;i++){const r=ev.results[i];if(r.isFinal)finalT+=r[0].transcript;else interim+=r[0].transcript}stE.textContent='“'+(finalT+interim).trim()+'”'};
+    rec.onerror=()=>{stE.textContent="(couldn't hear — tap to retry)"};
+    rec.onend=()=>{recording=false;micE.classList.remove("rec");if(finalT.trim()){addVoice(finalT.trim());stE.textContent=""}else if(!stE.textContent.includes("couldn't"))stE.textContent="";};
+    rec.start();
+  };
+}else{
+  // graceful concept fallback
+  const samples=["Pick up groceries after work","Remember to call the landlord","Idea — a calmer weekly review"];let si=0;
+  micE.onclick=()=>{
+    recording=!recording;micE.classList.toggle("rec",recording);
+    if(recording){stE.textContent="Listening… (demo — no mic API here)";
+      setTimeout(()=>{if(recording){addVoice(samples[si++%samples.length]);recording=false;micE.classList.remove("rec");stE.textContent=""}},1400);
+    }else stE.textContent="";
+  };
+  stE.textContent="";
+}
 </script>
 </body>
 </html>
