@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#FFFFFF"><title>Type anywhere — Lull</title>
+<link rel="stylesheet" href="./app.css">
+<style>
+.canvas{flex:1;display:flex;flex-direction:column;overflow:hidden;cursor:text}
+.composer{padding:34px 26px 10px;flex:0 0 auto}
+.editor{font-family:var(--serif);font-size:26px;line-height:1.35;color:var(--ink);outline:none;caret-color:var(--accent);min-height:38px;white-space:pre-wrap;word-break:break-word}
+.editor:empty::before{content:attr(data-hint);color:var(--ink-faint);font-style:italic}
+.detect{display:flex;gap:6px;align-items:center;min-height:24px;margin-top:12px;flex-wrap:wrap}
+.detect .lead{font-size:11.5px;color:var(--ink-faint)}
+.cue{padding:2px 26px 14px;font-size:12px;color:var(--ink-faint)}
+.cue b{color:var(--ink-soft);font-weight:600}
+.stream{flex:1;overflow-y:auto;padding:8px 26px 30px;border-top:1px solid var(--rule-2)}
+.stream .lbl{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);font-weight:700;padding:14px 4px 4px}
+.empty{color:var(--ink-faint);font-family:var(--serif);font-style:italic;font-size:16px;padding:26px 4px}
+</style></head>
+<body>
+<div class="shell">
+  <div class="top"><div class="mark">◍</div><h1>Lull</h1><span class="sub" id="date"></span>
+    <a class="back" href="./finalists.html">finalists ↗</a></div>
+  <div class="canvas" id="canvas">
+    <div class="composer">
+      <div class="editor" id="ed" contenteditable="true" spellcheck="false" data-hint="just start typing…"></div>
+      <div class="detect" id="detect"></div>
+    </div>
+    <div class="cue"><b>↵</b> captures &amp; clears · <b>⇧↵</b> new line · everything you type just becomes a note</div>
+    <div class="stream" id="stream"><div class="empty" id="empty">Nothing yet today. The cursor's already waiting.</div></div>
+  </div>
+</div>
+<div class="flash" id="flash">Captured ✓</div>
+<script>
+const ed=document.getElementById("ed"),stream=document.getElementById("stream"),detect=document.getElementById("detect");
+const now=new Date();document.getElementById("date").textContent=now.toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"});
+let n=0;
+function clock(){const d=new Date();let h=d.getHours(),m=d.getMinutes();const ap=h<12?"am":"pm";h=h%12||12;return h+":"+String(m).padStart(2,"0")+" "+ap}
+function parse(t){let text=t,chips=[];const low=t.toLowerCase();
+  const days=["today","tomorrow","tonight","monday","tuesday","wednesday","thursday","friday","saturday","sunday"];
+  for(const d of days){if(new RegExp("\\b"+d+"\\b").test(low)){chips.push({k:"due",t:d[0].toUpperCase()+d.slice(1)});break}}
+  if(/(^|\s)!(\s|$)|!$/.test(t)){chips.push({k:"pri",t:"! Priority"});text=text.replace(/!/g,"")}
+  const tag=t.match(/#(\w+)/);if(tag){chips.push({k:"tag",t:"# "+tag[1]});text=text.replace(/#\w+/,"")}
+  return{text:text.replace(/\s{2,}/g," ").trim()||t,chips}}
+function showDetect(){const v=ed.textContent.trim();detect.innerHTML="";if(!v)return;
+  const p=parse(v);if(!p.chips.length)return;
+  const l=document.createElement("span");l.className="lead";l.textContent="detected:";detect.appendChild(l);
+  p.chips.forEach(c=>{const s=document.createElement("span");s.className="chip "+c.k;s.textContent=c.t;detect.appendChild(s)})}
+ed.addEventListener("input",showDetect);
+document.getElementById("canvas").addEventListener("mousedown",e=>{if(e.target.closest(".stream"))return;});
+document.getElementById("canvas").addEventListener("click",e=>{if(!e.target.closest(".li"))ed.focus()});
+ed.addEventListener("keydown",e=>{
+  if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();const raw=ed.textContent.trim();if(!raw)return;
+    const p=parse(raw);const em=document.getElementById("empty");if(em)em.remove();
+    if(!stream.querySelector(".lbl")){const l=document.createElement("div");l.className="lbl";l.textContent="Captured today";stream.prepend(l)}
+    const row=document.createElement("div");row.className="li fresh";
+    row.innerHTML='<span class="d"></span><div style="flex:1"><div class="t"></div></div><span class="time">'+clock()+'</span>';
+    row.querySelector(".t").textContent=p.text;
+    if(p.chips.length){const c=document.createElement("div");c.style.marginTop="6px";c.style.display="flex";c.style.gap="5px";
+      p.chips.forEach(ch=>{const s=document.createElement("span");s.className="chip "+ch.k;s.textContent=ch.t;c.appendChild(s)});
+      row.querySelector("div[style]").appendChild(c)}
+    const lbl=stream.querySelector(".lbl");lbl.after(row);
+    ed.textContent="";detect.innerHTML="";n++;flash()}
+  if(e.key==="Escape"){ed.textContent="";detect.innerHTML="";}});
+let ft;function flash(){const f=document.getElementById("flash");f.classList.add("on");clearTimeout(ft);ft=setTimeout(()=>f.classList.remove("on"),1200)}
+ed.focus();
+</script>
+</body></html>
