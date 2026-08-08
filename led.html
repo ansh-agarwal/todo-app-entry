@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#FBFAF7"><title>Ledger — capture</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
+<link rel="stylesheet" href="./f-base.css">
+<style>
+:root{--paper:#FBFAF7;--paper-2:#FBFAF7;--card:#FFFFFF;--ink:#1A1A16;--ink-soft:#585449;--ink-faint:#A6A093;
+  --rule:#E4E0D6;--rule-2:#EEEAE0;--cbrule:#B9B4A6;--accent:#9C3B2A;--accent-soft:#F3E6E2;--task:#9C3B2A;
+  --r:0px;--shadow:none;--on-accent:#fff;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  --sans:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace}
+.top{border-bottom:1px solid var(--rule);padding-bottom:12px}
+.vtag{border-radius:0;background:transparent;border:1px solid var(--accent);color:var(--accent)}
+.card{background:transparent;border:none;border-top:1px solid var(--rule);border-left:2px solid var(--accent);border-radius:0;box-shadow:none;padding:12px 14px 12px 16px}
+.card .time{font-size:10.5px;letter-spacing:.04em}
+.ln.title{font-size:19px;letter-spacing:-.01em}
+.ln .mk.cb,.blk .mk.cb{border-width:1.3px;border-radius:0;width:17px;height:17px}
+.blk .mk.bul,.ln .mk.bul{color:var(--accent);font-weight:700}
+.editor{border:none;border-top:1px solid var(--ink);border-bottom:1px solid var(--rule);border-radius:0;background:transparent;padding:12px 2px}
+.composer{background:var(--paper);border-top:1px solid var(--rule)}
+.tbtn{border-radius:0;border-color:var(--rule);background:transparent}
+.keep{border-radius:0;font-family:var(--sans);letter-spacing:.03em;text-transform:uppercase;font-size:12px}
+.blk .btx{line-height:1.5}
+</style></head>
+<body class="minimal">
+<div class="wrap">
+  <div class="top"><span class="date" id="date"></span><span class="vtag">Ledger · v6</span><span class="count" id="count"></span><a href="./f-designs.html">designs ↗</a></div>
+  <div class="feed" id="feed"><div class="empty" id="empty">Write below. It gathers up here.</div></div>
+  <div class="composer">
+    <div class="toolbar"><button class="tbtn" id="bBul">•</button><button class="tbtn" id="bTask">☐</button></div>
+    <div class="editor" id="editor"></div>
+    <div class="crow"><button class="keep" id="keep">Keep</button></div>
+  </div>
+</div>
+<script src="./f.js"></script>
+</body></html>

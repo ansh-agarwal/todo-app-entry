@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#FDF0E7"><title>Bloom — capture</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./f-base.css">
+<style>
+:root{--paper:#FFF8F3;--paper-2:#FDF0E7;--card:#FFFFFF;--ink:#3A2A20;--ink-soft:#7A6355;--ink-faint:#BCA595;
+  --rule:#F1E2D6;--rule-2:#F7ECE3;--cbrule:#E0C7B6;--accent:#E8674C;--accent-soft:#FCE7E1;--task:#E8674C;
+  --r:20px;--shadow:0 2px 6px rgba(180,90,60,.06),0 12px 30px rgba(180,90,60,.09);--on-accent:#fff;
+  --serif:"Nunito",-apple-system,"Segoe UI",sans-serif;--sans:"Nunito",-apple-system,"Segoe UI",sans-serif}
+body{font-weight:600}
+.card{border:none}
+.ln .mk.cb,.blk .mk.cb{border-width:2px;border-radius:50%;width:21px;height:21px}
+.blk.done .mk.cb,.ln.done .mk.cb{border-radius:8px;animation:bloom .34s cubic-bezier(.2,1.5,.4,1)}
+@keyframes bloom{0%{transform:scale(.5) rotate(-8deg)}55%{transform:scale(1.18)}100%{transform:scale(1)}}
+.blk .mk.bul,.ln .mk.bul{color:var(--accent);font-weight:800}
+.editor{border:2px solid var(--rule)}
+.editor:focus-within{border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
+.tbtn{border-radius:14px;border-width:2px;font-weight:700}
+.keep{border-radius:24px;font-weight:800;box-shadow:0 6px 16px rgba(232,103,76,.28)}
+.editor .blk:first-child[data-type="text"] .btx{font-weight:800}
+.vtag{font-weight:800}
+</style></head>
+<body class="minimal">
+<div class="wrap">
+  <div class="top"><span class="date" id="date"></span><span class="vtag">Bloom · v6</span><span class="count" id="count"></span><a href="./f-designs.html">designs ↗</a></div>
+  <div class="feed" id="feed"><div class="empty" id="empty">Write below — no rush. It gathers up here.</div></div>
+  <div class="composer">
+    <div class="toolbar"><button class="tbtn" id="bBul">•</button><button class="tbtn" id="bTask">☐</button></div>
+    <div class="editor" id="editor"></div>
+    <div class="crow"><button class="keep" id="keep">Keep</button></div>
+  </div>
+</div>
+<script src="./f.js"></script>
+</body></html>
