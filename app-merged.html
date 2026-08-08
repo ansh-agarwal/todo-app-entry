@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#FFFFFF"><title>Lull · Today = Capture</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
+<link rel="stylesheet" href="./app-base.css">
+<style>
+@media(min-width:860px){.app{grid-template-columns:1fr}.main{grid-column:1;max-width:640px}.tabbar{display:flex}}
+.inboxwrap{margin-top:8px;background:#FAFAFB;border:1px solid var(--rule);border-radius:14px;padding:6px 12px 8px}
+.inboxwrap .sec-label{padding-top:8px}
+.inboxwrap .task{border-bottom:1px solid var(--rule-2)}
+.flash{position:fixed;left:50%;bottom:82px;transform:translateX(-50%) translateY(14px);background:var(--ink);color:#fff;font-size:13px;font-weight:600;padding:9px 15px;border-radius:11px;box-shadow:var(--shadow);opacity:0;transition:.22s;z-index:40;pointer-events:none}
+.flash.on{opacity:1;transform:translateX(-50%)}
+.tabbar button.dim{opacity:.5}
+.capbar .plus{background:var(--accent)}
+</style></head>
+<body>
+<div class="app">
+  <main class="main">
+    <section class="view on" id="v-today" style="display:flex;flex-direction:column;flex:1;min-height:0">
+      <div class="vhead"><div class="eyebrow" id="eyebrow"></div><h1>Today <span class="sub" id="count"></span></h1></div>
+      <div class="scroll" id="scroll" style="flex:1"></div>
+      <div class="capbar"><span class="plus">+</span><input id="cap" placeholder="Capture, or add to today…" autocomplete="off"><span class="hint" id="hint">↵</span></div>
+    </section>
+  </main>
+  <nav class="tabbar" id="tabbar">
+    <button class="on"><span class="i">◔</span>Today</button>
+    <button class="dim"><span class="i">▦</span>Plan</button>
+    <button class="dim"><span class="i">▤</span>Calendar</button>
+  </nav>
+</div>
+<div class="flash" id="flash"></div>
+<script>
+const KEY="lull.merged.v1";const pad=n=>String(n).padStart(2,"0");
+const iso=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+const TODAY=iso(new Date());const addDays=(b,n)=>{const d=new Date(b+"T00:00");d.setDate(d.getDate()+n);return iso(d)};
+let sc=Date.now();const uid=()=>(sc++).toString(36);
+function nextWeekend(){const d=new Date();let diff=(6-d.getDay()+7)%7||7;return addDays(TODAY,diff)}
+function seed(){return[
+  {id:uid(),text:"Draft the r/ADHD launch post",task:true,done:false,due:TODAY,someday:false,evening:false,ts:Date.now()-9e6},
+  {id:uid(),text:"Reply to Krishni about the roadmap",task:true,done:false,due:addDays(TODAY,-1),someday:false,evening:false,ts:Date.now()-8e6},
+  {id:uid(),text:"Book the dentist",task:true,done:false,due:TODAY,someday:false,evening:false,ts:Date.now()-7e6},
+  {id:uid(),text:"20 min evening yoga",task:true,done:false,due:TODAY,someday:false,evening:true,ts:Date.now()-6e6},
+  {id:uid(),text:"Idea: calmer weekly review",task:false,done:false,due:null,someday:false,evening:false,ts:Date.now()-4e6},
+  {id:uid(),text:"Think about the fig plant",task:false,done:false,due:null,someday:false,evening:false,ts:Date.now()-3e6},
+];}
+let items=load();function load(){try{const r=localStorage.getItem(KEY);if(r)return JSON.parse(r)}catch(e){}const s=seed();save(s);return s}
+function save(x){localStorage.setItem(KEY,JSON.stringify(x||items))}
+let briefDismissed=false;
+function fmtDue(due){if(!due)return null;if(due<TODAY)return{t:"Overdue",over:true};if(due===TODAY)return{t:"Today"};if(due===addDays(TODAY,1))return{t:"Tomorrow"};return{t:new Date(due+"T00:00").toLocaleDateString(undefined,{weekday:"short",day:"numeric"})}}
+function flash(m){const f=document.getElementById("flash");f.textContent=m;f.classList.add("on");clearTimeout(f._t);f._t=setTimeout(()=>f.classList.remove("on"),1600)}
+
+function taskRow(it,inbox){
+  const el=document.createElement("div");el.className="task"+(it.done?" done":"");
+  const cb=document.createElement("button");cb.className="cb"+(it.done?" on":"");
+  cb.onclick=()=>{it.done=!it.done;if(it.done)it.task=true;save();render()};
+  if(it.task)el.appendChild(cb);else{const s=document.createElement("span");s.style.cssText="width:22px;flex:0 0 auto;color:var(--ink-faint);text-align:center;margin-top:1px";s.textContent="»";el.appendChild(s)}
+  const body=document.createElement("div");body.className="tbody";
+  const tx=document.createElement("div");tx.className="ttext";tx.textContent=it.text;body.appendChild(tx);
+  const meta=document.createElement("div");meta.className="tmeta";
+  const df=fmtDue(it.due);
+  if(df&&!it.someday){const c=document.createElement("span");c.className="chip due"+(df.over?" over":"");c.textContent=df.t;meta.appendChild(c)}
+  if(it.someday){const c=document.createElement("span");c.className="chip eve";c.textContent="Someday";meta.appendChild(c)}
+  if(it.evening){const c=document.createElement("span");c.className="chip eve";c.textContent="This evening";meta.appendChild(c)}
+  if(inbox){const CY=["→ Today","→ Tomorrow","→ Weekend","→ Someday"];let ci=0;
+    const c=document.createElement("span");c.className="chip add";c.textContent="＋ Schedule";
+    c.onclick=()=>{ci=(ci+1)%CY.length;const tg=CY[ci];it.task=true;it.someday=false;it.evening=false;
+      if(tg==="→ Today")it.due=TODAY;else if(tg==="→ Tomorrow")it.due=addDays(TODAY,1);else if(tg==="→ Weekend")it.due=nextWeekend();else{it.someday=true;it.due=null}
+      save();render();flash("Scheduled "+tg.replace("→ ",""))};
+    meta.appendChild(c)}
+  if(meta.children.length)body.appendChild(meta);
+  el.appendChild(body);
+  return el;
+}
+
+function render(){
+  document.getElementById("eyebrow").textContent=new Date().toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"})+"  ·  Merged · v15";
+  const scroll=document.getElementById("scroll");scroll.innerHTML="";
+  const todays=items.filter(i=>i.task&&i.due&&i.due<=TODAY&&!i.someday);
+  const openN=todays.filter(i=>!i.done).length;
+  document.getElementById("count").textContent=openN?openN+" to do":"all clear ✓";
+  const inbox=items.filter(i=>!i.done&&!i.someday&&!i.due);
+  if(!briefDismissed){const b=document.createElement("div");b.className="brief";
+    b.innerHTML=`<span class="x" id="bx">✕</span><h3>Here's today</h3><p>${openN} planned. ${inbox.length} in your inbox below — pull any into today, or just leave them.</p>`;
+    scroll.appendChild(b);b.querySelector("#bx").onclick=()=>{briefDismissed=true;render()}}
+  const now=todays.filter(i=>!i.evening),eve=todays.filter(i=>i.evening);
+  const l1=document.createElement("div");l1.className="sec-label";l1.textContent="Today's plan";scroll.appendChild(l1);
+  if(!todays.length){const e=document.createElement("div");e.className="empty";e.innerHTML='<span class="b">🍃</span>Nothing planned yet. Capture something, or pull from inbox.';scroll.appendChild(e)}
+  now.sort((a,b)=>(a.done-b.done)||((a.due<b.due)?-1:1));now.forEach(it=>scroll.appendChild(taskRow(it)));
+  if(eve.length){const l=document.createElement("div");l.className="sec-label";l.textContent="🌙 This evening";scroll.appendChild(l);eve.forEach(it=>scroll.appendChild(taskRow(it)))}
+  // inbox zone
+  const wrap=document.createElement("div");wrap.className="inboxwrap";
+  const l2=document.createElement("div");l2.className="sec-label";l2.textContent="Inbox · "+inbox.length+" unsorted";wrap.appendChild(l2);
+  if(!inbox.length){const e=document.createElement("div");e.style.cssText="font-size:13.5px;color:var(--ink-faint);padding:6px 2px 4px";e.textContent="Clear. Anything you capture without a date waits here.";wrap.appendChild(e)}
+  else inbox.sort((a,b)=>b.ts-a.ts).forEach(it=>wrap.appendChild(taskRow(it,true)));
+  scroll.appendChild(wrap);
+}
+function parseCap(raw){let v=raw,task=false,due=null,someday=false,evening=false;
+  if(/^(\[\]|\[ \]|\(\))\s*/.test(v)){task=true;v=v.replace(/^(\[\]|\[ \]|\(\))\s*/,"")}
+  const low=v.toLowerCase();
+  if(/\bsomeday\b/.test(low)){someday=true;task=true;v=v.replace(/\bsomeday\b/ig,"")}
+  if(/\btonight\b|\bthis evening\b/.test(low)){due=TODAY;task=true;evening=true;v=v.replace(/\btonight\b|\bthis evening\b/ig,"")}
+  else if(/\btoday\b/.test(low)){due=TODAY;task=true;v=v.replace(/\btoday\b/ig,"")}
+  else if(/\btomorrow\b/.test(low)){due=addDays(TODAY,1);task=true;v=v.replace(/\btomorrow\b/ig,"")}
+  else{const days={sunday:0,monday:1,tuesday:2,wednesday:3,thursday:4,friday:5,saturday:6};
+    for(const d in days){if(new RegExp("\\b"+d+"\\b").test(low)){const now=new Date();let diff=(days[d]-now.getDay()+7)%7||7;due=addDays(TODAY,diff);task=true;v=v.replace(new RegExp("\\b"+d+"\\b","ig"),"");break}}}
+  v=v.replace(/\s{2,}/g," ").replace(/^[,\s]+|[,\s]+$/g,"").trim();
+  return{text:v||raw,task,due,someday,evening}}
+const cap=document.getElementById("cap");
+cap.addEventListener("keydown",e=>{if(e.key==="Enter"){const raw=cap.value.trim();if(!raw)return;const p=parseCap(raw);
+  items.unshift({id:uid(),text:p.text,task:p.task,done:false,due:p.due,someday:p.someday,evening:p.evening,ts:Date.now()});
+  save();cap.value="";render();
+  if(p.someday)flash("Saved to Someday");else if(p.due&&p.due>TODAY)flash("Scheduled for "+fmtDue(p.due).t);else if(p.due===TODAY)flash("Added to today");else flash("Captured to inbox")}});
+render();cap.focus();
+</script>
+</body></html>
