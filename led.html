@@ -1,32 +1,40 @@
 <!DOCTYPE html>
 <html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#FBFAF7"><title>Ledger — capture</title>
+<meta name="theme-color" content="#FFFFFF"><title>Ledger — capture</title>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
 <link rel="stylesheet" href="./f-base.css">
 <style>
-:root{--paper:#FBFAF7;--paper-2:#FBFAF7;--card:#FFFFFF;--ink:#1A1A16;--ink-soft:#585449;--ink-faint:#A6A093;
-  --rule:#E4E0D6;--rule-2:#EEEAE0;--cbrule:#B9B4A6;--accent:#9C3B2A;--accent-soft:#F3E6E2;--task:#9C3B2A;
-  --r:0px;--shadow:none;--on-accent:#fff;
-  --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
-  --sans:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace}
+:root{--paper:#FFFFFF;--paper-2:#FFFFFF;--card:#FFFFFF;--ink:#191919;--ink-soft:#5C5C5C;--ink-faint:#9C9C9C;
+  --rule:#ECECEC;--rule-2:#F5F5F5;--cbrule:#C7C7C7;--accent:#191919;--accent-soft:#EFEFEF;--task:#191919;
+  --r:10px;--shadow:none;--on-accent:#fff;
+  --serif:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,sans-serif;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,sans-serif;
+  --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace}
+body{background:#fff}
 .top{border-bottom:1px solid var(--rule);padding-bottom:12px}
-.vtag{border-radius:0;background:transparent;border:1px solid var(--accent);color:var(--accent)}
-.card{background:transparent;border:none;border-top:1px solid var(--rule);border-left:2px solid var(--accent);border-radius:0;box-shadow:none;padding:12px 14px 12px 16px}
-.card .time{font-size:10.5px;letter-spacing:.04em}
-.ln.title{font-size:19px;letter-spacing:-.01em}
-.ln .mk.cb,.blk .mk.cb{border-width:1.3px;border-radius:0;width:17px;height:17px}
-.blk .mk.bul,.ln .mk.bul{color:var(--accent);font-weight:700}
-.editor{border:none;border-top:1px solid var(--ink);border-bottom:1px solid var(--rule);border-radius:0;background:transparent;padding:12px 2px}
-.composer{background:var(--paper);border-top:1px solid var(--rule)}
-.tbtn{border-radius:0;border-color:var(--rule);background:transparent}
-.keep{border-radius:0;font-family:var(--sans);letter-spacing:.03em;text-transform:uppercase;font-size:12px}
-.blk .btx{line-height:1.5}
+.top .date{font-family:var(--mono);font-size:12px;letter-spacing:.01em}
+.vtag{font-family:var(--mono);background:transparent;border:1px solid var(--rule);color:var(--ink-soft);border-radius:5px;font-weight:500}
+.feed{padding:6px 22px 8px}
+.card{background:transparent;border:none;border-top:1px solid var(--rule);border-radius:0;box-shadow:none;padding:15px 2px}
+.card .time{font-family:var(--mono);font-size:10.5px;color:var(--ink-faint)}
+.ln.title{font-size:16.5px;font-weight:650}
+.ln .bd{font-size:15px}
+.ln .mk.cb,.blk .mk.cb{border-width:1.3px;border-radius:5px;width:18px;height:18px}
+.blk .mk.bul,.ln .mk.bul{color:var(--ink-faint);font-weight:400}
+.editor{border:1px solid var(--rule);border-radius:10px;background:#fff;padding:12px 14px;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+.editor:focus-within{border-color:#C7C7C7;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.composer{background:#fff;border-top:1px solid var(--rule)}
+.tbtn{border:1px solid var(--rule);border-radius:8px;background:#fff;color:var(--ink-soft)}
+.tbtn:hover{border-color:#C7C7C7;color:var(--ink)}
+.keep{background:var(--ink);color:#fff;border-radius:9px;font-weight:600;font-size:13.5px;padding:9px 20px}
+.editor .blk:first-child[data-type="text"] .btx{font-size:18px;font-weight:650}
+.blk .btx{font-size:16px}
 </style></head>
 <body class="minimal">
 <div class="wrap">
-  <div class="top"><span class="date" id="date"></span><span class="vtag">Ledger · v6</span><span class="count" id="count"></span><a href="./f-designs.html">designs ↗</a></div>
+  <div class="top"><span class="date" id="date"></span><span class="vtag">Ledger · v7</span><span class="count" id="count"></span><a href="./f-designs.html">designs ↗</a></div>
   <div class="feed" id="feed"><div class="empty" id="empty">Write below. It gathers up here.</div></div>
   <div class="composer">
     <div class="toolbar"><button class="tbtn" id="bBul">•</button><button class="tbtn" id="bTask">☐</button></div>
