@@ -1,20 +1,33 @@
 <!DOCTYPE html>
 <html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#FFFFFF"><title>Notes · Ink</title>
+<meta name="theme-color" content="#FFFFFF"><title>Notes · Things × Reminders</title>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
 <link rel="stylesheet" href="./note-base.css">
 <style>
-:root{--bg:#FFFFFF;--ink:#191919;--ink-soft:#5C5C5C;--ink-faint:#A2A2A2;--rule:#ECECEC;--rule-2:#F4F4F4;
-  --cbrule:#C7C7C7;--accent:#191919;--accent-soft:#EFEFEF;--on-accent:#fff;--cb-radius:5px;--title:22px;
-  --btn:#191919;--btn-ink:#fff;--fmt-bg:#fff;
-  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;--mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
-.divider{background:none;border-top:1px dotted var(--rule);height:0;margin:22px 0}
+:root{--bg:#FFFFFF;--ink:#1C1C1E;--ink-soft:#6B6B70;--ink-faint:#AEAEB2;--rule:#ECECEE;--rule-2:#F5F5F6;
+  --cbrule:#C7C7CC;--accent:#0A84FF;--accent-soft:#E9F2FF;--on-accent:#fff;--cb-radius:50%;--title:24px;--body:17px;
+  --btn:var(--accent-soft);--btn-ink:#0A84FF;--btn-r:20px;--fmt-bg:#fff;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Segoe UI",Roboto,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+.doc{padding:20px 22px 40px}
+.blk{padding:4px 0}
+.blk .mk.cb{width:21px;height:21px;border-width:1.6px;margin-top:3px}
+.blk.done .mk.cb{animation:pop .24s cubic-bezier(.3,1.5,.5,1)}
+@keyframes pop{0%{transform:scale(.55)}62%{transform:scale(1.14)}100%{transform:scale(1)}}
+.blk .mk.bul{color:var(--ink-faint)}
+.blk.tt .btx{font-size:24px;font-weight:700;letter-spacing:-.02em}
+.divider{background:none;border-top:1px solid var(--rule);height:0;margin:22px 0}
+.bar{border-top:1px solid var(--rule-2)}
+.fmt{border:1px solid var(--rule);border-radius:9px;color:var(--ink-soft)}
+.fmt:hover{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.new{background:var(--accent-soft);color:var(--accent);font-weight:700;border-radius:20px;box-shadow:none}
+.new:hover{background:#DCEAFE}
 </style></head>
 <body>
 <div class="wrap">
-  <div class="top"><span class="date" id="date"></span><span class="vtag">Ink · v10</span><a href="./note-styles.html">styles ↗</a></div>
+  <div class="top"><span class="date" id="date"></span><span class="vtag">Things×Reminders · v11</span><a href="./platform.html">platforms ↗</a></div>
   <div class="doc" id="doc"></div>
   <div class="bar"><button class="fmt" id="bBul" title="Bullet">•</button><button class="fmt" id="bTask" title="Task">☐</button><button class="new" id="bNew">＋ New</button></div>
 </div>

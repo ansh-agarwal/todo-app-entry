@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#FEF7FF"><title>Notes · Android (Material 3)</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./note-base.css">
+<style>
+:root{--bg:#FEF7FF;--ink:#1D1B20;--ink-soft:#49454F;--ink-faint:#8E8792;--rule:#E7E0EC;--rule-2:#EFE9F3;
+  --cbrule:#79747E;--accent:#6750A4;--accent-soft:#EADDFF;--on-accent:#fff;--cb-radius:2px;--title:22px;--body:16px;
+  --sans:"Roboto",-apple-system,"Segoe UI",sans-serif;--mono:"Roboto Mono",ui-monospace,monospace}
+body{background:var(--bg)}
+.wrap{border:none;background:var(--bg)}
+.appbar{display:flex;align-items:center;gap:10px;padding:16px 18px 10px;flex:0 0 auto}
+.appbar .title{font-size:22px;font-weight:500;color:var(--ink)}
+.appbar .date{font-size:12px;color:var(--ink-soft);font-family:var(--mono)}
+.appbar .vtag{font-family:var(--mono);font-size:10.5px;color:var(--accent);background:var(--accent-soft);border:none;padding:3px 9px;border-radius:20px}
+.appbar .actions{margin-left:auto;display:flex;gap:2px}
+.iconbtn{width:42px;height:42px;border-radius:50%;border:none;background:transparent;color:var(--ink-soft);font-size:16px;cursor:pointer;transition:.12s}
+.iconbtn:hover{background:rgba(103,80,164,.10)}
+.iconbtn:active{background:rgba(103,80,164,.18)}
+.doc{padding:6px 18px 130px}
+.blk .mk.cb{border-radius:2px;border-width:2px;width:18px;height:18px}
+.blk.done .mk.cb{animation:mpop .2s ease}
+@keyframes mpop{0%{transform:scale(.7)}100%{transform:scale(1)}}
+.blk.tt .btx{font-weight:500}
+.divider{background:var(--rule)}
+.fab{position:fixed;left:50%;transform:translateX(160px);bottom:26px;display:inline-flex;align-items:center;gap:10px;
+  background:var(--accent-soft);color:#21005D;border:none;border-radius:16px;padding:16px 22px;font-family:var(--sans);
+  font-size:15px;font-weight:500;box-shadow:0 3px 8px rgba(0,0,0,.16),0 1px 3px rgba(0,0,0,.1);cursor:pointer}
+.fab:hover{box-shadow:0 5px 12px rgba(0,0,0,.2)}
+.fab:active{transform:translateX(160px) scale(.98)}
+@media(max-width:640px){.fab{left:auto;right:20px;transform:none}.fab:active{transform:scale(.98)}}
+</style></head>
+<body>
+<div class="wrap">
+  <header class="appbar"><span class="title">Notes</span><span class="date" id="date"></span><span class="vtag">Android · v11</span>
+    <div class="actions"><button class="iconbtn" id="bBul" title="Bullet">•</button><button class="iconbtn" id="bTask" title="Task">☐</button></div></header>
+  <div class="doc" id="doc"></div>
+  <button class="fab" id="bNew">＋ New</button>
+</div>
+<script src="./note.js"></script>
+</body></html>
