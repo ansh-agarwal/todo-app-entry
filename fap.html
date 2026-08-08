@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#F2F2F7"><title>Apple style — capture</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
+<link rel="stylesheet" href="./f-base.css">
+<style>
+:root{--paper:#F2F2F7;--paper-2:#F2F2F7;--card:#FFFFFF;--ink:#1C1C1E;--ink-soft:#636366;--ink-faint:#AEAEB2;
+  --rule:#D9D9DE;--rule-2:#E5E5EA;--cbrule:#C7C7CC;--accent:#007AFF;--accent-soft:#E9F2FF;--task:#34C759;
+  --r:12px;--shadow:0 1px 3px rgba(0,0,0,.05);--on-accent:#fff;
+  --serif:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display",Helvetica,sans-serif;--sans:-apple-system,BlinkMacSystemFont,"SF Pro Text",Helvetica,sans-serif}
+.card,.editor{border-width:.5px}
+.composer{border-top:.5px solid var(--rule)}
+.ln .mk.cb,.blk .mk.cb{border-width:1.3px;border-radius:50%;width:21px;height:21px}
+.ln.done .mk.cb::after,.blk.done .mk.cb::after{font-size:12px}
+.blk .mk.bul,.ln .mk.bul{font-weight:400;color:var(--ink-faint)}
+.keep{border-radius:10px}
+.tbtn{border-radius:9px}
+</style></head>
+<body class="minimal">
+<div class="wrap">
+  <div class="top"><span class="date" id="date"></span><span class="vtag">Apple · v5</span><span class="count" id="count"></span><a href="./f-designs.html">designs ↗</a></div>
+  <div class="feed" id="feed"><div class="empty" id="empty">Write below. It gathers up here.</div></div>
+  <div class="composer">
+    <div class="toolbar"><button class="tbtn" id="bBul">•</button><button class="tbtn" id="bTask">☐</button></div>
+    <div class="editor" id="editor"></div>
+    <div class="crow"><button class="keep" id="keep">Keep</button></div>
+  </div>
+</div>
+<script src="./f.js"></script>
+</body></html>

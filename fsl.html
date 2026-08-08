@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#F3F3F3"><title>Salesforce Lightning style — capture</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
+<link rel="stylesheet" href="./f-base.css">
+<style>
+:root{--paper:#FFFFFF;--paper-2:#F3F3F3;--card:#FFFFFF;--ink:#181818;--ink-soft:#514F4D;--ink-faint:#969492;
+  --rule:#DDDBDA;--rule-2:#ECEBEA;--cbrule:#B0ADAB;--accent:#0176D3;--accent-soft:#EEF4FF;--task:#0176D3;
+  --r:4px;--shadow:0 1px 2px rgba(0,0,0,.05),0 2px 8px rgba(0,0,0,.03);--on-accent:#fff;
+  --serif:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;--sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.card,.editor{border-width:1px;border-color:var(--rule)}
+.top{border-bottom:1px solid var(--rule);padding-bottom:12px}
+.ln .mk.cb,.blk .mk.cb{border-width:1.3px;border-radius:3px;width:18px;height:18px}
+.blk .mk.bul,.ln .mk.bul{font-weight:400;color:var(--ink-faint)}
+.tbtn{border-radius:4px}
+.keep{border-radius:4px;background:var(--accent);font-weight:600}
+.editor:focus-within{border-color:var(--accent);box-shadow:0 0 3px var(--accent)}
+.blk .btx{font-size:15px}
+.editor .blk:first-child[data-type="text"] .btx{font-size:17px}
+</style></head>
+<body class="minimal">
+<div class="wrap">
+  <div class="top"><span class="date" id="date"></span><span class="vtag">Salesforce · v5</span><span class="count" id="count"></span><a href="./f-designs.html">designs ↗</a></div>
+  <div class="feed" id="feed"><div class="empty" id="empty">Write below. It gathers up here.</div></div>
+  <div class="composer">
+    <div class="toolbar"><button class="tbtn" id="bBul">•</button><button class="tbtn" id="bTask">☐</button></div>
+    <div class="editor" id="editor"></div>
+    <div class="crow"><button class="keep" id="keep">Keep</button></div>
+  </div>
+</div>
+<script src="./f.js"></script>
+</body></html>

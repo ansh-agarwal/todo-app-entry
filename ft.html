@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#FBFBFA"><title>Things style — capture</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
+<link rel="stylesheet" href="./f-base.css">
+<style>
+:root{--paper:#FEFEFE;--paper-2:#FBFBFA;--card:#FFFFFF;--ink:#1D1D1F;--ink-soft:#6E6E73;--ink-faint:#B0B0B5;
+  --rule:#ECECEC;--rule-2:#F4F4F4;--cbrule:#C9C9CE;--accent:#297CFB;--accent-soft:#EAF2FF;--task:#297CFB;
+  --r:11px;--shadow:0 1px 2px rgba(0,0,0,.04);--on-accent:#fff;
+  --serif:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;--sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif}
+.card,.editor{border-width:1px}
+.ln .mk.cb,.blk .mk.cb{border-width:1.4px;border-radius:50%;width:20px;height:20px}
+.blk .mk.bul,.ln .mk.bul{font-weight:400;color:var(--ink-faint)}
+.editor .blk:first-child[data-type="text"] .btx{font-size:19px}
+</style></head>
+<body class="minimal">
+<div class="wrap">
+  <div class="top"><span class="date" id="date"></span><span class="vtag">Things · v5</span><span class="count" id="count"></span><a href="./f-designs.html">designs ↗</a></div>
+  <div class="feed" id="feed"><div class="empty" id="empty">A calm, open day. Write below.</div></div>
+  <div class="composer">
+    <div class="toolbar"><button class="tbtn" id="bBul">•</button><button class="tbtn" id="bTask">☐</button></div>
+    <div class="editor" id="editor"></div>
+    <div class="crow"><button class="keep" id="keep">Keep</button></div>
+  </div>
+</div>
+<script src="./f.js"></script>
+</body></html>

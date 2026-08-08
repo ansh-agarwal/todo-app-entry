@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#F3F3F3"><title>Windows style — capture</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
+<link rel="stylesheet" href="./f-base.css">
+<style>
+:root{--paper:#F9F9F9;--paper-2:#F3F3F3;--card:#FBFBFB;--ink:#1B1B1B;--ink-soft:#5C5C5C;--ink-faint:#9A9A9A;
+  --rule:#E5E5E5;--rule-2:#EDEDED;--cbrule:#8A8A8A;--accent:#0067C0;--accent-soft:#EAF2FB;--task:#0067C0;
+  --r:7px;--shadow:0 1px 2px rgba(0,0,0,.05),0 2px 8px rgba(0,0,0,.04);--on-accent:#fff;
+  --serif:"Segoe UI Variable","Segoe UI",-apple-system,Roboto,sans-serif;--sans:"Segoe UI Variable","Segoe UI",-apple-system,Roboto,sans-serif}
+.card,.editor{border-width:1px;border-color:#E0E0E0}
+.ln .mk.cb,.blk .mk.cb{border-width:1.3px;border-radius:4px;width:19px;height:19px}
+.blk .mk.bul,.ln .mk.bul{font-weight:400;color:var(--ink-faint)}
+.tbtn{border-radius:5px}
+.keep{border-radius:5px}
+.editor:focus-within{outline:1.5px solid var(--accent);outline-offset:1px}
+</style></head>
+<body class="minimal">
+<div class="wrap">
+  <div class="top"><span class="date" id="date"></span><span class="vtag">Windows · v5</span><span class="count" id="count"></span><a href="./f-designs.html">designs ↗</a></div>
+  <div class="feed" id="feed"><div class="empty" id="empty">Write below. It gathers up here.</div></div>
+  <div class="composer">
+    <div class="toolbar"><button class="tbtn" id="bBul">•</button><button class="tbtn" id="bTask">☐</button></div>
+    <div class="editor" id="editor"></div>
+    <div class="crow"><button class="keep" id="keep">Keep</button></div>
+  </div>
+</div>
+<script src="./f.js"></script>
+</body></html>
