@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#F5F5F2"><title>Notes — style variants</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<style>
+:root{--bg:#F5F5F2;--panel:#fff;--ink:#22262B;--ink-soft:#5C636C;--ink-faint:#A6ABB2;--rule:#E9E9E3;--accent:#191919;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;--shadow:0 1px 2px rgba(20,24,28,.05),0 8px 22px rgba(20,24,28,.05)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;line-height:1.5}
+.wrap{max-width:720px;margin:0 auto;padding:50px 22px 70px}
+.head{text-align:center;margin-bottom:30px}
+.head .k{font-size:12px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink-soft);font-weight:700}
+.head h1{font-size:29px;font-weight:700;margin:9px 0 10px;letter-spacing:-.01em}
+.head p{color:var(--ink-soft);font-size:15.5px;max-width:56ch;margin:0 auto}
+.cards{display:grid;gap:13px}
+.card{display:flex;gap:15px;align-items:center;background:var(--panel);border:1px solid var(--rule);border-radius:14px;padding:18px;text-decoration:none;color:inherit;box-shadow:var(--shadow);transition:.14s}
+.card:hover{transform:translateY(-2px);border-color:#bbb}
+.sw{width:46px;height:46px;border-radius:11px;flex:0 0 auto;border:1px solid var(--rule)}
+.card h2{font-size:17px;font-weight:650;margin-bottom:2px}
+.card p{font-size:13.5px;color:var(--ink-soft)}
+.card .go{margin-left:auto;color:var(--ink-faint);font-size:19px}
+.foot{text-align:center;margin-top:26px;color:var(--ink-soft);font-size:14px}
+.foot a{color:#333;text-decoration:none;font-weight:600}
+</style></head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <div class="k">Entry point · note-taking style · variants</div>
+    <h1>One continuous page, four skins</h1>
+    <p>All behave the same — type straight in, first line is the title, <b>＋ New</b> drops a divider and a fresh section. Only the look differs.</p>
+  </div>
+  <div class="cards">
+    <a class="card" href="./ni.html"><div class="sw" style="background:#fff"></div><div><h2>Ink</h2><p>Crisp white, black ticks, dotted dividers, mono timestamp. The most native &amp; minimal.</p></div><span class="go">→</span></a>
+    <a class="card" href="./np.html"><div class="sw" style="background:#FBF7EC"></div><div><h2>Paper</h2><p>Warm cream, amber accents, dashed torn dividers. Cozy legal-pad feel.</p></div><span class="go">→</span></a>
+    <a class="card" href="./nd.html"><div class="sw" style="background:#15171B"></div><div><h2>Dark</h2><p>Calm dark surface, soft-blue accent. Easy on the eyes at night.</p></div><span class="go">→</span></a>
+    <a class="card" href="./nw.html"><div class="sw" style="background:#FFF7F1"></div><div><h2>Warm</h2><p>Nunito type, coral accent, checkboxes that pop. Friendly and soft.</p></div><span class="go">→</span></a>
+  </div>
+  <div class="foot">Base build: <a href="./note.html">Notes v9</a> · other explorations: <a href="./f-designs.html">F design skins</a></div>
+</div>
+</body></html>
