@@ -1,57 +1,162 @@
 <!DOCTYPE html>
 <html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#FCF8EE"><title>Paper — type anywhere</title>
+<meta name="theme-color" content="#F7F1E1"><title>Paper — type anywhere</title>
 <style>
-:root{--paper:#FCF8EE;--paper-2:#F7F1E1;--ink:#2A2620;--ink-soft:#6B6353;--ink-faint:#A99F87;--rule:#EAE1CC;--accent:#C08A2E;
+:root{--paper:#FCF8EE;--paper-2:#F7F1E1;--card:#FEFCF5;--ink:#2A2620;--ink-soft:#6B6353;--ink-faint:#AA9F86;
+  --rule:#EAE1CC;--rule-2:#F0E9D7;--accent:#C08A2E;--task:#3B7A57;
   --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;--serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
-  --shadow:0 1px 2px rgba(60,50,20,.05),0 14px 40px rgba(60,50,20,.09)}
+  --shadow:0 1px 2px rgba(60,50,20,.05),0 10px 26px rgba(60,50,20,.08)}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
 body{background:var(--paper-2);color:var(--ink);font-family:var(--serif);-webkit-font-smoothing:antialiased}
-.wrap{max-width:600px;margin:0 auto;height:100dvh;display:flex;flex-direction:column;padding:0 0 env(safe-area-inset-bottom)}
-.top{display:flex;align-items:center;gap:8px;padding:16px 22px;font-family:var(--sans)}
+.wrap{max-width:600px;margin:0 auto;height:100dvh;display:flex;flex-direction:column;background:var(--paper-2)}
+.top{display:flex;align-items:center;gap:8px;padding:15px 22px 10px;font-family:var(--sans);flex:0 0 auto}
 .top .date{font-size:13px;color:var(--ink-faint);font-weight:600}
 .top .count{margin-left:auto;font-size:12px;color:var(--ink-faint);font-weight:600}
 .top a{color:var(--ink-faint);text-decoration:none;font-size:13px;font-weight:600;margin-left:14px}
-.sheetwrap{flex:1;position:relative;padding:8px 26px 20px;overflow:hidden}
-.sheet{background:var(--paper);border-radius:14px 14px 4px 4px;box-shadow:var(--shadow);min-height:100%;padding:30px 28px;outline:none;
-  transition:transform .34s cubic-bezier(.4,.0,.2,1),opacity .34s}
-.sheet.turn{transform:translateY(-26px) rotate(-.4deg);opacity:0}
-.sheet:empty::before{content:"Start writing… the first line becomes the title";color:var(--ink-faint);font-style:italic;font-size:19px}
-.sheet{font-size:18px;line-height:1.6;color:var(--ink);caret-color:var(--accent)}
-.sheet div:first-child,.sheet:first-line{font-weight:700}
-.bar{font-family:var(--sans);display:flex;align-items:center;gap:12px;padding:6px 26px 18px;color:var(--ink-faint);font-size:12.5px}
-.bar b{color:var(--ink-soft);font-weight:600}
-.file{margin-left:auto;background:var(--accent);color:#fff;border:none;font-family:var(--sans);font-weight:650;font-size:13px;padding:9px 16px;border-radius:10px;cursor:pointer;opacity:0;transform:translateY(4px);transition:.16s;pointer-events:none}
-.file.on{opacity:1;transform:none;pointer-events:auto}
-.last{font-family:var(--sans);padding:0 26px 14px;font-size:12.5px;color:var(--ink-faint)}
-.last b{color:var(--ink-soft)}
+
+/* feed (kept notes) above */
+.feed{flex:1;overflow-y:auto;padding:6px 20px 8px;display:flex;flex-direction:column;gap:12px;justify-content:flex-end}
+.feed .empty{color:var(--ink-faint);font-style:italic;font-size:16px;text-align:center;padding:30px 10px;margin-top:auto}
+.card{background:var(--card);border:1px solid var(--rule);border-radius:12px;box-shadow:var(--shadow);padding:14px 16px;animation:rise .3s cubic-bezier(.2,.7,.3,1)}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.card .time{font-family:var(--sans);font-size:11px;color:var(--ink-faint);float:right}
+.ln{display:flex;gap:9px;align-items:flex-start;padding:2px 0;line-height:1.5}
+.ln.title{font-weight:700;font-size:18px}
+.ln .mk{flex:0 0 auto;margin-top:2px}
+.ln .mk.bul{color:var(--accent);font-weight:700}
+.ln .mk.cb{width:17px;height:17px;border-radius:5px;border:1.7px solid #B9B08F;cursor:pointer;display:grid;place-items:center;transition:.13s}
+.ln .mk.cb:hover{border-color:var(--task)}
+.ln.done .mk.cb{background:var(--task);border-color:var(--task)}
+.ln.done .mk.cb::after{content:"✓";color:#fff;font-size:11px;font-weight:700}
+.ln .bd{flex:1;font-size:15.5px}
+.ln.done .bd{color:var(--ink-faint);text-decoration:line-through}
+
+/* composer at bottom */
+.composer{flex:0 0 auto;background:var(--paper);border-top:1px solid var(--rule);padding:8px 16px calc(10px + env(safe-area-inset-bottom))}
+.toolbar{display:flex;align-items:center;gap:6px;padding:4px 4px 8px;font-family:var(--sans)}
+.tbtn{border:1px solid var(--rule);background:var(--card);color:var(--ink-soft);font-size:12.5px;font-weight:600;padding:5px 10px;border-radius:8px;cursor:pointer;display:inline-flex;gap:5px;align-items:center}
+.tbtn:hover{border-color:var(--accent);color:var(--accent)}
+.thelp{margin-left:auto;font-size:11.5px;color:var(--ink-faint)}
+.thelp b{color:var(--ink-soft)}
+.editor{background:var(--card);border:1px solid var(--rule);border-radius:12px;padding:10px 12px;max-height:44vh;overflow-y:auto}
+.blk{display:flex;gap:9px;align-items:flex-start;padding:2px 0}
+.blk .mk{flex:0 0 auto;margin-top:3px;width:18px;display:flex;justify-content:center}
+.blk[data-type="text"] .mk{display:none}
+.blk .mk.bul{color:var(--accent);font-weight:700}
+.blk .mk.cb{width:17px;height:17px;border-radius:5px;border:1.7px solid #B9B08F;cursor:pointer;display:grid;place-items:center;transition:.13s}
+.blk .mk.cb:hover{border-color:var(--task)}
+.blk.done .mk.cb{background:var(--task);border-color:var(--task)}
+.blk.done .mk.cb::after{content:"✓";color:#fff;font-size:11px;font-weight:700}
+.blk .btx{flex:1;outline:none;font-size:16.5px;line-height:1.5;min-height:25px;word-break:break-word}
+.blk.done .btx{color:var(--ink-faint);text-decoration:line-through}
+.editor .blk:first-child[data-type="text"] .btx{font-weight:700;font-size:19px}
+.blk .btx:empty::before{content:attr(data-ph);color:var(--ink-faint);font-style:italic}
+.crow{display:flex;align-items:center;gap:12px;padding:8px 4px 2px;font-family:var(--sans)}
+.crow .h{font-size:11.5px;color:var(--ink-faint)}
+.crow .h b{color:var(--ink-soft);font-weight:600}
+.keep{margin-left:auto;background:var(--accent);color:#fff;border:none;font-family:var(--sans);font-weight:650;font-size:13.5px;padding:9px 18px;border-radius:10px;cursor:pointer;opacity:.45;pointer-events:none;transition:.15s}
+.keep.on{opacity:1;pointer-events:auto}
 </style></head>
 <body>
 <div class="wrap">
   <div class="top"><span class="date" id="date"></span><span class="count" id="count"></span><a href="./f-variants.html">variants ↗</a></div>
-  <div class="sheetwrap"><div class="sheet" id="sheet" contenteditable="true" spellcheck="false"></div></div>
-  <div class="bar"><span><b>⌘↵</b> keep &amp; new page · <b>esc</b> clear</span><button class="file" id="file">Keep note →</button></div>
-  <div class="last" id="last"></div>
+
+  <div class="feed" id="feed"><div class="empty" id="empty">Write below. What you keep gathers up here.</div></div>
+
+  <div class="composer">
+    <div class="toolbar">
+      <button class="tbtn" id="bBul">•&nbsp; Bullet</button>
+      <button class="tbtn" id="bTask">☐&nbsp; Task</button>
+      <span class="thelp">start a line with <b>-</b> for a bullet, <b>[]</b> for a task</span>
+    </div>
+    <div class="editor" id="editor"></div>
+    <div class="crow"><span class="h"><b>↵</b> new line · <b>⌘↵</b> keep note</span><button class="keep" id="keep">Keep note →</button></div>
+  </div>
 </div>
 <script>
-const sheet=document.getElementById("sheet"),fileBtn=document.getElementById("file"),count=document.getElementById("count"),last=document.getElementById("last");
+const editor=document.getElementById("editor"),feed=document.getElementById("feed"),keepBtn=document.getElementById("keep"),count=document.getElementById("count");
 document.getElementById("date").textContent=new Date().toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"});
 let n=0;
-function upd(){const has=sheet.textContent.trim().length>0;fileBtn.classList.toggle("on",has)}
-sheet.addEventListener("input",upd);
-function keep(){const raw=sheet.textContent.trim();if(!raw)return;
-  const title=(sheet.innerText||raw).split("\n").map(s=>s.trim()).filter(Boolean)[0]||raw;
-  n++;count.textContent=n+" today";last.innerHTML='Kept · <b>'+esc(title.slice(0,60))+'</b>';
-  sheet.classList.add("turn");
-  setTimeout(()=>{sheet.textContent="";sheet.classList.remove("turn");upd();sheet.focus()},340)}
-function esc(s){return s.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]))}
-document.getElementById("file").onclick=keep;
-sheet.addEventListener("keydown",e=>{
-  if(e.key==="Enter"&&(e.metaKey||e.ctrlKey)){e.preventDefault();keep()}
-  if(e.key==="Escape"){sheet.textContent="";upd()}});
-document.querySelector(".sheetwrap").addEventListener("click",()=>sheet.focus());
-sheet.focus();
+function clock(){const d=new Date();let h=d.getHours(),m=d.getMinutes();const a=h<12?"am":"pm";h=h%12||12;return h+":"+String(m).padStart(2,"0")+" "+a}
+
+function makeBlock(type,text){
+  const blk=document.createElement("div");blk.className="blk";blk.dataset.type=type||"text";
+  blk.innerHTML='<span class="mk"></span><div class="btx" contenteditable="true" spellcheck="false"></div>';
+  const btx=blk.querySelector(".btx");if(text)btx.textContent=text;
+  renderMarker(blk);
+  btx.addEventListener("keydown",e=>onKey(e,blk,btx));
+  btx.addEventListener("input",()=>{shortcut(blk,btx);updateKeep();updatePh()});
+  return blk;
+}
+function renderMarker(blk){const mk=blk.querySelector(".mk");mk.className="mk";mk.innerHTML="";
+  if(blk.dataset.type==="bullet"){mk.classList.add("bul");mk.textContent="•"}
+  else if(blk.dataset.type==="task"){mk.classList.add("cb");mk.onclick=()=>blk.classList.toggle("done")}
+}
+function setType(blk,type){blk.dataset.type=type;blk.classList.remove("done");renderMarker(blk);updatePh()}
+function shortcut(blk,btx){
+  if(blk.dataset.type!=="text")return;const t=btx.textContent;
+  if(/^[-*]\s/.test(t)){btx.textContent=t.replace(/^[-*]\s/,"");setType(blk,"bullet");placeCaretEnd(btx)}
+  else if(/^(\[\]|\[ \]|\(\))\s/.test(t)){btx.textContent=t.replace(/^(\[\]|\[ \]|\(\))\s/,"");setType(blk,"task");placeCaretEnd(btx)}
+}
+function onKey(e,blk,btx){
+  if(e.key==="Enter"&&(e.metaKey||e.ctrlKey)){e.preventDefault();keep();return}
+  if(e.key==="Enter"){e.preventDefault();
+    if(blk.dataset.type!=="text"&&!btx.textContent.trim()){setType(blk,"text");updatePh();return}
+    const nb=makeBlock(blk.dataset.type==="task"?"task":blk.dataset.type==="bullet"?"bullet":"text","");
+    blk.after(nb);placeCaret(nb.querySelector(".btx"));updatePh();return}
+  if(e.key==="Backspace"&&!btx.textContent&&caretStart(btx)){
+    if(blk.dataset.type!=="text"){e.preventDefault();setType(blk,"text");updatePh();return}
+    const prev=blk.previousElementSibling;
+    if(prev){e.preventDefault();const p=prev.querySelector(".btx");blk.remove();placeCaretEnd(p);updatePh();updateKeep()}
+  }
+}
+function caretStart(el){const s=getSelection();return s.rangeCount&&s.getRangeAt(0).collapsed&&s.anchorOffset===0}
+function placeCaret(el){el.focus();const r=document.createRange();r.selectNodeContents(el);r.collapse(true);const s=getSelection();s.removeAllRanges();s.addRange(r)}
+function placeCaretEnd(el){el.focus();const r=document.createRange();r.selectNodeContents(el);r.collapse(false);const s=getSelection();s.removeAllRanges();s.addRange(r)}
+
+function updatePh(){const blks=[...editor.children];blks.forEach((b,i)=>{const btx=b.querySelector(".btx");
+  let ph="";if(!btx.textContent){if(i===0&&b.dataset.type==="text")ph=blks.length===1?"Title, then write freely…":"Title…";
+    else if(b.dataset.type==="bullet")ph="list item";else if(b.dataset.type==="task")ph="to-do";}
+  btx.setAttribute("data-ph",ph)})}
+function hasContent(){return [...editor.querySelectorAll(".btx")].some(b=>b.textContent.trim())}
+function updateKeep(){keepBtn.classList.toggle("on",hasContent())}
+
+function addBlockOfType(type){
+  // convert current focused empty block, else append
+  const sel=getSelection();let cur=sel.anchorNode?closestBlk(sel.anchorNode):null;
+  if(cur&&!cur.querySelector(".btx").textContent.trim()){setType(cur,type);placeCaret(cur.querySelector(".btx"))}
+  else{const nb=makeBlock(type,"");editor.appendChild(nb);placeCaret(nb.querySelector(".btx"))}
+  updatePh();
+}
+function closestBlk(node){while(node&&node!==editor){if(node.classList&&node.classList.contains("blk"))return node;node=node.parentNode}return null}
+document.getElementById("bBul").onclick=()=>addBlockOfType("bullet");
+document.getElementById("bTask").onclick=()=>addBlockOfType("task");
+
+function keep(){
+  if(!hasContent())return;
+  const blocks=[...editor.children].map(b=>({type:b.dataset.type,text:b.querySelector(".btx").textContent,done:b.classList.contains("done")}))
+    .filter(b=>b.text.trim()||b.type!=="text");
+  const em=document.getElementById("empty");if(em)em.remove();
+  const card=document.createElement("div");card.className="card";
+  const time=document.createElement("span");time.className="time";time.textContent=clock();card.appendChild(time);
+  let firstText=true;
+  blocks.forEach(b=>{const ln=document.createElement("div");ln.className="ln"+(b.done?" done":"");
+    if(b.type==="text"&&firstText){ln.classList.add("title");firstText=false;ln.innerHTML='<div class="bd"></div>';ln.querySelector(".bd").textContent=b.text}
+    else if(b.type==="bullet"){ln.innerHTML='<span class="mk bul">•</span><div class="bd"></div>';ln.querySelector(".bd").textContent=b.text}
+    else if(b.type==="task"){ln.innerHTML='<span class="mk cb"></span><div class="bd"></div>';ln.querySelector(".bd").textContent=b.text;
+      const cb=ln.querySelector(".cb");cb.onclick=()=>ln.classList.toggle("done")}
+    else{ln.innerHTML='<div class="bd"></div>';ln.querySelector(".bd").textContent=b.text}
+    card.appendChild(ln)});
+  feed.appendChild(card);feed.scrollTop=feed.scrollHeight;
+  n++;count.textContent=n+" kept today";
+  editor.innerHTML="";const b=makeBlock("text","");editor.appendChild(b);updatePh();updateKeep();placeCaret(b.querySelector(".btx"));
+}
+document.getElementById("keep").onclick=keep;
+
+// init
+editor.appendChild(makeBlock("text",""));updatePh();updateKeep();
+editor.querySelector(".btx").focus();
 </script>
 </body></html>
