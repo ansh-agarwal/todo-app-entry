@@ -1,10 +1,23 @@
 <!DOCTYPE html>
 <html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#FFFFFF"><title>Lull · Apple</title>
+<meta name="theme-color" content="#FFFFFF"><title>Lull · Windows</title>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
-<link rel="stylesheet" href="./app-base.css"></head>
+<link rel="stylesheet" href="./app-base.css"><style>
+/* Windows · Fluent / WinUI */
+:root{--accent:#0067C0;--accent-soft:#EAF2FB;--accent-ink:#004E96;
+  --ink:#1B1B1B;--ink-soft:#5C5C5C;--ink-faint:#9A9A9A;--bg:#F3F3F3;--surface:#FBFBFB;--rule:#E5E5E5;--rule-2:#EDEDED;
+  --sans:"Segoe UI Variable Text","Segoe UI",-apple-system,Roboto,sans-serif;--mono:"Cascadia Code",Consolas,ui-monospace,monospace}
+.cb{border-radius:4px !important;border-width:1.3px}
+.goal .gk{border-radius:3px}
+.brief{background:#EEF5FB;border-color:#D6E4F2}
+.rail .ri.on{border-radius:5px}
+.main{background:var(--surface)}
+.tabbar,.capbar{background:var(--surface)}
+
+</style>
+</head>
 <body>
 <div class="app">
   <nav class="rail" id="rail">
@@ -65,5 +78,5 @@
 </div>
 
 <script src="./app.js"></script>
-<script>window.addEventListener("load",()=>{const e=document.getElementById("capDate");if(e)e.textContent=e.textContent.replace("app v14","Apple · v14")});</script>
+<script>window.addEventListener("load",()=>{const e=document.getElementById("capDate");if(e)e.textContent=e.textContent.replace("app v14","app v14")});</script>
 </body></html>

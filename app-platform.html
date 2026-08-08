@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#F5F5F2"><title>Lull — the app, native everywhere</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<style>
+:root{--bg:#F5F5F2;--panel:#fff;--ink:#22262B;--ink-soft:#5C636C;--ink-faint:#A6ABB2;--rule:#E9E9E3;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;--shadow:0 1px 2px rgba(20,24,28,.05),0 8px 22px rgba(20,24,28,.05)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;line-height:1.5}
+.wrap{max-width:720px;margin:0 auto;padding:50px 22px 70px}
+.head{text-align:center;margin-bottom:14px}
+.head .k{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);font-weight:700}
+.head h1{font-size:29px;font-weight:700;margin:9px 0 10px;letter-spacing:-.01em}
+.head p{color:var(--ink-soft);font-size:15.5px;max-width:60ch;margin:0 auto}
+.note{background:#fff;border:1px solid var(--rule);border-radius:12px;padding:13px 16px;margin:22px 0 24px;font-size:13.5px;color:var(--ink-soft)}
+.note b{color:var(--ink)}
+.cards{display:grid;gap:14px}
+.card{display:flex;gap:16px;align-items:center;background:var(--panel);border:1px solid var(--rule);border-radius:16px;padding:19px;text-decoration:none;color:inherit;box-shadow:var(--shadow);transition:.14s}
+.card:hover{transform:translateY(-2px);border-color:#bbb}
+.sw{width:50px;height:50px;border-radius:13px;flex:0 0 auto;display:grid;place-items:center;font-size:22px;color:#fff}
+.card h2{font-size:18px;font-weight:650;margin-bottom:2px}
+.card p{font-size:13.5px;color:var(--ink-soft)}
+.card .go{margin-left:auto;color:var(--ink-faint);font-size:20px}
+.foot{text-align:center;margin-top:26px;color:var(--ink-soft);font-size:14px}
+.foot a{color:#333;text-decoration:none;font-weight:600}
+</style></head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <div class="k">The app · every feature · native everywhere</div>
+    <h1>Lull, on each platform</h1>
+    <p>The complete concept — Capture · Today · Plan · Calendar, plus Focus, Scheduling, morning briefing and the evening confirm loop — sharing one engine, each wearing its platform's native controls.</p>
+  </div>
+  <div class="note"><b>Same code, three skins.</b> One shared <code>app.js</code> + <code>app-base.css</code>; each build overrides only design tokens + control shapes — circle checkboxes &amp; iOS-blue on Apple, square Fluent checkboxes &amp; Segoe on Windows, square Material checkboxes &amp; Roboto on Android. Tip: on desktop it uses a left rail; narrow the window for bottom tabs.</div>
+  <div class="cards">
+    <a class="card" href="./app.html"><div class="sw" style="background:#0A84FF">◔</div><div><h2>Apple — Things × Reminders</h2><p>Circle checkboxes, iOS-blue, SF. The identity build (iOS/macOS).</p></div><span class="go">→</span></a>
+    <a class="card" href="./app-win.html"><div class="sw" style="background:#0067C0">▣</div><div><h2>Windows — Fluent / WinUI</h2><p>Segoe UI Variable, Mica surface, square checkboxes, Windows accent.</p></div><span class="go">→</span></a>
+    <a class="card" href="./app-and.html"><div class="sw" style="background:#6750A4">◪</div><div><h2>Android — Material 3</h2><p>Roboto, Material-You purple, square Material checkboxes.</p></div><span class="go">→</span></a>
+  </div>
+  <div class="foot">Capture component alone: <a href="./platform.html">its three native builds</a> · <a href="./today-research.html">Today research</a></div>
+</div>
+</body></html>
