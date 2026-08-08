@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#F1F1EE">
+<title>Entry point — creative doors</title>
+<style>
+:root{
+  --ground:#F1F1EE; --panel:#FFFFFF; --panel-2:#FBFBF9;
+  --ink:#20242A; --ink-soft:#5F6670; --ink-faint:#A2A8B0;
+  --rule:#E9E9E3; --rule-2:#F1F1EC;
+  --accent:#3B6DF5; --accent-soft:#ECF1FE; --accent-ink:#2b56c9; --done:#12B76A;
+  --amber:#B4530F; --amber-soft:#FBECD9; --sun:#F2C14E;
+  --shadow:0 1px 2px rgba(20,24,28,.05),0 10px 30px rgba(20,24,28,.07);
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,sans-serif;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;line-height:1.5}
+.wrap{max-width:900px;margin:0 auto;padding:44px 22px 70px}
+.head{text-align:center;margin-bottom:12px}
+.head .k{font-size:12px;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);font-weight:700}
+.head h1{font-family:var(--serif);font-size:30px;font-weight:600;margin:8px 0 8px;letter-spacing:-.01em}
+.head p{color:var(--ink-soft);font-size:15.5px;max-width:54ch;margin:0 auto}
+.head p b{color:var(--ink)}
+.back{display:block;text-align:center;margin-bottom:26px;font-size:13px}
+.back a{color:var(--accent);text-decoration:none;font-weight:600}
+
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px}
+@media(max-width:720px){.cols{grid-template-columns:1fr}}
+.col .label{display:flex;align-items:baseline;gap:9px;margin-bottom:4px;padding:0 2px}
+.col .label .v{font-size:12px;font-weight:800;color:var(--accent);letter-spacing:.05em}
+.col .label h2{font-size:16.5px;font-weight:650}
+.col .note{font-size:13px;color:var(--ink-soft);padding:0 2px 12px;min-height:34px}
+
+.frame{position:relative;background:var(--panel-2);border:1px solid var(--rule);border-radius:18px;height:344px;box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column}
+.flist{flex:1;overflow-y:auto;padding:10px 12px}
+.li{display:flex;gap:9px;align-items:flex-start;padding:8px 4px;border-bottom:1px solid var(--rule-2)}
+.li:last-child{border:none}
+.li .d{width:15px;height:15px;border-radius:50%;border:1.7px solid var(--ink-faint);flex:0 0 auto;margin-top:2px}
+.li .t{font-size:13.5px;color:var(--ink);word-break:break-word}
+.li.fresh{animation:pop .3s ease}
+@keyframes pop{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:none}}
+.flash{position:absolute;left:50%;top:12px;transform:translateX(-50%) translateY(-10px);background:var(--done);color:#fff;font-size:11.5px;font-weight:650;padding:4px 11px;border-radius:20px;opacity:0;transition:.22s;z-index:8;pointer-events:none}
+.flash.on{opacity:1;transform:translateX(-50%)}
+
+/* F — type anywhere */
+.fType{cursor:text}
+.fType .stage{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;text-align:center}
+.fType .ghosthint{color:var(--ink-faint);font-family:var(--serif);font-style:italic;font-size:16px;pointer-events:none}
+.fType .live{font-family:var(--serif);font-size:22px;color:var(--ink);min-height:30px;line-height:1.3;outline:none;caret-color:var(--accent);max-width:90%}
+.fType .cue{position:absolute;bottom:12px;left:0;right:0;text-align:center;font-size:11px;color:var(--ink-faint)}
+.fType .mini{position:absolute;top:10px;left:12px;font-size:11px;color:var(--ink-faint)}
+
+/* G — chat to self */
+.chat{flex:1;display:flex;flex-direction:column;padding:10px 12px;gap:7px;overflow-y:auto}
+.bub{align-self:flex-end;background:var(--accent);color:#fff;font-size:13.5px;padding:8px 12px;border-radius:15px 15px 4px 15px;max-width:82%;animation:pop .25s ease}
+.chatbar{display:flex;gap:8px;padding:9px 11px;border-top:1px solid var(--rule)}
+.chatbar input{flex:1;border:1px solid var(--rule);border-radius:20px;padding:9px 13px;outline:none;font-size:13.5px;font-family:var(--sans)}
+.chatbar input:focus{border-color:var(--accent)}
+.chatbar button{width:36px;height:36px;border-radius:50%;background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:15px}
+.chathint{align-self:center;color:var(--ink-faint);font-family:var(--serif);font-style:italic;font-size:14px;margin:auto 0}
+
+/* H — brain dump */
+.dump{flex:1;display:flex;flex-direction:column;padding:11px 12px}
+.dump textarea{flex:1;border:1px solid var(--rule);border-radius:11px;padding:11px;resize:none;outline:none;font-family:var(--serif);font-size:14.5px;line-height:1.7;color:var(--ink);background:var(--panel)}
+.dump textarea:focus{border-color:var(--accent)}
+.dump textarea::placeholder{color:var(--ink-faint);font-style:italic}
+.dumpfoot{display:flex;align-items:center;gap:10px;padding:9px 2px 0}
+.dumpfoot .cnt{font-size:12px;color:var(--ink-soft)}
+.dumpfoot button{margin-left:auto;background:var(--accent);color:#fff;border:none;font-weight:650;font-size:13px;padding:8px 14px;border-radius:9px;cursor:pointer}
+.dumpfoot button:disabled{opacity:.4;cursor:default}
+
+/* I — command bar */
+.cmdwrap{padding:12px}
+.cmdbar{display:flex;align-items:center;gap:9px;background:var(--panel);border:1px solid var(--rule);border-radius:11px;padding:11px 13px}
+.cmdbar:focus-within{border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
+.cmdbar .k{font-size:11px;color:var(--ink-faint);border:1px solid var(--rule);border-radius:5px;padding:2px 6px;font-weight:600}
+.cmdbar input{flex:1;border:none;outline:none;font-size:14.5px;background:none}
+.cmdmenu{margin:8px 12px 0;background:var(--panel);border:1px solid var(--rule);border-radius:11px;box-shadow:var(--shadow);overflow:hidden;display:none}
+.cmdmenu.on{display:block}
+.cmdmenu .ci{display:flex;gap:10px;align-items:center;padding:9px 13px;font-size:13.5px;cursor:pointer;color:var(--ink)}
+.cmdmenu .ci:hover{background:var(--rule-2)}
+.cmdmenu .ci .ig{width:18px;text-align:center;color:var(--accent)}
+.cmdmenu .ci .tagx{margin-left:auto;font-size:10.5px;color:var(--ink-faint)}
+.cmdhint{padding:8px 14px;color:var(--ink-faint);font-size:12px}
+
+/* J — spatial board */
+.board{flex:1;position:relative;overflow:hidden;background:
+  radial-gradient(circle at 1px 1px, var(--rule) 1px, transparent 0) 0 0/22px 22px;cursor:crosshair}
+.boardhint{position:absolute;inset:0;display:grid;place-items:center;color:var(--ink-faint);font-family:var(--serif);font-style:italic;font-size:15px;pointer-events:none}
+.sticky{position:absolute;width:118px;min-height:70px;background:var(--sun);border-radius:6px;padding:9px 10px;font-size:12.5px;color:#4a3c12;box-shadow:0 6px 14px rgba(0,0,0,.12);transform:rotate(-1.5deg);cursor:grab;font-family:var(--serif)}
+.sticky:nth-child(even){background:#BFE3D0;color:#1f3f31;transform:rotate(1.5deg)}
+.sticky [contenteditable]{outline:none;min-height:40px}
+
+.foot{text-align:center;margin-top:30px;color:var(--ink-soft);font-size:14px}
+.foot b{color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <div class="k">Entry point · creative doors</div>
+    <h1>Stranger ways to capture a thought</h1>
+    <p>Beyond the bar and the +. Each is live — poke at it. <b>Simplicity still referees</b>, but these reach for a feeling.</p>
+  </div>
+  <div class="back"><a href="./index.html">← back to the conventional five (A–E)</a></div>
+
+  <div class="cols">
+    <!-- F -->
+    <div class="col">
+      <div class="label"><span class="v">F</span><h2>Type anywhere — no box at all</h2></div>
+      <div class="note">The app opens straight into a blinking cursor. No field, no button — the whole page <i>is</i> the input. Just type.</div>
+      <div class="frame fType" id="fF">
+        <div class="flash" id="flF">Captured ✓</div>
+        <div class="mini" id="miniF"></div>
+        <div class="stage">
+          <div class="live" id="liveF" contenteditable="true" spellcheck="false"></div>
+          <div class="ghosthint" id="hintF">just start typing…</div>
+        </div>
+        <div class="cue">↵ files it &amp; clears · everything you type just becomes a note</div>
+      </div>
+    </div>
+
+    <!-- G -->
+    <div class="col">
+      <div class="label"><span class="v">G</span><h2>Text your own brain</h2></div>
+      <div class="note">Capture as a chat with yourself — the most muscle-memory input on earth. Fire off several in a row.</div>
+      <div class="frame" id="fG">
+        <div class="flash" id="flG">Sent ✓</div>
+        <div class="chat" id="chatG"><div class="chathint">Say something to future-you…</div></div>
+        <div class="chatbar"><input id="inpG" placeholder="Message yourself…" autocomplete="off"><button id="sendG">↑</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cols">
+    <!-- H -->
+    <div class="col">
+      <div class="label"><span class="v">H</span><h2>Empty your head, it sorts itself</h2></div>
+      <div class="note">One calm page. Dump everything, one thought per line — it splits into separate items when you're done.</div>
+      <div class="frame" id="fH">
+        <div class="flash" id="flH">Captured ✓</div>
+        <div class="dump">
+          <textarea id="taH" placeholder="empty your head…&#10;one thing per line&#10;dentist&#10;call mom sunday&#10;idea for the launch"></textarea>
+          <div class="dumpfoot"><span class="cnt" id="cntH">0 items</span><button id="fileH" disabled>Capture all</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- I -->
+    <div class="col">
+      <div class="label"><span class="v">I</span><h2>One bar for everything</h2></div>
+      <div class="note">A single command bar. Type to capture; start with <b>/</b> to jump, search, or file. One door, whole app.</div>
+      <div class="frame" id="fI">
+        <div class="flash" id="flI">Captured ✓</div>
+        <div class="cmdwrap"><div class="cmdbar"><span class="k">/</span><input id="inpI" placeholder="Type a thought — or / for commands" autocomplete="off"></div></div>
+        <div class="cmdmenu" id="menuI"></div>
+        <div class="flist" id="lI"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cols">
+    <!-- J -->
+    <div class="col">
+      <div class="label"><span class="v">J</span><h2>Drop it where it lives</h2></div>
+      <div class="note">A calm board. Tap anywhere to leave a sticky note exactly there; drag them around. Spatial memory does the filing.</div>
+      <div class="frame" id="fJ">
+        <div class="flash" id="flJ">Note ✓</div>
+        <div class="board" id="boardJ"><div class="boardhint" id="hintJ">tap anywhere to leave a note</div></div>
+      </div>
+    </div>
+
+    <div class="col" style="display:flex;align-items:center">
+      <div style="padding:16px;color:var(--ink-soft);font-size:14px">
+        <p style="margin-bottom:10px"><b style="color:var(--ink)">Which of these sparks something?</b></p>
+        <p style="margin-bottom:10px">My honest read for an ADHD-calm product: <b style="color:var(--ink)">F</b> (type-anywhere) and <b style="color:var(--ink)">G</b> (chat-to-self) are the two that feel genuinely new <i>and</i> stay dead simple. <b style="color:var(--ink)">H</b> is the pressure-release valve. <b style="color:var(--ink)">I</b> is powerful but power-user. <b style="color:var(--ink)">J</b> is lovely but can get messy.</p>
+        <p>Want me to push any one of these much further — or keep generating more?</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot"><b>Tell me which door(s) to chase</b> — I'll go deep on your favourite, or keep the ideas coming.</div>
+</div>
+
+<script>
+function mkRow(t){const d=document.createElement("div");d.className="li fresh";d.innerHTML='<span class="d"></span><span class="t"></span>';d.querySelector(".t").textContent=t;return d}
+function flash(id){const f=document.getElementById(id);f.classList.add("on");setTimeout(()=>f.classList.remove("on"),850)}
+
+/* F — type anywhere */
+const liveF=document.getElementById("liveF"),hintF=document.getElementById("hintF"),miniF=document.getElementById("miniF");
+let capF=[];
+function syncHintF(){hintF.style.display=liveF.textContent.trim()?"none":"block"}
+document.getElementById("fF").addEventListener("click",()=>liveF.focus());
+liveF.addEventListener("input",syncHintF);
+liveF.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();const v=liveF.textContent.trim();if(!v)return;
+  capF.unshift(v);miniF.textContent=capF.length+" captured";liveF.textContent="";syncHintF();flash("flF")}});
+liveF.focus&&setTimeout(()=>{},0);
+
+/* G — chat */
+const chatG=document.getElementById("chatG"),inpG=document.getElementById("inpG");
+function sendG(){const v=inpG.value.trim();if(!v)return;const h=chatG.querySelector(".chathint");if(h)h.remove();
+  const b=document.createElement("div");b.className="bub";b.textContent=v;chatG.appendChild(b);chatG.scrollTop=chatG.scrollHeight;inpG.value="";flash("flG")}
+document.getElementById("sendG").onclick=sendG;
+inpG.addEventListener("keydown",e=>{if(e.key==="Enter")sendG()});
+
+/* H — brain dump */
+const taH=document.getElementById("taH"),cntH=document.getElementById("cntH"),fileH=document.getElementById("fileH");
+function linesH(){return taH.value.split("\n").map(s=>s.trim()).filter(Boolean)}
+taH.addEventListener("input",()=>{const n=linesH().length;cntH.textContent=n+" item"+(n===1?"":"s");fileH.disabled=n===0});
+fileH.onclick=()=>{const n=linesH().length;if(!n)return;taH.value="";cntH.textContent="0 items";fileH.disabled=true;flash("flH")};
+
+/* I — command bar */
+const inpI=document.getElementById("inpI"),menuI=document.getElementById("menuI"),lI=document.getElementById("lI");
+const CMDS=[{i:"◎",t:"Go to Today",x:"jump"},{i:"🔍",t:"Search everything",x:"find"},{i:"🌙",t:"Send to Someday",x:"file"},{i:"📥",t:"Open Inbox",x:"jump"}];
+function renderMenu(q){menuI.innerHTML="";const items=CMDS.filter(c=>c.t.toLowerCase().includes(q.toLowerCase()));
+  if(!items.length){menuI.innerHTML='<div class="cmdhint">no command — press ↵ to capture as a note</div>';return}
+  items.forEach(c=>{const d=document.createElement("div");d.className="ci";d.innerHTML=`<span class="ig">${c.i}</span> ${c.t}<span class="tagx">${c.x}</span>`;
+    d.onclick=()=>{inpI.value="";menuI.classList.remove("on");flash("flI")};menuI.appendChild(d)})}
+inpI.addEventListener("input",()=>{const v=inpI.value;if(v.startsWith("/")){menuI.classList.add("on");renderMenu(v.slice(1))}else menuI.classList.remove("on")});
+inpI.addEventListener("keydown",e=>{if(e.key==="Enter"){const v=inpI.value.trim();if(!v)return;
+  if(v.startsWith("/")){menuI.classList.remove("on");inpI.value="";flash("flI");return}
+  if(lI.querySelector(".emptyx"))lI.innerHTML="";lI.prepend(mkRow(v));inpI.value="";flash("flI")}});
+
+/* J — spatial board */
+const board=document.getElementById("boardJ"),hintJ=document.getElementById("hintJ");
+board.addEventListener("click",e=>{
+  if(e.target!==board&&e.target!==hintJ)return;
+  const r=board.getBoundingClientRect();const x=e.clientX-r.left,y=e.clientY-r.top;
+  if(hintJ)hintJ.style.display="none";
+  const s=document.createElement("div");s.className="sticky";
+  s.style.left=Math.max(4,Math.min(x-59,r.width-122))+"px";s.style.top=Math.max(4,Math.min(y-30,r.height-84))+"px";
+  s.innerHTML='<div contenteditable="true" spellcheck="false"></div>';
+  board.appendChild(s);const ed=s.querySelector("[contenteditable]");ed.focus();flash("flJ");
+  // drag
+  s.addEventListener("pointerdown",ev=>{if(ev.target===ed)return;ev.preventDefault();s.setPointerCapture(ev.pointerId);
+    const ox=ev.clientX-s.offsetLeft,oy=ev.clientY-s.offsetTop;s.style.cursor="grabbing";
+    const mv=m=>{s.style.left=Math.max(4,Math.min(m.clientX-ox,r.width-122))+"px";s.style.top=Math.max(4,Math.min(m.clientY-oy,r.height-84))+"px"};
+    const up=()=>{s.style.cursor="grab";s.removeEventListener("pointermove",mv);s.removeEventListener("pointerup",up)};
+    s.addEventListener("pointermove",mv);s.addEventListener("pointerup",up)});
+});
+</script>
+</body>
+</html>
