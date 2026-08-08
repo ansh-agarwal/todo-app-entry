@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#F6F6F3"><title>F — ADHD design variants</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<style>
+:root{--bg:#F5F5F2;--panel:#fff;--ink:#22262B;--ink-soft:#5C636C;--ink-faint:#A6ABB2;--rule:#E9E9E3;--accent:#4C7C74;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;--serif:"Iowan Old Style",Palatino,Georgia,serif;
+  --shadow:0 1px 2px rgba(20,24,28,.05),0 10px 28px rgba(20,24,28,.06)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;line-height:1.5}
+.wrap{max-width:720px;margin:0 auto;padding:52px 22px 70px}
+.head{text-align:center;margin-bottom:16px}
+.head .k{font-size:12px;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);font-weight:700}
+.head h1{font-family:var(--serif);font-size:30px;font-weight:600;margin:9px 0 10px}
+.head p{color:var(--ink-soft);font-size:15.5px;max-width:56ch;margin:0 auto}
+.tenets{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;margin:16px 0 30px}
+.tn{font-size:12px;color:var(--ink-soft);background:var(--panel);border:1px solid var(--rule);border-radius:20px;padding:5px 11px}
+.cards{display:grid;gap:15px}
+.card{display:flex;gap:16px;align-items:center;background:var(--panel);border:1px solid var(--rule);border-radius:16px;padding:20px;text-decoration:none;color:inherit;box-shadow:var(--shadow);transition:.15s}
+.card:hover{transform:translateY(-2px);border-color:var(--accent)}
+.sw{width:52px;height:52px;border-radius:13px;flex:0 0 auto;border:1px solid var(--rule)}
+.card h2{font-size:18px;font-weight:650;margin-bottom:3px}
+.card p{font-size:14px;color:var(--ink-soft)}
+.card .go{margin-left:auto;color:var(--ink-faint);font-size:20px}
+.foot{text-align:center;margin-top:26px;color:var(--ink-soft);font-size:14px}
+.foot a{color:var(--accent);text-decoration:none;font-weight:600}
+</style></head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <div class="k">Entry point · F · ADHD design variants</div>
+    <h1>Same capture, calmer skins</h1>
+    <p>Layout and behaviour are locked (feed on top, capture below, bullets · tasks · indent). These change only the <b>design</b> — each pared down for low overwhelm.</p>
+  </div>
+  <div class="tenets">
+    <span class="tn">fewer colours</span><span class="tn">less chrome</span><span class="tn">bigger tap targets</span><span class="tn">one thing at a time</span><span class="tn">calm, not clinical</span>
+  </div>
+  <div class="cards">
+    <a class="card" href="./fa.html"><div class="sw" style="background:#F6F6F3"></div><div><h2>Quiet</h2><p>Near-monochrome, no shadows, hints stripped away. Just your words and one soft accent. The least to look at.</p></div><span class="go">→</span></a>
+    <a class="card" href="./fb.html"><div class="sw" style="background:linear-gradient(135deg,#fff,#E9F1FE)"></div><div><h2>Focus</h2><p>Everything you're not touching fades back; the line you're on stays crisp. Attention goes where it should.</p></div><span class="go">→</span></a>
+    <a class="card" href="./fc.html"><div class="sw" style="background:#E9F0ED"></div><div><h2>Soft</h2><p>Gentle green, rounded, bigger checkboxes and buttons. Warm and reassuring, low-stimulation.</p></div><span class="go">→</span></a>
+  </div>
+  <div class="foot">Base build: <a href="./f.html?v=3">the working F (v3)</a></div>
+</div>
+</body></html>
