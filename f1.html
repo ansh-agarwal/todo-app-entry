@@ -69,10 +69,10 @@ body{background:var(--paper-2);color:var(--ink);font-family:var(--serif);-webkit
     <div class="toolbar">
       <button class="tbtn" id="bBul">•&nbsp; Bullet</button>
       <button class="tbtn" id="bTask">☐&nbsp; Task</button>
-      <span class="thelp">start a line with <b>-</b> for a bullet, <b>[]</b> for a task</span>
+      <span class="thelp"><b>-</b> bullet · <b>[]</b> task · <b>Tab</b> indent</span>
     </div>
     <div class="editor" id="editor"></div>
-    <div class="crow"><span class="h"><b>↵</b> new line · <b>⌘↵</b> keep note</span><button class="keep" id="keep">Keep note →</button></div>
+    <div class="crow"><span class="h"><b>↵</b> new line · <b>Tab</b> / <b>⇧Tab</b> indent · <b>⌘↵</b> keep</span><button class="keep" id="keep">Keep note →</button></div>
   </div>
 </div>
 <script>
@@ -81,15 +81,18 @@ document.getElementById("date").textContent=new Date().toLocaleDateString(undefi
 let n=0;
 function clock(){const d=new Date();let h=d.getHours(),m=d.getMinutes();const a=h<12?"am":"pm";h=h%12||12;return h+":"+String(m).padStart(2,"0")+" "+a}
 
-function makeBlock(type,text){
+function makeBlock(type,text,indent){
   const blk=document.createElement("div");blk.className="blk";blk.dataset.type=type||"text";
+  blk.dataset.indent=indent||0;
   blk.innerHTML='<span class="mk"></span><div class="btx" contenteditable="true" spellcheck="false"></div>';
   const btx=blk.querySelector(".btx");if(text)btx.textContent=text;
-  renderMarker(blk);
+  applyIndent(blk);renderMarker(blk);
   btx.addEventListener("keydown",e=>onKey(e,blk,btx));
   btx.addEventListener("input",()=>{shortcut(blk,btx);updateKeep();updatePh()});
   return blk;
 }
+function applyIndent(blk){blk.style.marginLeft=(parseInt(blk.dataset.indent||0)*22)+"px"}
+function setIndent(blk,d){const v=Math.max(0,Math.min(6,parseInt(blk.dataset.indent||0)+d));blk.dataset.indent=v;applyIndent(blk)}
 function renderMarker(blk){const mk=blk.querySelector(".mk");mk.className="mk";mk.innerHTML="";
   if(blk.dataset.type==="bullet"){mk.classList.add("bul");mk.textContent="•"}
   else if(blk.dataset.type==="task"){mk.classList.add("cb");mk.onclick=()=>blk.classList.toggle("done")}
@@ -101,10 +104,11 @@ function shortcut(blk,btx){
   else if(/^(\[\]|\[ \]|\(\))\s/.test(t)){btx.textContent=t.replace(/^(\[\]|\[ \]|\(\))\s/,"");setType(blk,"task");placeCaretEnd(btx)}
 }
 function onKey(e,blk,btx){
+  if(e.key==="Tab"){e.preventDefault();setIndent(blk,e.shiftKey?-1:1);return}
   if(e.key==="Enter"&&(e.metaKey||e.ctrlKey)){e.preventDefault();keep();return}
   if(e.key==="Enter"){e.preventDefault();
     if(blk.dataset.type!=="text"&&!btx.textContent.trim()){setType(blk,"text");updatePh();return}
-    const nb=makeBlock(blk.dataset.type==="task"?"task":blk.dataset.type==="bullet"?"bullet":"text","");
+    const nb=makeBlock(blk.dataset.type==="task"?"task":blk.dataset.type==="bullet"?"bullet":"text","",parseInt(blk.dataset.indent||0));
     blk.after(nb);placeCaret(nb.querySelector(".btx"));updatePh();return}
   if(e.key==="Backspace"&&!btx.textContent&&caretStart(btx)){
     if(blk.dataset.type!=="text"){e.preventDefault();setType(blk,"text");updatePh();return}
@@ -136,13 +140,14 @@ document.getElementById("bTask").onclick=()=>addBlockOfType("task");
 
 function keep(){
   if(!hasContent())return;
-  const blocks=[...editor.children].map(b=>({type:b.dataset.type,text:b.querySelector(".btx").textContent,done:b.classList.contains("done")}))
+  const blocks=[...editor.children].map(b=>({type:b.dataset.type,text:b.querySelector(".btx").textContent,done:b.classList.contains("done"),indent:parseInt(b.dataset.indent||0)}))
     .filter(b=>b.text.trim()||b.type!=="text");
   const em=document.getElementById("empty");if(em)em.remove();
   const card=document.createElement("div");card.className="card";
   const time=document.createElement("span");time.className="time";time.textContent=clock();card.appendChild(time);
   let firstText=true;
   blocks.forEach(b=>{const ln=document.createElement("div");ln.className="ln"+(b.done?" done":"");
+    if(b.indent)ln.style.marginLeft=(b.indent*20)+"px";
     if(b.type==="text"&&firstText){ln.classList.add("title");firstText=false;ln.innerHTML='<div class="bd"></div>';ln.querySelector(".bd").textContent=b.text}
     else if(b.type==="bullet"){ln.innerHTML='<span class="mk bul">•</span><div class="bd"></div>';ln.querySelector(".bd").textContent=b.text}
     else if(b.type==="task"){ln.innerHTML='<span class="mk cb"></span><div class="bd"></div>';ln.querySelector(".bd").textContent=b.text;
