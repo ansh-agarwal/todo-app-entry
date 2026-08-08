@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#FCF8EE"><title>Paper — type anywhere</title>
+<style>
+:root{--paper:#FCF8EE;--paper-2:#F7F1E1;--ink:#2A2620;--ink-soft:#6B6353;--ink-faint:#A99F87;--rule:#EAE1CC;--accent:#C08A2E;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;--serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  --shadow:0 1px 2px rgba(60,50,20,.05),0 14px 40px rgba(60,50,20,.09)}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--paper-2);color:var(--ink);font-family:var(--serif);-webkit-font-smoothing:antialiased}
+.wrap{max-width:600px;margin:0 auto;height:100dvh;display:flex;flex-direction:column;padding:0 0 env(safe-area-inset-bottom)}
+.top{display:flex;align-items:center;gap:8px;padding:16px 22px;font-family:var(--sans)}
+.top .date{font-size:13px;color:var(--ink-faint);font-weight:600}
+.top .count{margin-left:auto;font-size:12px;color:var(--ink-faint);font-weight:600}
+.top a{color:var(--ink-faint);text-decoration:none;font-size:13px;font-weight:600;margin-left:14px}
+.sheetwrap{flex:1;position:relative;padding:8px 26px 20px;overflow:hidden}
+.sheet{background:var(--paper);border-radius:14px 14px 4px 4px;box-shadow:var(--shadow);min-height:100%;padding:30px 28px;outline:none;
+  transition:transform .34s cubic-bezier(.4,.0,.2,1),opacity .34s}
+.sheet.turn{transform:translateY(-26px) rotate(-.4deg);opacity:0}
+.sheet:empty::before{content:"Start writing… the first line becomes the title";color:var(--ink-faint);font-style:italic;font-size:19px}
+.sheet{font-size:18px;line-height:1.6;color:var(--ink);caret-color:var(--accent)}
+.sheet div:first-child,.sheet:first-line{font-weight:700}
+.bar{font-family:var(--sans);display:flex;align-items:center;gap:12px;padding:6px 26px 18px;color:var(--ink-faint);font-size:12.5px}
+.bar b{color:var(--ink-soft);font-weight:600}
+.file{margin-left:auto;background:var(--accent);color:#fff;border:none;font-family:var(--sans);font-weight:650;font-size:13px;padding:9px 16px;border-radius:10px;cursor:pointer;opacity:0;transform:translateY(4px);transition:.16s;pointer-events:none}
+.file.on{opacity:1;transform:none;pointer-events:auto}
+.last{font-family:var(--sans);padding:0 26px 14px;font-size:12.5px;color:var(--ink-faint)}
+.last b{color:var(--ink-soft)}
+</style></head>
+<body>
+<div class="wrap">
+  <div class="top"><span class="date" id="date"></span><span class="count" id="count"></span><a href="./f-variants.html">variants ↗</a></div>
+  <div class="sheetwrap"><div class="sheet" id="sheet" contenteditable="true" spellcheck="false"></div></div>
+  <div class="bar"><span><b>⌘↵</b> keep &amp; new page · <b>esc</b> clear</span><button class="file" id="file">Keep note →</button></div>
+  <div class="last" id="last"></div>
+</div>
+<script>
+const sheet=document.getElementById("sheet"),fileBtn=document.getElementById("file"),count=document.getElementById("count"),last=document.getElementById("last");
+document.getElementById("date").textContent=new Date().toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"});
+let n=0;
+function upd(){const has=sheet.textContent.trim().length>0;fileBtn.classList.toggle("on",has)}
+sheet.addEventListener("input",upd);
+function keep(){const raw=sheet.textContent.trim();if(!raw)return;
+  const title=(sheet.innerText||raw).split("\n").map(s=>s.trim()).filter(Boolean)[0]||raw;
+  n++;count.textContent=n+" today";last.innerHTML='Kept · <b>'+esc(title.slice(0,60))+'</b>';
+  sheet.classList.add("turn");
+  setTimeout(()=>{sheet.textContent="";sheet.classList.remove("turn");upd();sheet.focus()},340)}
+function esc(s){return s.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]))}
+document.getElementById("file").onclick=keep;
+sheet.addEventListener("keydown",e=>{
+  if(e.key==="Enter"&&(e.metaKey||e.ctrlKey)){e.preventDefault();keep()}
+  if(e.key==="Escape"){sheet.textContent="";upd()}});
+document.querySelector(".sheetwrap").addEventListener("click",()=>sheet.focus());
+sheet.focus();
+</script>
+</body></html>

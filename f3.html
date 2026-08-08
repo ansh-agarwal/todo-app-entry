@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#FFFFFF"><title>Living list — type anywhere</title>
+<style>
+:root{--bg:#FFFFFF;--ink:#1F232A;--ink-soft:#5C636C;--ink-faint:#AEB4BC;--rule:#EDEDE8;--accent:#12A66B;--accent-2:#EAF7F0;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;--serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+.wrap{max-width:600px;margin:0 auto;height:100dvh;display:flex;flex-direction:column}
+.top{display:flex;align-items:center;gap:8px;padding:18px 24px 6px}
+.top h1{font-family:var(--serif);font-size:22px;font-weight:600}
+.top .date{font-size:12.5px;color:var(--ink-faint);font-weight:600}
+.top a{margin-left:auto;color:var(--ink-faint);text-decoration:none;font-size:13px;font-weight:600}
+.hint{padding:2px 26px 6px;font-size:12.5px;color:var(--ink-faint)}
+.hint b{color:var(--ink-soft);font-weight:600}
+.list{flex:1;overflow-y:auto;padding:8px 22px 40px}
+.item{display:flex;align-items:flex-start;gap:12px;padding:7px 4px;border-radius:8px}
+.item:hover{background:#Fafaf8}
+.item .cir{width:21px;height:21px;border-radius:50%;border:1.9px solid #CBD0D6;flex:0 0 auto;margin-top:3px;cursor:pointer;display:grid;place-items:center;transition:.13s}
+.item .cir:hover{border-color:var(--accent)}
+.item.done .cir{background:var(--accent);border-color:var(--accent)}
+.item.done .cir::after{content:"✓";color:#fff;font-size:12px;font-weight:700}
+.item .tx{flex:1;font-family:var(--serif);font-size:18px;line-height:1.5;color:var(--ink);outline:none;min-height:27px;word-break:break-word}
+.item.done .tx{color:var(--ink-faint);text-decoration:line-through}
+.item .tx:empty::before{content:attr(data-ph);color:var(--ink-faint);font-style:italic}
+</style></head>
+<body>
+<div class="wrap">
+  <div class="top"><h1>List</h1><span class="date" id="date"></span><a href="./f-variants.html">variants ↗</a></div>
+  <div class="hint">Type a line, press <b>↵</b> for the next. Tap a circle to tick it. It's all just… there — nothing to file.</div>
+  <div class="list" id="list"></div>
+</div>
+<script>
+const list=document.getElementById("list");
+document.getElementById("date").textContent=new Date().toLocaleDateString(undefined,{month:"long",day:"numeric"});
+function firstEmptyPh(){[...list.querySelectorAll(".tx")].forEach((t,i)=>{
+  t.setAttribute("data-ph", (list.children.length===1&&!t.textContent)?"List anything — dinner, ideas, tasks…":"")})}
+function addItem(afterEl,focus){
+  const it=document.createElement("div");it.className="item";
+  it.innerHTML='<span class="cir"></span><div class="tx" contenteditable="true" spellcheck="false" data-ph=""></div>';
+  const cir=it.querySelector(".cir"),tx=it.querySelector(".tx");
+  cir.onclick=()=>it.classList.toggle("done");
+  tx.addEventListener("keydown",e=>onKey(e,it,tx));
+  if(afterEl)afterEl.after(it);else list.appendChild(it);
+  firstEmptyPh();
+  if(focus)placeCaret(tx);
+  return it;
+}
+function onKey(e,it,tx){
+  if(e.key==="Enter"){e.preventDefault();const ni=addItem(it,true);}
+  else if(e.key==="Backspace"&&!tx.textContent&&caretAtStart(tx)){
+    const prev=it.previousElementSibling;
+    if(prev){e.preventDefault();const ptx=prev.querySelector(".tx");it.remove();placeCaretEnd(ptx);firstEmptyPh()}
+  }
+  setTimeout(firstEmptyPh,0);
+}
+function caretAtStart(el){const s=window.getSelection();return s.rangeCount&&s.getRangeAt(0).collapsed&&s.anchorOffset===0}
+function placeCaret(el){el.focus();const r=document.createRange();r.selectNodeContents(el);r.collapse(true);const s=getSelection();s.removeAllRanges();s.addRange(r)}
+function placeCaretEnd(el){el.focus();const r=document.createRange();r.selectNodeContents(el);r.collapse(false);const s=getSelection();s.removeAllRanges();s.addRange(r)}
+addItem(null,true);
+list.addEventListener("input",firstEmptyPh);
+</script>
+</body></html>
