@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#FFFFFF">
+<title>Today — four answers</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
+<style>
+:root{
+  --bg:#FFFFFF; --ground:#FAFAF9; --ink:#1C1C1E; --ink-soft:#5A5A5E; --ink-faint:#AEAEB2;
+  --rule:#E7E7EA; --rule-2:#F1F1F3; --cbrule:#C7C7CC;
+  --accent:#E5A50A; --accent-soft:#FBF1D8;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;line-height:1.55}
+.page{max-width:1080px;margin:0 auto;padding:56px 24px 90px}
+
+/* ---------- page type ---------- */
+.k{font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;color:var(--ink-faint);text-transform:uppercase}
+.hd{max-width:70ch;padding-bottom:34px;border-bottom:1px solid var(--rule)}
+.hd h1{font-size:clamp(27px,3.2vw,36px);font-weight:700;letter-spacing:-.02em;line-height:1.15;margin:12px 0 16px}
+.hd p{font-size:16.5px;color:var(--ink-soft);max-width:66ch}
+.hd p + p{margin-top:12px}
+.hd b{color:var(--ink);font-weight:600}
+.hd .back{float:right;font-family:var(--mono);font-size:12px;color:var(--ink-faint);text-decoration:none}
+.hd .back:hover{color:var(--accent)}
+.qs{margin-top:22px;display:flex;flex-direction:column;gap:0;border-left:2px solid var(--rule);padding-left:16px}
+.qs div{font-size:14.5px;color:var(--ink-soft);padding:5px 0}
+.qs span{font-family:var(--mono);font-size:11.5px;color:var(--ink-faint);margin-right:9px}
+
+/* ---------- concept section ---------- */
+.cc{padding-top:52px}
+.cc + .cc{border-top:1px solid var(--rule);margin-top:52px}
+.ch{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.ch .n{font-family:var(--mono);font-size:12px;color:var(--accent);font-weight:600}
+.ch h2{font-size:22px;font-weight:700;letter-spacing:-.015em}
+.ch .tl{font-family:var(--mono);font-size:11.5px;color:var(--ink-faint);margin-left:auto}
+.thesis{font-size:16.5px;color:var(--ink);max-width:64ch;margin-top:10px}
+.thesis b{font-weight:600}
+.split{display:grid;grid-template-columns:400px 1fr;gap:44px;margin-top:26px;align-items:start}
+@media(max-width:900px){.split{grid-template-columns:1fr;gap:28px}}
+
+.stage{display:flex;flex-direction:column;align-items:flex-start}
+.hint{font-family:var(--mono);font-size:11.5px;color:var(--ink-faint);margin-top:11px;line-height:1.65;max-width:400px}
+.hint b{color:var(--ink-soft);font-weight:400;border-bottom:1px solid var(--rule)}
+
+.rat h3{font-size:12px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);font-weight:600;margin-top:22px;margin-bottom:7px}
+.rat h3:first-child{margin-top:2px}
+.rat ul{list-style:none;display:flex;flex-direction:column;gap:8px}
+.rat li{font-size:15px;color:var(--ink-soft);padding-left:15px;position:relative;max-width:60ch}
+.rat li::before{content:"";position:absolute;left:0;top:10px;width:5px;height:1px;background:var(--cbrule)}
+.rat li b{color:var(--ink);font-weight:600}
+.rat p{font-size:15px;color:var(--ink-soft);max-width:60ch}
+.rat p b{color:var(--ink);font-weight:600}
+
+/* ---------- device ---------- */
+.dev{width:100%;max-width:400px;background:var(--bg);border:1px solid var(--rule);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;height:552px;position:relative}
+.dtop{flex:0 0 auto;padding:15px 20px 13px;border-bottom:1px solid var(--rule-2);display:flex;align-items:baseline;gap:9px}
+.dtop .date{font-family:var(--mono);font-size:11.5px;color:var(--ink-faint)}
+.dtop .meta{font-family:var(--mono);font-size:11px;color:var(--ink-faint);margin-left:auto}
+.dtop .reset{font-family:var(--mono);font-size:11px;color:var(--ink-faint);background:none;border:none;cursor:pointer;padding:0}
+.dtop .reset:hover{color:var(--accent)}
+.dbody{flex:1;overflow-y:auto;padding:18px 20px 26px}
+.dfoot{flex:0 0 auto;border-top:1px solid var(--rule-2);padding:10px 20px;font-family:var(--mono);font-size:11px;color:var(--ink-faint);display:flex;align-items:center;gap:8px}
+
+h1.dh{font-size:23px;font-weight:700;letter-spacing:-.01em;line-height:1.25;margin-bottom:2px}
+.dsub{font-family:var(--mono);font-size:11.5px;color:var(--ink-faint);margin-bottom:16px}
+
+/* checkbox + row, straight from the capture surface */
+.cb{width:19px;height:19px;border-radius:50%;border:1.5px solid var(--cbrule);cursor:pointer;display:grid;place-items:center;transition:.13s;flex:0 0 auto;margin-top:3px;background:none;padding:0}
+.cb:hover{border-color:var(--accent)}
+.cb.on{background:var(--accent);border-color:var(--accent);animation:cbpop .2s ease}
+.cb.on::after{content:"✓";color:#fff;font-size:12px;font-weight:700;line-height:1}
+@keyframes cbpop{0%{transform:scale(.72)}60%{transform:scale(1.1)}100%{transform:scale(1)}}
+.row{display:flex;gap:11px;align-items:flex-start;padding:6px 0}
+.ttx{flex:1;font-size:17px;line-height:1.5;word-break:break-word}
+.row.done .ttx{color:var(--ink-faint);text-decoration:line-through}
+.why{font-family:var(--mono);font-size:11px;color:var(--ink-faint);margin-top:3px;cursor:pointer;display:inline-flex;gap:5px;align-items:center}
+.why:hover{color:var(--accent)}
+.why .cv{display:inline-block;transition:transform .16s}
+.why.open .cv{transform:rotate(90deg)}
+.quote{margin-top:8px;padding:2px 0 2px 13px;border-left:1.5px solid var(--rule);font-size:15px;line-height:1.5;color:var(--ink-soft)}
+.quote .qm{display:block;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint);margin-top:6px}
+.mkn{flex:0 0 auto;width:19px;margin-top:4px;text-align:center;color:var(--ink-faint);font-size:14px;line-height:1}
+.seclabel{font-family:var(--mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-faint);margin:22px 0 4px;display:flex;align-items:center;gap:9px}
+.seclabel::after{content:"";flex:1;height:1px;background:var(--rule-2)}
+.mini{background:none;border:1px solid var(--rule);border-radius:7px;font-family:var(--mono);font-size:10.5px;color:var(--ink-soft);padding:3px 8px;cursor:pointer;flex:0 0 auto}
+.mini:hover{border-color:var(--accent);color:var(--accent)}
+.foldline{font-family:var(--mono);font-size:11.5px;color:var(--ink-faint);cursor:pointer;padding:9px 0;display:flex;align-items:center;gap:8px;border-top:1px solid var(--rule-2);margin-top:14px}
+.foldline:hover{color:var(--ink-soft)}
+.foldline .cv{transition:transform .16s}
+.foldline.open .cv{transform:rotate(90deg)}
+.dim .ttx{color:var(--ink-soft);font-size:16px}
+
+/* ---------- C1 : the three ---------- */
+.slot{display:flex;gap:11px;align-items:flex-start;padding:13px 0;border-bottom:1px solid var(--rule-2)}
+.slot .ix{font-family:var(--mono);font-size:11px;color:var(--ink-faint);width:12px;flex:0 0 auto;margin-top:6px}
+.slot.empty{cursor:pointer}
+.slot.empty .ph{flex:1;font-size:17px;color:var(--ink-faint);line-height:1.5}
+.slot.empty:hover .ph{color:var(--accent)}
+.slot .rel{opacity:0;background:none;border:none;color:var(--ink-faint);font-size:14px;cursor:pointer;padding:2px 2px;transition:.15s;line-height:1}
+.slot:hover .rel{opacity:1}
+.slot .rel:hover{color:var(--ink)}
+.c1done{padding:26px 0 6px}
+.c1done .big{font-size:23px;font-weight:700;letter-spacing:-.01em;line-height:1.3}
+.c1done .sm{font-size:15px;color:var(--ink-soft);margin-top:9px;max-width:36ch}
+.c1done .acts{display:flex;gap:10px;margin-top:20px;align-items:center;flex-wrap:wrap}
+.c1done .stop{font-family:var(--mono);font-size:11px;color:var(--ink-faint)}
+.c1list .row{padding:4px 0}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--rule);border-radius:14px 14px 0 0;max-height:78%;display:flex;flex-direction:column;transform:translateY(102%);transition:transform .26s cubic-bezier(.3,.8,.3,1);z-index:3}
+.sheet.on{transform:translateY(0)}
+.sheet .sh{padding:13px 20px 9px;display:flex;align-items:baseline;gap:8px;border-bottom:1px solid var(--rule-2)}
+.sheet .sh b{font-size:15px;font-weight:600}
+.sheet .sh .x{margin-left:auto;background:none;border:none;color:var(--ink-faint);font-size:15px;cursor:pointer;line-height:1}
+.sheet .sl{overflow-y:auto;padding:6px 20px 20px}
+.pick{display:flex;gap:11px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--rule-2);cursor:pointer}
+.pick:hover .pt{color:var(--accent)}
+.pick .pt{flex:1;font-size:16px;line-height:1.45}
+.pick .pk{font-family:var(--mono);font-size:10px;color:var(--ink-faint);border:1px solid var(--rule);border-radius:5px;padding:1px 6px;margin-top:3px;flex:0 0 auto}
+.scrim{position:absolute;inset:0;background:rgba(255,255,255,.62);opacity:0;pointer-events:none;transition:.2s;z-index:2}
+.scrim.on{opacity:1;pointer-events:auto}
+
+/* ---------- C2 : today's page ---------- */
+.carried{padding-bottom:6px;margin-bottom:6px;border-bottom:1px solid var(--rule-2)}
+.carried .row{padding:4px 0}
+.carried .ttx{color:var(--ink-soft)}
+.carried .drop{opacity:0;background:none;border:none;color:var(--ink-faint);cursor:pointer;font-size:13px;padding:0 3px;transition:.15s;margin-top:5px}
+.carried .row:hover .drop{opacity:1}
+.carried .drop:hover{color:var(--ink)}
+.pblk{display:flex;gap:10px;align-items:flex-start;padding:3px 0}
+.pmk{flex:0 0 auto;margin-top:4px;width:19px;display:flex;justify-content:center}
+.pblk[data-type="text"] .pmk{display:none}
+.pmk.bul{color:var(--ink-faint);font-size:17px;line-height:1}
+.ptx{flex:1;outline:none;font-size:17px;line-height:1.55;min-height:27px;word-break:break-word}
+.pblk.done .ptx{color:var(--ink-faint);text-decoration:line-through}
+.ptx:empty::before{content:attr(data-ph);color:var(--ink-faint);pointer-events:none}
+
+/* ---------- C4 : capacity ---------- */
+.band{margin-bottom:6px}
+.bhead{display:flex;align-items:baseline;gap:9px;font-family:var(--mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-faint);padding:14px 0 4px;border-bottom:1px solid var(--rule-2)}
+.bhead .cap{margin-left:auto;letter-spacing:0;text-transform:none}
+.bhead .cap.over{color:var(--accent)}
+.band .row{cursor:pointer;position:relative;transition:padding .15s}
+.band .row.spill{padding-left:11px}
+.band .row.spill::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:1.5px;background:var(--accent)}
+.chips{display:flex;gap:6px;padding:2px 0 10px 30px;flex-wrap:wrap}
+.gauge{height:3px;background:var(--rule-2);border-radius:2px;overflow:hidden;margin:14px 0 2px;display:flex}
+.gauge i{display:block;height:100%;background:var(--cbrule)}
+.gauge i.over{background:var(--accent)}
+.notestrip{font-family:var(--mono);font-size:11px;color:var(--ink-faint);border:1px solid var(--rule);border-radius:9px;padding:9px 12px;margin-bottom:4px;cursor:pointer}
+.notestrip:hover{border-color:var(--cbrule)}
+.notestrip .nl{font-family:var(--sans);font-size:15px;color:var(--ink-soft);line-height:1.45;margin-top:8px;padding-left:11px;border-left:1.5px solid var(--rule)}
+
+/* ---------- recommendation ---------- */
+.reco{margin-top:56px;padding-top:34px;border-top:1px solid var(--rule)}
+.reco h2{font-size:22px;font-weight:700;letter-spacing:-.015em;margin:10px 0 14px}
+.reco p{font-size:16.5px;color:var(--ink-soft);max-width:68ch;margin-bottom:13px}
+.reco p b{color:var(--ink);font-weight:600}
+.verdicts{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:0;margin-top:26px;border-top:1px solid var(--rule)}
+.vd{padding:16px 18px 18px;border-bottom:1px solid var(--rule);border-right:1px solid var(--rule)}
+.vd:last-child{border-right:none}
+@media(max-width:900px){.vd{border-right:none}}
+.vd .t{font-family:var(--mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-faint)}
+.vd .t.win{color:var(--accent)}
+.vd h4{font-size:15.5px;font-weight:650;margin:7px 0 6px}
+.vd p{font-size:14px;color:var(--ink-soft);margin:0;max-width:none}
+.pfoot{margin-top:48px;padding-top:20px;border-top:1px solid var(--rule);font-family:var(--mono);font-size:11.5px;color:var(--ink-faint)}
+.pfoot a{color:var(--ink-soft);text-decoration:none;border-bottom:1px solid var(--rule)}
+.pfoot a:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="hd">
+  <a class="back" href="./note.html">capture ↗</a>
+  <div class="k">Component 2 · Today · concepts</div>
+  <h1>Capture is one stream. So what is Today?</h1>
+  <p>In the locked capture surface a note and a task are typed the same way, into the same document. That decision quietly breaks the usual answer to “what goes in Today”, because the stream isn’t a task list you can filter — it’s a record of what was on your mind.</p>
+  <p>Four different answers below, each one built far enough to click. They are not variations: they disagree with each other about what the surface is <b>for</b>.</p>
+  <div class="qs">
+    <div><span>a</span>Today = tasks dated today. The obvious answer, and probably too thin.</div>
+    <div><span>b</span>Today = something you choose, not something computed for you.</div>
+    <div><span>c</span>Notes are the reason tasks exist. How does that context show up without a feed?</div>
+  </div>
+</header>
+
+<!-- ============ CONCEPT 1 ============ -->
+<section class="cc" id="c1">
+  <div class="ch"><span class="n">01</span><h2>The Three</h2><span class="tl">intention · hard cap</span></div>
+  <p class="thesis">Today is a <b>promise you make in the morning</b>, not a query result. Three slots, empty at 7am. Nothing arrives in them on its own — every item is there because you put it there. Everything else in the stream still exists; it is simply not today’s problem.</p>
+  <div class="split">
+    <div class="stage">
+      <div class="dev" id="d1">
+        <div class="dtop"><span class="date" data-date></span><button class="reset" data-r="1">reset</button></div>
+        <div class="dbody" id="b1"></div>
+        <div class="dfoot" id="f1"></div>
+        <div class="scrim" id="scrim1"></div>
+        <div class="sheet" id="sheet1">
+          <div class="sh"><b>Pick from the stream</b><button class="x" id="sx1">✕</button></div>
+          <div class="sl" id="sl1"></div>
+        </div>
+      </div>
+      <div class="hint">Tap an empty slot to fill it · picking a <b>note</b> promotes it into a task and keeps the note as its reason · tick all three to see the mid-morning state</div>
+    </div>
+    <div class="rat">
+      <h3>Good at</h3>
+      <ul>
+        <li><b>It makes the hard choice visible.</b> A filtered list lets you avoid deciding; three slots make the decision the interaction.</li>
+        <li><b>Completion is real.</b> The list can actually end — which no date-filtered Today ever does.</li>
+        <li><b>Notes get a purpose.</b> Promotion from the stream is the natural way to fill a slot, so notes stop being a graveyard.</li>
+        <li><b>Nothing is deleted.</b> Unpicked items sit under one collapsed line with no colour, no badge and no count of shame.</li>
+      </ul>
+      <h3>What it costs</h3>
+      <ul>
+        <li><b>Three is a lie on some days.</b> A day of eleven small errands doesn’t fit the model, and forcing it feels precious.</li>
+        <li><b>Deadlines don’t care.</b> If you don’t pick the thing that’s due, nothing catches it — the surface needs a quiet, non-nagging line for dated items you skipped.</li>
+        <li>Requires a <b>ritual</b>. If you never do the morning pick, you land on three empty slots and the app is useless.</li>
+      </ul>
+      <h3>Finishing all three at 10:40</h3>
+      <p>The mistake would be to auto-refill. The screen instead states plainly that the commitment is met, and offers exactly <b>one</b> more slot — never another three — beside an equally weighted “or stop”. Adding a fourth is a second, deliberate promise, not the list quietly regenerating itself.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CONCEPT 2 ============ -->
+<section class="cc" id="c2">
+  <div class="ch"><span class="n">02</span><h2>Today’s Page</h2><span class="tl">document · no list at all</span></div>
+  <p class="thesis">Today isn’t a view of your data — Today <b>is a note</b>, dated today, and it is the same editor as capture. You don’t “add to today”, you write today. Tasks are lines in that page; yesterday’s unfinished lines appear at the top, greyed, and you choose to keep or drop each one.</p>
+  <div class="split">
+    <div class="stage">
+      <div class="dev" id="d2">
+        <div class="dtop"><span class="date" data-date></span><span class="meta">page</span></div>
+        <div class="dbody" id="b2"></div>
+        <div class="dfoot">↵ new line · type <span style="color:var(--ink-soft)">[]&nbsp;</span> or <span style="color:var(--ink-soft)">-&nbsp;</span> to change a line</div>
+      </div>
+      <div class="hint">Actually type in it · <b>[] </b>makes a task, <b>- </b>makes a bullet · <b>×</b> drops a carried line</div>
+    </div>
+    <div class="rat">
+      <h3>Good at</h3>
+      <ul>
+        <li><b>Zero new concepts.</b> If capture is a document, this is capture with today’s date on it — one mental model for the whole product.</li>
+        <li><b>Context is free.</b> The note explaining the task is literally the line above it. No linking feature required.</li>
+        <li><b>Honest carry-over.</b> Yesterday’s leftovers don’t silently roll forward; you re-type or dismiss them, which is a real review.</li>
+        <li>Writing prose <i>next to</i> your tasks is where thinking actually happens — this is the only concept that allows it.</li>
+      </ul>
+      <h3>What it costs</h3>
+      <ul>
+        <li><b>No overview.</b> Something due today that you didn’t write onto the page is invisible. That is a correctness bug for anyone with deadlines.</li>
+        <li><b>It rots.</b> By 4pm the page is a scroll of half-thoughts and struck-through lines; there is no structure to lean on.</li>
+        <li><b>Bad on a phone</b> in a queue. Free-form editing is a laptop posture; the other three work one-thumbed.</li>
+        <li>Retrieval moves to search. “What am I meant to do?” becomes a query, not a glance.</li>
+      </ul>
+      <h3>Where it belongs</h3>
+      <p>Not as the Today surface, but this is almost certainly the right shape for <b>the day’s journal</b> underneath one — and it’s the cheapest concept to build, because it’s the capture editor with a date filter.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CONCEPT 3 ============ -->
+<section class="cc" id="c3">
+  <div class="ch"><span class="n">03</span><h2>Because</h2><span class="tl">filter · with provenance</span></div>
+  <p class="thesis">Keep the obvious answer — Today is what’s dated today — but fix the thing that makes it thin: a bare task line has <b>lost its reason</b>. Every task remembers the note it came out of, and one tap unfolds that note in place. Related notes you never promoted sit at the bottom, one tap from becoming work.</p>
+  <div class="split">
+    <div class="stage">
+      <div class="dev" id="d3">
+        <div class="dtop"><span class="date" data-date></span><span class="meta" id="m3"></span><button class="reset" data-r="3" style="margin-left:12px">reset</button></div>
+        <div class="dbody" id="b3"></div>
+        <div class="dfoot">context stays folded until you ask for it</div>
+      </div>
+      <div class="hint">Tap <b>from a note</b> under a task to unfold why it exists · <b>→ today</b> promotes a note into the list</div>
+    </div>
+    <div class="rat">
+      <h3>Good at</h3>
+      <ul>
+        <li><b>It answers the actual morning question</b>, which is rarely “what” and almost always “wait, why did I write this”.</li>
+        <li><b>Calm by default.</b> Context is one line of monospace until requested — it can’t become a feed, because nothing expands on its own.</li>
+        <li><b>Promotion has a home.</b> Notes surface exactly where a decision about them is cheap, instead of in a separate inbox you never open.</li>
+        <li><b>Least disruptive.</b> It’s the standard Today everyone already knows, so it needs no ritual and no teaching.</li>
+      </ul>
+      <h3>What it costs</h3>
+      <ul>
+        <li><b>Still computed.</b> You never decide what today is; the date field does, and an eleven-item Today is as demoralising as ever.</li>
+        <li><b>Depends on links existing.</b> If the promotion path isn’t how tasks are usually born, most rows have no “why” and the idea evaporates.</li>
+        <li><b>Relevance is a guess.</b> Choosing which unpromoted notes to show is a ranking problem, and a wrong guess is clutter.</li>
+        <li>The stream doesn’t get smaller. It just gets better annotated.</li>
+      </ul>
+      <h3>The real contribution</h3>
+      <p>“Why this task exists” is a <b>mechanic, not a concept</b>. It costs one monospace line, it makes the notes-and-todos-are-one-object bet legible, and it can be dropped into any of the other three.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CONCEPT 4 ============ -->
+<section class="cc" id="c4">
+  <div class="ch"><span class="n">04</span><h2>Room</h2><span class="tl">capacity · shaped by time</span></div>
+  <p class="thesis">The thing that ruins Today isn’t <i>which</i> items — it’s <b>how many</b>. So Today is a container with visible walls: three parts of a day, each with room for a couple of things. You don’t pick three; you place everything, and the surface tells you honestly when a stretch is over-subscribed instead of pretending eleven tasks fit.</p>
+  <div class="split">
+    <div class="stage">
+      <div class="dev" id="d4">
+        <div class="dtop"><span class="date" data-date></span><span class="meta" id="m4"></span><button class="reset" data-r="4" style="margin-left:12px">reset</button></div>
+        <div class="dbody" id="b4"></div>
+        <div class="dfoot">notes cost nothing — they never take a slot</div>
+      </div>
+      <div class="hint">Tap any task to move it between parts of the day, or out of today entirely · the amber rule marks what doesn’t fit</div>
+    </div>
+    <div class="rat">
+      <h3>Good at</h3>
+      <ul>
+        <li><b>It argues with you.</b> The only concept that tells you the plan is impossible before the day proves it at 6pm.</li>
+        <li><b>Triage is continuous</b>, not a morning ceremony — so it survives the days you skip the ritual.</li>
+        <li><b>Overflow is visible, not blocked.</b> You can over-subscribe; you just can’t do it unknowingly.</li>
+        <li>Maps onto how days actually break — before lunch, after lunch, evening — without touching a calendar.</li>
+      </ul>
+      <h3>What it costs</h3>
+      <ul>
+        <li><b>Capacity is fiction.</b> “Room for two” assumes tasks are comparable; renewing a domain and rewriting onboarding are not the same object.</li>
+        <li><b>Most work per item.</b> Every task needs placing, so a busy stream turns into an admin session.</li>
+        <li><b>Notes are second class</b> here by design — they don’t consume capacity, so they sit in a strip at the top and are easy to ignore.</li>
+        <li>Ambient guilt: an over-subscribed band is a permanent amber mark on your day.</li>
+      </ul>
+      <h3>Where it belongs</h3>
+      <p>Phase two. The capacity idea is genuinely good, but it only earns its keep once there’s enough history to make the numbers <b>real</b> rather than a setting you invented.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ RECOMMENDATION ============ -->
+<section class="reco">
+  <div class="k">Recommendation</div>
+  <h2>Ship 01, with 03’s provenance line built into it.</h2>
+  <p><b>The Three is the only concept that changes the product’s promise.</b> Everything else on the market — Things, Todoist, TickTick, Reminders — computes Today from a date field, so competing there means competing on filters. A surface where the list is a commitment you made, can be finished, and never refills itself is a different product, and it’s the one that fits a capture stream you’re never going to fully process.</p>
+  <p>On its own it has one real hole: a hard cap of three ignores things that are actually due. That’s a line item, not a redesign — a single quiet monospace row under the three (“<span style="font-family:var(--mono);font-size:14px">2 dated today you didn’t pick</span>”), no red, tappable, and the hole is closed without the surface turning back into a filter.</p>
+  <p>From 03, take the <b>“from a note” line</b> and put it under any picked item that came out of the stream. It is the cheapest possible expression of the notes-and-todos-are-the-same-object bet — one line of monospace, folded by default, unfolding the note that caused the task. That single detail is what makes Today feel like it belongs to <i>this</i> app rather than to any other list.</p>
+  <p>Hold 02 as the day’s journal beneath Today rather than as Today itself — it’s the capture editor with a date, so it costs almost nothing later — and hold 04 until real completion history exists, because invented capacity numbers are worse than none.</p>
+  <div class="verdicts">
+    <div class="vd"><div class="t win">Build</div><h4>01 · The Three</h4><p>The spine. Add the dated-items line and the promotion path from the stream.</p></div>
+    <div class="vd"><div class="t win">Graft in</div><h4>03 · Because</h4><p>Not a screen — a row detail. Provenance folded under picked items.</p></div>
+    <div class="vd"><div class="t">Later, below</div><h4>02 · Today’s Page</h4><p>Right shape for the journal, wrong shape for the surface you check.</p></div>
+    <div class="vd"><div class="t">Phase two</div><h4>04 · Room</h4><p>Good instinct, needs history before the numbers mean anything.</p></div>
+  </div>
+</section>
+
+<div class="pfoot">Component 1 (locked): <a href="./note.html">capture</a> · prior work: <a href="./today-research.html">Today research</a>, <a href="./app-merged.html">merged concept</a> · <a href="./index.html">entry-point tests</a></div>
+</div>
+
+<script>
+"use strict";
+/* ------------------------------------------------------------------ shared */
+const $=(s,r)=>(r||document).querySelector(s);
+const $$=(s,r)=>[...(r||document).querySelectorAll(s)];
+function el(tag,cls,txt){const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e}
+const NOW=new Date();
+$$("[data-date]").forEach(n=>n.textContent=NOW.toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"}));
+const clock=NOW.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"});
+let _id=0;const uid=()=>"i"+(++_id);
+
+function cbFor(item,onToggle){
+  const b=el("button","cb"+(item.done?" on":""));
+  b.setAttribute("aria-label","toggle done");
+  b.onclick=()=>{item.done=!item.done;b.classList.toggle("on",item.done);onToggle()};
+  return b;
+}
+
+/* ============================================================ CONCEPT 1 */
+const C1={};
+function seed1(){return[
+  {id:uid(),kind:"task",text:"Rewrite the second onboarding screen",why:"Krishni: the drop-off is at the second screen, not the first. Everyone has been fixing the wrong one.",when:"Tue"},
+  {id:uid(),kind:"task",text:"Reply to the migration-window thread",why:null,when:null,dated:true},
+  {id:uid(),kind:"task",text:"Renew the domain",why:null,when:null,dated:true},
+  {id:uid(),kind:"task",text:"Book the dentist",why:null,when:null},
+  {id:uid(),kind:"note",text:"If we charge ₹149 the annual price has to read as a decision, not a discount.",why:null,when:"yesterday"},
+  {id:uid(),kind:"note",text:"A weekly review that is just three questions. Nothing else.",why:null,when:"Sat"},
+  {id:uid(),kind:"task",text:"Read the staff-engineer post I saved",why:null,when:null},
+];}
+function c1init(){
+  C1.pool=seed1();C1.slots=[null,null,null];C1.extra=[];C1.target=0;C1.showRest=false;
+  c1sheet(false);c1render();
+}
+function c1render(){
+  const b=$("#b1");b.innerHTML="";
+  const filled=C1.slots.filter(Boolean);
+  const allDone=filled.length===3&&filled.every(i=>i.done)&&C1.extra.every(i=>i.done);
+
+  b.appendChild(el("h1","dh","Today"));
+  b.appendChild(el("div","dsub",allDone?"kept":(filled.length+" of 3 chosen")));
+
+  if(allDone){
+    const d=el("div","c1done");
+    d.appendChild(el("div","big","That’s the day you set."));
+    d.appendChild(el("div","sm","It’s "+clock+". Three things, done. Nothing is going to arrive here on its own."));
+    const acts=el("div","acts");
+    const one=el("button","mini","＋ one more thing");
+    one.onclick=()=>{C1.target=3+C1.extra.length;c1sheet(true)};
+    acts.appendChild(one);
+    acts.appendChild(el("span","stop","or stop — the list is allowed to be empty"));
+    d.appendChild(acts);
+    b.appendChild(d);
+    b.appendChild(el("div","seclabel","kept"));
+    const doneList=el("div","c1list");
+    C1.slots.concat(C1.extra).forEach((it,i)=>doneList.appendChild(c1row(it,i,true)));
+    b.appendChild(doneList);
+  }else{
+    C1.slots.forEach((it,i)=>{
+      if(!it){
+        const s=el("div","slot empty");
+        s.appendChild(el("span","ix",String(i+1)));
+        s.appendChild(el("div","ph",i===0?"Choose the thing that matters most":"Choose something for today"));
+        s.onclick=()=>{C1.target=i;c1sheet(true)};
+        b.appendChild(s);
+      }else b.appendChild(c1row(it,i));
+    });
+    C1.extra.forEach((it,i)=>b.appendChild(c1row(it,3+i)));
+  }
+
+  /* dated items you did not pick — the quiet correctness line */
+  const missed=C1.pool.filter(i=>i.dated&&i.kind==="task");
+  if(missed.length&&!allDone){
+    const m=el("div",null,missed.length+" dated today you didn’t pick");
+    m.style.cssText="font-family:var(--mono);font-size:11px;color:var(--ink-faint);padding:12px 0 0";
+    b.appendChild(m);
+  }
+
+  /* everything else, behind one line */
+  const f=el("div","foldline"+(C1.showRest?" open":""));
+  f.appendChild(el("span","cv","›"));
+  f.appendChild(el("span",null,"The rest of the stream · "+C1.pool.length));
+  f.onclick=()=>{C1.showRest=!C1.showRest;c1render()};
+  b.appendChild(f);
+  if(C1.showRest){
+    const list=el("div","dim");
+    C1.pool.forEach(it=>{
+      const r=el("div","row");
+      r.appendChild(el("span","mkn",it.kind==="note"?"»":"○"));
+      const t=el("div","ttx",it.text);
+      t.style.cssText="font-size:15.5px;color:var(--ink-soft)";
+      r.appendChild(t);
+      list.appendChild(r);
+    });
+    b.appendChild(list);
+  }
+  $("#f1").textContent=allDone?"nothing refills automatically":"three slots · they do not fill themselves";
+}
+function c1row(it,i,plain){
+  const s=el("div","slot");
+  s.appendChild(el("span","ix",String(i+1)));
+  s.appendChild(cbFor(it,c1render));
+  const body=el("div");body.style.flex="1";
+  const t=el("div","ttx",it.text);
+  if(it.done){t.style.color="var(--ink-faint)";t.style.textDecoration="line-through"}
+  body.appendChild(t);
+  if(it.why){
+    const w=el("div","why"+(it.openWhy?" open":""));
+    w.appendChild(el("span","cv","›"));
+    w.appendChild(el("span",null,(it.promoted?"you wrote this · ":"from a note · ")+(it.when||"earlier")));
+    w.onclick=e=>{e.stopPropagation();it.openWhy=!it.openWhy;c1render()};
+    body.appendChild(w);
+    if(it.openWhy)body.appendChild(el("div","quote",it.why));
+  }
+  s.appendChild(body);
+  if(!plain){
+    const rel=el("button","rel","×");
+    rel.title="put it back in the stream";
+    rel.onclick=()=>{
+      it.done=false;it.openWhy=false;
+      C1.pool.unshift({id:it.id,kind:"task",text:it.text,why:it.promoted?null:it.why,when:it.when});
+      if(i<3)C1.slots[i]=null;else C1.extra.splice(i-3,1);
+      c1render();
+    };
+    s.appendChild(rel);
+  }
+  return s;
+}
+function c1sheet(on){
+  $("#sheet1").classList.toggle("on",on);
+  $("#scrim1").classList.toggle("on",on);
+  if(!on)return;
+  const sl=$("#sl1");sl.innerHTML="";
+  if(!C1.pool.length){
+    const e=el("div",null,"The stream is empty.");
+    e.style.cssText="font-size:15px;color:var(--ink-faint);padding:14px 0";
+    sl.appendChild(e);return;
+  }
+  C1.pool.forEach(it=>{
+    const p=el("div","pick");
+    p.appendChild(el("span","pk",it.kind==="note"?"note":"task"));
+    p.appendChild(el("div","pt",it.text));
+    p.onclick=()=>{
+      C1.pool.splice(C1.pool.indexOf(it),1);
+      const picked={id:it.id,text:it.text,done:false,why:it.why,when:it.when,openWhy:false};
+      if(it.kind==="note"){picked.why=it.text;picked.promoted=true}
+      if(C1.target<3)C1.slots[C1.target]=picked;else C1.extra.push(picked);
+      c1sheet(false);c1render();
+    };
+    sl.appendChild(p);
+  });
+}
+
+/* ============================================================ CONCEPT 2 */
+function c2init(){
+  const b=$("#b2");b.innerHTML="";
+  const carried=el("div","carried");
+  const lbl=el("div","seclabel","carried from yesterday");lbl.style.margin="0 0 2px";
+  carried.appendChild(lbl);
+  ["Reply to the migration-window thread","Renew the domain"].forEach(txt=>{
+    const r=el("div","row");
+    const item={done:false};
+    r.appendChild(cbFor(item,()=>r.classList.toggle("done",item.done)));
+    r.appendChild(el("div","ttx",txt));
+    const d=el("button","drop","×");d.title="not today";
+    d.onclick=()=>r.remove();
+    r.appendChild(d);
+    carried.appendChild(r);
+  });
+  b.appendChild(carried);
+
+  const doc=el("div","pdoc");b.appendChild(doc);
+  [
+    ["text","Onboarding — the drop-off is on screen two, not screen one. Krishni was right and we’ve been fixing the wrong thing for a fortnight."],
+    ["task","Rewrite the second screen’s copy"],
+    ["task","Pull last week’s funnel numbers to check"],
+    ["text","Pricing: ₹149 monthly only works if annual reads as a decision, not a discount."],
+    ["bullet","ask what the annual number should actually be"],
+    ["text",""]
+  ].forEach(pair=>doc.appendChild(mkBlk(doc,pair[0],pair[1])));
+  ph(doc);
+}
+function mkBlk(doc,type,text){
+  const b=el("div","pblk");b.dataset.type=type||"text";
+  const mk=el("span","pmk");
+  const tx=el("div","ptx");tx.contentEditable="true";tx.spellcheck=false;if(text)tx.textContent=text;
+  b.appendChild(mk);b.appendChild(tx);
+  paint(b);
+  tx.addEventListener("keydown",e=>{
+    if(e.key==="Enter"){
+      e.preventDefault();
+      if(b.dataset.type!=="text"&&!tx.textContent.trim()){setT(b,"text");ph(doc);return}
+      const nb=mkBlk(doc,b.dataset.type==="task"?"task":b.dataset.type==="bullet"?"bullet":"text","");
+      b.after(nb);caretEnd($(".ptx",nb));ph(doc);return;
+    }
+    if(e.key==="Backspace"&&!tx.textContent&&atStart()){
+      if(b.dataset.type!=="text"){e.preventDefault();setT(b,"text");ph(doc);return}
+      const prev=b.previousElementSibling;
+      if(prev&&prev.classList.contains("pblk")){e.preventDefault();const p=$(".ptx",prev);b.remove();caretEnd(p);ph(doc)}
+    }
+  });
+  tx.addEventListener("input",()=>{
+    if(b.dataset.type==="text"){
+      const t=tx.textContent;
+      if(/^[-*]\s/.test(t)){tx.textContent=t.replace(/^[-*]\s/,"");setT(b,"bullet");caretEnd(tx)}
+      else if(/^(\[\]|\[ \]|\(\))\s/.test(t)){tx.textContent=t.replace(/^(\[\]|\[ \]|\(\))\s/,"");setT(b,"task");caretEnd(tx)}
+    }
+    ph(doc);
+  });
+  return b;
+}
+function paint(b){
+  const mk=$(".pmk",b);mk.className="pmk";mk.innerHTML="";
+  if(b.dataset.type==="bullet"){mk.classList.add("bul");mk.textContent="•"}
+  else if(b.dataset.type==="task"){
+    const cb=el("button","cb");cb.style.marginTop="0";
+    cb.onclick=()=>{const on=b.classList.toggle("done");cb.classList.toggle("on",on)};
+    mk.appendChild(cb);
+  }
+}
+function setT(b,t){b.dataset.type=t;b.classList.remove("done");paint(b)}
+function ph(doc){
+  $$(".pblk",doc).forEach(b=>{
+    const tx=$(".ptx",b);
+    tx.setAttribute("data-ph",tx.textContent?"":(b.dataset.type==="task"?"to-do":b.dataset.type==="bullet"?"list":"write today"));
+  });
+}
+function atStart(){const s=getSelection();return s.rangeCount&&s.getRangeAt(0).collapsed&&s.anchorOffset===0}
+function caretEnd(e){if(!e)return;e.focus();const r=document.createRange();r.selectNodeContents(e);r.collapse(false);const s=getSelection();s.removeAllRanges();s.addRange(r)}
+
+/* ============================================================ CONCEPT 3 */
+const C3={};
+function seed3(){return{
+  tasks:[
+    {id:uid(),text:"Rewrite the second onboarding screen",done:false,open:false,when:"Tuesday",
+     why:"Krishni in standup: the drop-off is at the second screen, not the first. We’ve been fixing the wrong one for a fortnight."},
+    {id:uid(),text:"Reply to the migration-window thread",done:false,open:false,why:null,late:true},
+    {id:uid(),text:"Pull last week’s funnel numbers",done:false,open:false,when:"Tuesday",
+     why:"Don’t trust the screen-two theory until the numbers say it too."},
+    {id:uid(),text:"Renew the domain",done:false,open:false,why:null},
+  ],
+  notes:[
+    {id:uid(),text:"If we charge ₹149 the annual price has to read as a decision, not a discount.",when:"yesterday"},
+    {id:uid(),text:"A weekly review that is just three questions. Nothing else.",when:"Saturday"},
+  ]
+};}
+function c3init(){const s=seed3();C3.tasks=s.tasks;C3.notes=s.notes;c3render()}
+function c3render(){
+  const b=$("#b3");b.innerHTML="";
+  b.appendChild(el("h1","dh","Today"));
+  const open=C3.tasks.filter(t=>!t.done).length;
+  $("#m3").textContent=open?open+" open":"clear";
+  b.appendChild(el("div","dsub",open?"dated today":"nothing left dated today"));
+  C3.tasks.forEach(t=>{
+    const r=el("div","row"+(t.done?" done":""));
+    r.appendChild(cbFor(t,c3render));
+    const body=el("div");body.style.flex="1";
+    body.appendChild(el("div","ttx",t.text));
+    if(t.late){
+      const l=el("div","why",null);l.style.cursor="default";l.textContent="carried from Friday";
+      body.appendChild(l);
+    }
+    if(t.why){
+      const w=el("div","why"+(t.open?" open":""));
+      w.appendChild(el("span","cv","›"));
+      w.appendChild(el("span",null,(t.promoted?"you wrote this · ":"from a note · ")+t.when));
+      w.onclick=()=>{t.open=!t.open;c3render()};
+      body.appendChild(w);
+      if(t.open){
+        const q=el("div","quote",t.why);
+        q.appendChild(el("span","qm","captured "+t.when+" — this is why the task exists"));
+        body.appendChild(q);
+      }
+    }
+    r.appendChild(body);
+    b.appendChild(r);
+  });
+  if(C3.notes.length){
+    b.appendChild(el("div","seclabel","from your notes this week"));
+    C3.notes.forEach(n=>{
+      const r=el("div","row");
+      r.appendChild(el("span","mkn","»"));
+      const body=el("div");body.style.flex="1";
+      const t=el("div","ttx",n.text);t.style.cssText="color:var(--ink-soft);font-size:16px";
+      body.appendChild(t);
+      const bar=el("div");bar.style.cssText="display:flex;gap:8px;align-items:center;margin-top:6px";
+      const go=el("button","mini","→ today");
+      go.onclick=()=>{
+        C3.notes.splice(C3.notes.indexOf(n),1);
+        C3.tasks.push({id:uid(),text:n.text,done:false,open:false,why:n.text,when:n.when,promoted:true});
+        c3render();
+      };
+      bar.appendChild(go);
+      bar.appendChild(el("span","why","captured "+n.when));
+      body.appendChild(bar);
+      r.appendChild(body);
+      b.appendChild(r);
+    });
+  }
+}
+
+/* ============================================================ CONCEPT 4 */
+const C4={};
+const BANDS=[{k:"am",label:"Before lunch",cap:2},{k:"pm",label:"After lunch",cap:3},{k:"eve",label:"Evening",cap:1}];
+function seed4(){return[
+  {id:uid(),text:"Rewrite the second onboarding screen",band:"am",done:false},
+  {id:uid(),text:"Reply to the migration-window thread",band:"am",done:false},
+  {id:uid(),text:"Pull last week’s funnel numbers",band:"pm",done:false},
+  {id:uid(),text:"Renew the domain",band:"pm",done:false},
+  {id:uid(),text:"Book the dentist",band:"pm",done:false},
+  {id:uid(),text:"Draft the pricing-page numbers",band:"pm",done:false},
+  {id:uid(),text:"20 minutes of yoga",band:"eve",done:false},
+  {id:uid(),text:"Read the staff-engineer post",band:"out",done:false},
+];}
+function c4init(){C4.items=seed4();C4.sel=null;C4.showOut=false;C4.showNotes=false;c4render()}
+function c4render(){
+  const b=$("#b4");b.innerHTML="";
+  b.appendChild(el("h1","dh","Today"));
+  const inDay=C4.items.filter(i=>i.band!=="out").length;
+  const totalCap=BANDS.reduce((a,x)=>a+x.cap,0);
+  const over=BANDS.reduce((a,bd)=>a+Math.max(0,C4.items.filter(i=>i.band===bd.k).length-bd.cap),0);
+  $("#m4").textContent=over?"over by "+over:"it fits";
+  b.appendChild(el("div","dsub",inDay+" placed · room for "+totalCap));
+
+  const strip=el("div","notestrip");
+  strip.appendChild(el("div",null,"2 notes worth re-reading — no slot needed"));
+  if(C4.showNotes){
+    strip.appendChild(el("div","nl","If we charge ₹149 the annual price has to read as a decision, not a discount."));
+    strip.appendChild(el("div","nl","A weekly review that is just three questions. Nothing else."));
+  }
+  strip.onclick=()=>{C4.showNotes=!C4.showNotes;c4render()};
+  b.appendChild(strip);
+
+  BANDS.forEach(bd=>{
+    const list=C4.items.filter(i=>i.band===bd.k);
+    const used=list.length;
+    const wrap=el("div","band");
+    const h=el("div","bhead");
+    h.appendChild(el("span",null,bd.label));
+    h.appendChild(el("span","cap"+(used>bd.cap?" over":""),used>bd.cap?("over by "+(used-bd.cap)):(used+" of "+bd.cap)));
+    wrap.appendChild(h);
+    const g=el("div","gauge");
+    const segs=Math.max(bd.cap,used);
+    for(let i=0;i<segs;i++){
+      const seg=el("i",i>=bd.cap?"over":null);
+      seg.style.width=(100/segs)+"%";
+      if(i>=used)seg.style.background="var(--rule-2)";
+      g.appendChild(seg);
+    }
+    wrap.appendChild(g);
+    if(!used){
+      const e=el("div",null,"empty");
+      e.style.cssText="font-size:14.5px;color:var(--ink-faint);padding:8px 0";
+      wrap.appendChild(e);
+    }
+    list.forEach((it,i)=>{
+      const r=el("div","row"+(it.done?" done":"")+(i>=bd.cap?" spill":""));
+      r.appendChild(cbFor(it,c4render));
+      const t=el("div","ttx",it.text);
+      t.onclick=()=>{C4.sel=C4.sel===it.id?null:it.id;c4render()};
+      r.appendChild(t);
+      wrap.appendChild(r);
+      if(C4.sel===it.id){
+        const ch=el("div","chips");
+        BANDS.concat([{k:"out",label:"Not today"}]).forEach(tg=>{
+          if(tg.k===it.band)return;
+          const c=el("button","mini",tg.label);
+          c.onclick=()=>{it.band=tg.k;C4.sel=null;c4render()};
+          ch.appendChild(c);
+        });
+        wrap.appendChild(ch);
+      }
+    });
+    b.appendChild(wrap);
+  });
+
+  const out=C4.items.filter(i=>i.band==="out");
+  const f=el("div","foldline"+(C4.showOut?" open":""));
+  f.appendChild(el("span","cv","›"));
+  f.appendChild(el("span",null,"Not today · "+out.length));
+  f.onclick=()=>{C4.showOut=!C4.showOut;c4render()};
+  b.appendChild(f);
+  if(C4.showOut)out.forEach(it=>{
+    const r=el("div","row");
+    r.appendChild(el("span","mkn","○"));
+    const t=el("div","ttx",it.text);
+    t.style.cssText="color:var(--ink-soft);font-size:15.5px;cursor:pointer";
+    t.title="pull it back into the day";
+    t.onclick=()=>{it.band="pm";c4render()};
+    r.appendChild(t);
+    b.appendChild(r);
+  });
+}
+
+/* ------------------------------------------------------------------ boot */
+$("#sx1").onclick=()=>c1sheet(false);
+$("#scrim1").onclick=()=>c1sheet(false);
+$$("[data-r]").forEach(btn=>btn.onclick=()=>{
+  const w=btn.dataset.r;
+  if(w==="1")c1init();else if(w==="3")c3init();else if(w==="4")c4init();
+});
+c1init();c2init();c3init();c4init();
+</script>
+</body>
+</html>
