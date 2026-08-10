@@ -5,6 +5,7 @@
 <meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme:light)">
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme:dark)">
 <title>Lull · Apple — Capture ↔ Today</title>
+<link rel="stylesheet" href="./note-base.css">
 <style>
 /* ============================================================
    UXBO-2 · Apple idiom (iOS 17 / macOS Sonoma)
@@ -92,8 +93,8 @@ h1.big{font-size:34px;font-weight:700;letter-spacing:-.022em;margin:1px 0 2px}
 
 /* ---------- progress strip ---------- */
 .strip{display:flex;align-items:center;gap:11px;padding:0 4px 16px}
-.strip .bar{flex:1;height:5px;border-radius:99px;background:var(--rule);overflow:hidden}
-.strip .bar>i{display:block;height:100%;background:var(--accent);border-radius:99px;transition:width .4s}
+.strip .pbar{flex:1;height:5px;border-radius:99px;background:var(--rule);overflow:hidden}
+.strip .pbar>i{display:block;height:100%;background:var(--accent);border-radius:99px;transition:width .4s}
 .strip span{font-size:13px;color:var(--ink-mid);font-variant-numeric:tabular-nums}
 
 /* ---------- capture pane ---------- */
@@ -171,6 +172,24 @@ h1.big{font-size:34px;font-weight:700;letter-spacing:-.022em;margin:1px 0 2px}
   .capbar{max-width:672px;left:50%;transform:translateX(-50%);border-radius:0;background:var(--chrome)}
   .toast{left:calc(50% + 119px)}
 }
+
+/* ===== embedded note editor — the locked capture surface (mirrors ni.html) ===== */
+:root{--cbrule:var(--ink-faint);--cb-radius:50%;--on-accent:#fff;--title:24px;--body:17px;
+      --btn:var(--accent-soft);--btn-ink:var(--accent);--btn-r:20px;--fmt-bg:var(--surface)}
+#p-capture{display:flex;flex-direction:column;overflow:hidden}
+#p-capture .caphead{flex:0 0 auto;max-width:640px;width:100%;margin:0 auto;
+  padding:calc(16px + env(safe-area-inset-top)) 16px 4px}
+#p-capture .caphead .eyebrow{padding-top:0}
+#p-capture #doc{flex:1 1 auto;min-height:0;max-width:640px;width:100%;margin:0 auto;padding:8px 20px 30px}
+#p-capture .bar{max-width:672px;width:100%;margin:0 auto;background:var(--chrome);
+  backdrop-filter:saturate(180%) blur(22px);-webkit-backdrop-filter:saturate(180%) blur(22px)}
+#doc .blk .mk.cb{width:21px;height:21px;border-width:1.6px;margin-top:3px}
+#doc .blk.tt .btx{font-size:24px;font-weight:700;letter-spacing:-.02em}
+#doc .divider{background:none;border-top:.5px solid var(--rule);height:0;margin:22px 0}
+.bar .fmt{border:1px solid var(--rule);border-radius:9px;color:var(--ink-soft);background:var(--surface)}
+.bar .fmt:hover{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.bar .new{background:var(--accent-soft);color:var(--accent);font-weight:700;border-radius:20px;box-shadow:none}
+.bar .new:hover{background:#DCEAFE}
 </style></head>
 <body>
 <div class="app">
@@ -186,31 +205,20 @@ h1.big{font-size:34px;font-weight:700;letter-spacing:-.022em;margin:1px 0 2px}
 
   <div class="deck" id="deck">
 
-    <!-- ============ CAPTURE (home) ============ -->
+    <!-- ============ CAPTURE (home) — the real locked editor ============ -->
     <section class="pane on" id="p-capture">
-      <div class="inner">
-        <div class="eyebrow" id="capDate">Monday 10 August</div>
+      <div class="caphead">
+        <div class="eyebrow"><span id="date">Monday 10 August</span></div>
         <h1 class="big">Capture</h1>
-        <div class="sub">Everything lands here first. Nothing is sorted until you say so.</div>
-
-        <div class="ghead">Just captured <span class="n" id="capCount"></span></div>
-        <div id="capList"></div>
-
-        <div class="ghead" style="margin-top:4px">How this works</div>
-        <div class="capcard">
-          <h3>Capture never asks you to decide</h3>
-          <p>Type and hit return — it goes nowhere but here. Later you pick what deserves
-             Today. Today only ever shows what you chose.</p>
-          <div class="chips">
-            <button class="chip" onclick="go(1)">Open Today →</button>
-            <button class="chip ghost" onclick="go(2)">See Inbox</button>
-          </div>
-        </div>
-        <div class="hintbar">Swipe left, or press → , to reach Today</div>
+        <div class="sub">Everything lands here first. Type freely — Enter for a new line,
+          “- ” makes a bullet, “[] ” a to-do, Tab to indent. Nothing leaves this note
+          until you choose.</div>
       </div>
-      <div class="capbar">
-        <input id="capInput" placeholder="What's on your mind?" autocomplete="off">
-        <button class="send" id="capSend" disabled>↑</button>
+      <div class="doc" id="doc"></div>
+      <div class="bar">
+        <button class="fmt" id="bBul" title="Bullet">•</button>
+        <button class="fmt" id="bTask" title="To-do">☐</button>
+        <button class="new" id="bNew">＋ New</button>
       </div>
     </section>
 
@@ -220,7 +228,7 @@ h1.big{font-size:34px;font-weight:700;letter-spacing:-.022em;margin:1px 0 2px}
         <div class="eyebrow">Monday 10 August · you chose 6</div>
         <h1 class="big">Today</h1>
         <div class="sub">Only what you accepted. Nothing lands here on its own.</div>
-        <div class="strip"><div class="bar"><i id="bar"></i></div><span id="pct"></span></div>
+        <div class="strip"><div class="pbar"><i id="bar"></i></div><span id="pct"></span></div>
         <div id="todayList"></div>
         <div class="hintbar">Swipe right, or press ← , to go back to Capture</div>
       </div>
@@ -301,7 +309,7 @@ document.querySelectorAll("[data-p]").forEach(b=>
   b.addEventListener("click", ()=>go(PANES.indexOf(b.dataset.p))));
 
 addEventListener("keydown", e=>{
-  if(document.activeElement && document.activeElement.tagName==="INPUT") return;
+  if(document.activeElement && (document.activeElement.tagName==="INPUT" || document.activeElement.isContentEditable)) return;
   if(e.key==="ArrowRight") go(cur+1);
   if(e.key==="ArrowLeft")  go(cur-1);
   if(e.key>="1" && e.key<="3") go(+e.key-1);
@@ -399,7 +407,7 @@ function renderInbox(){
   document.getElementById("rInbox").textContent = INBOX.length;
 }
 
-function render(){ renderToday(); renderCapture(); renderInbox(); }
+function render(){ renderToday(); renderInbox(); }
 
 /* ===================== actions ===================== */
 function check(id){
@@ -441,19 +449,8 @@ document.getElementById("toastBtn").onclick = ()=>{
   go(toastTarget); document.getElementById("toast").classList.remove("on");
 };
 
-/* capture bar */
-const input = document.getElementById("capInput"), send = document.getElementById("capSend");
-input.addEventListener("input", ()=> send.disabled = !input.value.trim());
-function commit(){
-  const v = input.value.trim(); if(!v) return;
-  const d = new Date();
-  CAPTURED.unshift({id:nextId++, t:v, src:"typed",
-    when:String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")});
-  input.value=""; send.disabled=true; renderCapture();
-}
-input.addEventListener("keydown", e=>{ if(e.key==="Enter") commit(); });
-send.addEventListener("click", commit);
-
 render();
 </script>
+<!-- the locked capture surface: shared editor logic + structural CSS, by reference -->
+<script src="./note.js"></script>
 </body></html>

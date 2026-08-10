@@ -5,6 +5,7 @@
 <meta name="theme-color" content="#F3F3F3" media="(prefers-color-scheme:light)">
 <meta name="theme-color" content="#202020" media="(prefers-color-scheme:dark)">
 <title>Lull · Windows — Capture ↔ Today</title>
+<link rel="stylesheet" href="./note-base.css">
 <style>
 /* ============================================================
    UXBO-2 · Windows idiom (Fluent 2 / WinUI 3)
@@ -114,8 +115,8 @@ h1.big{font:600 28px/1.2 var(--disp);letter-spacing:-.005em;margin:2px 0 3px}
 
 /* ---------- progress ---------- */
 .strip{display:flex;align-items:center;gap:12px;margin-bottom:16px;max-width:520px}
-.strip .bar{flex:1;height:3px;background:var(--stroke);border-radius:2px;overflow:hidden}
-.strip .bar>i{display:block;height:100%;background:var(--accent);transition:width .35s}
+.strip .pbar{flex:1;height:3px;background:var(--stroke);border-radius:2px;overflow:hidden}
+.strip .pbar>i{display:block;height:100%;background:var(--accent);transition:width .35s}
 .strip span{font-size:12px;color:var(--ink-soft);font-variant-numeric:tabular-nums}
 
 /* ---------- buttons ---------- */
@@ -198,6 +199,25 @@ h1.big{font:600 28px/1.2 var(--disp);letter-spacing:-.005em;margin:2px 0 3px}
   .capbar{padding-left:22px}
 }
 @media(prefers-color-scheme:dark) and (min-width:768px){.rail .ri .c{color:#000}}
+
+/* ===== embedded note editor — the locked capture surface (mirrors win.html) ===== */
+:root{--rule:var(--stroke);--rule-2:var(--stroke-2);--cbrule:var(--ink-faint);--cb-radius:4px;
+      --on-accent:#fff;--title:21px;--body:15px;--btn:var(--accent);--btn-ink:#fff;--btn-r:5px;--fmt-bg:var(--card-2)}
+@media (prefers-color-scheme:dark){:root{--on-accent:#000}}
+#p-capture{display:flex;flex-direction:column;overflow:hidden}
+#p-capture .caphead{flex:0 0 auto;max-width:780px;width:100%;padding:18px 22px 4px}
+#p-capture #doc{flex:1 1 auto;min-height:0;max-width:780px;width:100%;padding:6px 22px 26px;background:var(--card)}
+#p-capture .bar{max-width:none;width:100%;background:var(--layer);
+  backdrop-filter:blur(28px) saturate(140%);-webkit-backdrop-filter:blur(28px) saturate(140%)}
+#doc .blk .mk.cb{border-radius:4px;border-width:1.2px;width:18px;height:18px}
+#doc .blk .mk.cb:hover{background:var(--stroke-ctl)}
+#doc .blk.done .mk.cb{animation:none}
+#doc .blk.tt .btx{font-weight:600}
+#doc .divider{background:var(--stroke)}
+.bar .fmt{border:1px solid #E0E0E0;border-radius:5px;background:var(--card-2);color:var(--ink-soft)}
+.bar .fmt:hover{background:var(--stroke-2);border-color:#C7C7C7;color:var(--ink)}
+.bar .new{background:var(--accent);color:#fff;border-radius:5px;font-weight:600}
+.bar .new:hover{background:var(--accent-hi)}
 </style></head>
 <body>
 <div class="app">
@@ -220,24 +240,18 @@ h1.big{font:600 28px/1.2 var(--disp);letter-spacing:-.005em;margin:2px 0 3px}
 
     <!-- ============ CAPTURE ============ -->
     <section class="pane on" id="p-capture">
-      <div class="inner">
-        <div class="eyebrow">Monday, 10 August</div>
+      <div class="caphead">
+        <div class="eyebrow"><span id="date">Monday, 10 August</span></div>
         <h1 class="big">Capture</h1>
-        <div class="sub">Everything lands here first. No project, no date, no decision —
-          those come later, deliberately.</div>
-
-        <div class="info"><span class="i">ⓘ</span>
-          <div><b>Today never fills itself.</b> A capture only reaches Today when you say
-          “Do today”. That's the whole contract.</div></div>
-
-        <div class="ghead">Just captured <span class="n" id="capCount"></span></div>
-        <div id="capList"></div>
-        <div class="hintbar">Tip: press → for Today, ← to come back. Ctrl-like shortcuts 1 / 2 / 3 jump directly.</div>
+        <div class="sub">Everything lands here first. Type freely — Enter for a new line,
+          “- ” for a bullet, “[] ” for a to-do, Tab to indent. Nothing reaches Today until
+          you choose it.</div>
       </div>
-      <div class="capbar">
-        <input id="capInput" placeholder="Type a thought and press Enter" autocomplete="off">
-        <button class="btn pri" id="capSend">Capture</button>
-        <span class="k">Enter</span>
+      <div class="doc" id="doc"></div>
+      <div class="bar">
+        <button class="fmt" id="bBul" title="Bullet">•</button>
+        <button class="fmt" id="bTask" title="To-do">☐</button>
+        <button class="new" id="bNew">＋ New</button>
       </div>
     </section>
 
@@ -247,7 +261,7 @@ h1.big{font:600 28px/1.2 var(--disp);letter-spacing:-.005em;margin:2px 0 3px}
         <div class="eyebrow">Monday, 10 August</div>
         <h1 class="big">Today</h1>
         <div class="sub">Six things you chose. Not an auto-dump of everything that happens to be due.</div>
-        <div class="strip"><div class="bar"><i id="bar"></i></div><span id="pct"></span></div>
+        <div class="strip"><div class="pbar"><i id="bar"></i></div><span id="pct"></span></div>
         <div id="todayList"></div>
         <div class="hintbar">← back to Capture</div>
       </div>
@@ -320,7 +334,7 @@ function go(i){
 document.querySelectorAll("[data-p]").forEach(b=>
   b.addEventListener("click",()=>go(PANES.indexOf(b.dataset.p))));
 addEventListener("keydown",e=>{
-  if(document.activeElement&&document.activeElement.tagName==="INPUT") return;
+  if(document.activeElement&&(document.activeElement.tagName==="INPUT"||document.activeElement.isContentEditable)) return;
   if(e.key==="ArrowRight") go(cur+1);
   if(e.key==="ArrowLeft") go(cur-1);
   if(e.key>="1"&&e.key<="3") go(+e.key-1);
@@ -406,7 +420,7 @@ function renderInbox(){
   b.textContent=INBOX.length; b.style.display=INBOX.length?"":"none";
   document.getElementById("rInbox").textContent=INBOX.length;
 }
-function render(){renderToday();renderCapture();renderInbox();}
+function render(){renderToday();renderInbox();}
 
 /* ===================== actions ===================== */
 function check(id){const t=TODAY.find(x=>x.id===id);if(!t)return;t.done=!t.done;renderToday();}
@@ -441,17 +455,8 @@ function toast(msg,target){
 document.getElementById("toastBtn").onclick=()=>{go(toastTarget);
   document.getElementById("toast").classList.remove("on");};
 
-const input=document.getElementById("capInput");
-function commit(){
-  const v=input.value.trim();if(!v)return;
-  const d=new Date();
-  CAPTURED.unshift({id:nextId++,t:v,src:"typed",
-    when:String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")});
-  input.value="";renderCapture();
-}
-input.addEventListener("keydown",e=>{if(e.key==="Enter")commit();});
-document.getElementById("capSend").addEventListener("click",commit);
-
 render();
 </script>
+<!-- the locked capture surface: shared editor logic + structural CSS, by reference -->
+<script src="./note.js"></script>
 </body></html>

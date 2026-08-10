@@ -5,6 +5,8 @@
 <meta name="theme-color" content="#FEF7FF" media="(prefers-color-scheme:light)">
 <meta name="theme-color" content="#141218" media="(prefers-color-scheme:dark)">
 <title>Lull · Android — Capture ↔ Today</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./note-base.css">
 <style>
 /* ============================================================
    UXBO-2 · Android idiom (Material 3 / Material You)
@@ -121,8 +123,8 @@ body{background:var(--surface);color:var(--on-surface);font-family:var(--sans);
 
 /* ---------- linear progress ---------- */
 .strip{display:flex;align-items:center;gap:14px;margin-bottom:20px}
-.strip .bar{flex:1;height:4px;border-radius:2px;background:var(--surface-var);overflow:hidden}
-.strip .bar>i{display:block;height:100%;border-radius:2px;background:var(--primary);transition:width .4s}
+.strip .pbar{flex:1;height:4px;border-radius:2px;background:var(--surface-var);overflow:hidden}
+.strip .pbar>i{display:block;height:100%;border-radius:2px;background:var(--primary);transition:width .4s}
 .strip span{font-size:12px;color:var(--on-surface-var)}
 
 /* ---------- FAB ---------- */
@@ -201,6 +203,24 @@ body{background:var(--surface);color:var(--on-surface);font-family:var(--sans);
   .navbar{display:none}
   .inner{padding-bottom:170px}
 }
+
+/* ===== embedded note editor — the locked capture surface (mirrors and.html) ===== */
+:root{--accent:var(--primary);--accent-soft:var(--primary-container);--on-accent:var(--on-primary);
+  --ink:var(--on-surface);--ink-soft:var(--on-surface-var);--ink-faint:var(--on-surface-var);
+  --rule:var(--outline-var);--rule-2:var(--surface-2);--cbrule:var(--outline);--cb-radius:2px;
+  --title:22px;--body:16px}
+#p-capture{display:flex;flex-direction:column;overflow:hidden}
+#p-capture .caphead{flex:0 0 auto;max-width:700px;width:100%;padding:0 16px 4px}
+#p-capture #doc{flex:1 1 auto;min-height:0;max-width:700px;width:100%;padding:4px 16px 96px}
+#p-capture .bar{width:100%;background:var(--surface-2);border-top:1px solid var(--outline-var);
+  padding:10px 16px calc(10px + env(safe-area-inset-bottom))}
+#p-capture .fab{bottom:80px}
+#doc .blk .mk.cb{border-radius:2px;border-width:2px;width:18px;height:18px}
+#doc .blk .mk.cb::before{display:none}
+#doc .blk.tt .btx{font-weight:500}
+#doc .divider{background:var(--outline-var)}
+.bar .fmt{width:42px;height:42px;border:none;border-radius:50%;background:transparent;color:var(--on-surface-var);font-size:16px}
+.bar .fmt:hover{background:var(--surface-3);border:none;color:var(--on-surface)}
 </style></head>
 <body>
 <div class="app">
@@ -222,29 +242,18 @@ body{background:var(--surface);color:var(--on-surface);font-family:var(--sans);
 
     <!-- ============ CAPTURE ============ -->
     <section class="pane on" id="p-capture">
-      <div class="inner">
-        <div class="eyebrow">Monday 10 August</div>
+      <div class="caphead">
+        <div class="eyebrow"><span id="date">Monday 10 August</span></div>
         <h1 class="headline">Capture</h1>
-        <div class="sub">Everything lands here first. Sorting is a separate act, done on purpose.</div>
-
-        <div class="banner">
-          <h3>Today is a choice, not a queue</h3>
-          <p>A capture only appears in Today when you tap “Do today”. Nothing schedules itself
-             into your day behind your back.</p>
-          <div class="chips">
-            <button class="chip tone" onclick="go(1)">Open Today</button>
-            <button class="chip" onclick="go(2)">Inbox</button>
-          </div>
-        </div>
-
-        <div class="ghead">Just captured <span class="n" id="capCount"></span></div>
-        <div id="capList"></div>
-        <div class="hintbar">Swipe left for Today · the FAB always brings you back here</div>
+        <div class="sub">Everything lands here first. Type freely — Enter for a new line,
+          “- ” makes a bullet, “[] ” a to-do, Tab to indent. Nothing reaches Today on its own.</div>
       </div>
-      <div class="capbar">
-        <div class="field"><input id="capInput" placeholder="Add a thought" autocomplete="off"></div>
-        <button class="go" id="capSend" disabled>↑</button>
+      <div class="doc" id="doc"></div>
+      <div class="bar">
+        <button class="fmt" id="bBul" title="Bullet">•</button>
+        <button class="fmt" id="bTask" title="To-do">☐</button>
       </div>
+      <button class="fab" id="bNew"><span class="i">＋</span>New</button>
     </section>
 
     <!-- ============ TODAY ============ -->
@@ -253,7 +262,7 @@ body{background:var(--surface);color:var(--on-surface);font-family:var(--sans);
         <div class="eyebrow">Monday 10 August</div>
         <h1 class="headline">Today</h1>
         <div class="sub">Six things you chose. Everything else is still waiting, quietly, elsewhere.</div>
-        <div class="strip"><div class="bar"><i id="bar"></i></div><span id="pct"></span></div>
+        <div class="strip"><div class="pbar"><i id="bar"></i></div><span id="pct"></span></div>
         <div id="todayList"></div>
         <div class="hintbar">Swipe right to get back to Capture</div>
       </div>
@@ -326,11 +335,11 @@ function go(i){
   document.getElementById("barTitle").textContent=TITLES[PANES[i]];
   if(prev!==i) document.getElementById("p-"+PANES[i]).scrollTop=0;
 }
-function focusInput(){setTimeout(()=>document.getElementById("capInput").focus(),260);}
+function focusInput(){setTimeout(()=>{const b=document.querySelector("#doc .btx");if(b)b.focus();},260);}
 document.querySelectorAll("[data-p]").forEach(b=>
   b.addEventListener("click",()=>go(PANES.indexOf(b.dataset.p))));
 addEventListener("keydown",e=>{
-  if(document.activeElement&&document.activeElement.tagName==="INPUT") return;
+  if(document.activeElement&&(document.activeElement.tagName==="INPUT"||document.activeElement.isContentEditable)) return;
   if(e.key==="ArrowRight") go(cur+1);
   if(e.key==="ArrowLeft") go(cur-1);
   if(e.key>="1"&&e.key<="3") go(+e.key-1);
@@ -418,7 +427,7 @@ function renderInbox(){
     b.textContent=INBOX.length; b.style.display=INBOX.length?"":"none";
   }
 }
-function render(){renderToday();renderCapture();renderInbox();}
+function render(){renderToday();renderInbox();}
 
 /* ===================== actions ===================== */
 function check(id){const t=TODAY.find(x=>x.id===id);if(!t)return;t.done=!t.done;renderToday();}
@@ -456,18 +465,8 @@ document.getElementById("snackBtn").onclick=()=>{
   document.getElementById("snack").classList.remove("on");
 };
 
-const input=document.getElementById("capInput"),send=document.getElementById("capSend");
-input.addEventListener("input",()=>send.disabled=!input.value.trim());
-function commit(){
-  const v=input.value.trim();if(!v)return;
-  const d=new Date();
-  CAPTURED.unshift({id:nextId++,t:v,src:"typed",
-    when:String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")});
-  input.value="";send.disabled=true;renderCapture();
-}
-input.addEventListener("keydown",e=>{if(e.key==="Enter")commit();});
-send.addEventListener("click",commit);
-
 render();
 </script>
+<!-- the locked capture surface: shared editor logic + structural CSS, by reference -->
+<script src="./note.js"></script>
 </body></html>
