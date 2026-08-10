@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#F2F2F7">
+<title>Capture × Today — feel the merge</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
+<style>
+:root{
+  --bg:#F2F2F7;--card:#FFFFFF;--ink:#1C1C1E;--ink-soft:#6B6B70;--ink-faint:#AEAEB2;
+  --rule:#ECECEE;--rule-2:#F5F5F6;--cbrule:#C7C7CC;--accent:#0A84FF;--accent-soft:#E9F2FF;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Segoe UI",Roboto,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;
+  display:flex;flex-direction:column;height:100dvh;overflow:hidden}
+
+/* ---- header / segmented control ---- */
+.hd{flex:0 0 auto;padding:calc(10px + env(safe-area-inset-top)) 14px 10px;background:var(--bg);
+  border-bottom:1px solid var(--rule)}
+.hd h1{font-size:15px;font-weight:700;letter-spacing:-.01em;margin-bottom:2px}
+.hd .q{font-size:12px;color:var(--ink-soft);line-height:1.35;margin-bottom:9px}
+.seg{display:flex;gap:5px;background:#E4E4EA;border-radius:11px;padding:3px}
+.seg button{flex:1;border:none;background:none;font-family:inherit;font-size:12.5px;font-weight:600;
+  color:var(--ink-soft);padding:7px 2px;border-radius:8px;cursor:pointer;transition:.15s;line-height:1.1}
+.seg button .k{display:block;font-size:11px;font-weight:800;color:var(--accent);margin-bottom:1px}
+.seg button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.seg button.on .k{color:var(--accent)}
+
+/* ---- caption ---- */
+.cap{flex:0 0 auto;padding:9px 15px;background:#FBFBFD;border-bottom:1px solid var(--rule);font-size:12px;line-height:1.45}
+.cap b{font-weight:700}
+.cap .good{color:#1a7f37}.cap .risk{color:#b3261e}
+
+/* ---- stage ---- */
+.stage{flex:1;min-height:0;position:relative;display:flex;justify-content:center}
+.panel{position:absolute;inset:0;display:none;flex-direction:column;width:100%;max-width:440px;
+  background:var(--card);border-left:1px solid var(--rule);border-right:1px solid var(--rule)}
+.panel.on{display:flex}
+
+iframe.ed{border:none;width:100%;background:var(--card)}
+iframe.ed.grow{flex:1;min-height:0}
+
+/* ---- parent task rows (plan / today zones) ---- */
+.zhead{flex:0 0 auto;padding:14px 20px 6px;font-size:12px;font-weight:800;letter-spacing:.04em;
+  text-transform:uppercase;color:var(--ink-faint)}
+.zsub{font-weight:600;letter-spacing:0;text-transform:none;color:var(--ink-soft);font-size:12px}
+.zlist{padding:0 8px}
+.trow{display:flex;gap:11px;align-items:flex-start;padding:9px 12px;border-bottom:1px solid var(--rule-2)}
+.tcb{flex:0 0 auto;width:21px;height:21px;margin-top:1px;border-radius:50%;border:1.6px solid var(--cbrule);
+  background:none;cursor:pointer;display:grid;place-items:center;transition:.13s;padding:0}
+.tcb:hover{border-color:var(--accent)}
+.trow.done .tcb{background:var(--accent);border-color:var(--accent);animation:pop .24s cubic-bezier(.3,1.5,.5,1)}
+.trow.done .tcb::after{content:"✓";color:#fff;font-size:12px;font-weight:800}
+@keyframes pop{0%{transform:scale(.55)}62%{transform:scale(1.14)}100%{transform:scale(1)}}
+.trow .tx{flex:1;font-size:16.5px;line-height:1.5;color:var(--ink)}
+.trow.done .tx{color:var(--ink-faint);text-decoration:line-through}
+.trow.fresh{animation:slidein .3s ease}
+@keyframes slidein{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.zempty{padding:8px 20px 12px;font-size:13px;color:var(--ink-faint)}
+
+/* concept B: today grows, inbox pinned bottom */
+.divzone{flex:0 0 auto;padding:10px 20px 4px;border-top:1px solid var(--rule);background:#FBFBFD;
+  font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-faint)}
+.divzone .n{color:var(--accent)}
+
+/* concept C: whole thing scrolls */
+.cscroll{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column}
+.cscroll iframe.ed{flex:0 0 auto;height:58vh}
+
+/* concept D internal tabs */
+.dtabs{flex:0 0 auto;display:flex;border-bottom:1px solid var(--rule)}
+.dtabs button{flex:1;border:none;background:none;font-family:inherit;font-size:13.5px;font-weight:600;
+  color:var(--ink-soft);padding:11px 0;cursor:pointer;border-bottom:2px solid transparent}
+.dtabs button.on{color:var(--accent);border-bottom-color:var(--accent);font-weight:700}
+.dview{flex:1;min-height:0;display:none;flex-direction:column}
+.dview.on{display:flex}
+
+.flash{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(14px);background:var(--ink);
+  color:#fff;font-size:13px;font-weight:600;padding:9px 15px;border-radius:11px;opacity:0;transition:.22s;
+  z-index:50;pointer-events:none;box-shadow:0 6px 20px rgba(0,0,0,.25)}
+.flash.on{opacity:1;transform:translateX(-50%)}
+</style></head>
+<body>
+
+<div class="hd">
+  <h1>Capture × Today — feel the merge</h1>
+  <div class="q">A capture happens <i>today</i>, so it feels like Today. But a capture often isn't a to-do — it's a note, an idea, a link. Flip the four models and feel where the noise goes.</div>
+  <div class="seg" id="seg">
+    <button data-i="0" class="on"><span class="k">A</span>Daily note</button>
+    <button data-i="1"><span class="k">B</span>Calm + bar</button>
+    <button data-i="2"><span class="k">C</span>Two zones</button>
+    <button data-i="3"><span class="k">D</span>Split</button>
+  </div>
+</div>
+
+<div class="cap" id="cap"></div>
+
+<div class="stage">
+  <!-- A: DAILY NOTE -->
+  <section class="panel on" id="pA">
+    <iframe class="ed grow" id="edA"></iframe>
+  </section>
+
+  <!-- B: CALM TODAY + CAPTURE BAR -->
+  <section class="panel" id="pB">
+    <div class="zhead">Today <span class="zsub">· Monday, Aug 10 · what you chose</span></div>
+    <div class="zlist" id="bToday" style="flex:1;overflow-y:auto"></div>
+    <div class="divzone">Inbox · <span class="n">captures land here, never in Today</span></div>
+    <iframe class="ed" id="edB" style="flex:0 0 46%"></iframe>
+  </section>
+
+  <!-- C: TWO ZONES, ONE SCROLL -->
+  <section class="panel" id="pC">
+    <div class="cscroll">
+      <div class="zhead">Today's plan <span class="zsub">· lifted, on purpose</span></div>
+      <div class="zlist" id="cPlan"></div>
+      <div class="divzone">Captured today · <span class="n">unsorted — tap ↑ Today to plan one</span></div>
+      <iframe class="ed" id="edC"></iframe>
+    </div>
+  </section>
+
+  <!-- D: SPLIT (baseline) -->
+  <section class="panel" id="pD">
+    <div class="dtabs">
+      <button class="on" data-d="cap">Capture</button>
+      <button data-d="today">Today</button>
+    </div>
+    <div class="dview on" id="dCap"><iframe class="ed grow" id="edD"></iframe></div>
+    <div class="dview" id="dToday">
+      <div class="zhead">Today <span class="zsub">· Monday, Aug 10</span></div>
+      <div class="zlist" id="dTodayList" style="flex:1;overflow-y:auto"></div>
+    </div>
+  </section>
+</div>
+
+<div class="flash" id="flash"></div>
+
+<script>
+/* ---------- captions (honest trade-offs) ---------- */
+const CAPS=[
+  '<b>A · Daily note.</b> <span class="good">Good:</span> one gesture — capture and plan are the same act, zero friction. <span class="risk">Risk:</span> your plan and your junk drawer are one page; real to-dos get buried between an idea and a link.',
+  '<b>B · Calm Today + capture bar.</b> <span class="good">Good:</span> Today stays pure — only what you chose to plan. <span class="risk">Risk:</span> captures drop into an inbox you must remember to revisit; out of sight, out of mind.',
+  '<b>C · Two zones, one scroll.</b> <span class="good">Good:</span> nothing hidden, nothing auto-planned — a capture stays a capture until you tap it into the plan. <span class="risk">Risk:</span> plan and noise share one screen; on a busy day the scroll gets long.',
+  '<b>D · Split (baseline).</b> <span class="good">Good:</span> a clean plan and a free scratchpad, each uncluttered. <span class="risk">Risk:</span> two places to look; moving a capture into Today is manual and easy to skip.'
+];
+
+/* ---------- Apple palette for the embedded locked editor ---------- */
+const VARS=':root{--bg:#FFFFFF;--ink:#1C1C1E;--ink-soft:#6B6B70;--ink-faint:#AEAEB2;--rule:#ECECEE;--rule-2:#F5F5F6;--cbrule:#C7C7CC;--accent:#0A84FF;--accent-soft:#E9F2FF;--on-accent:#fff;--cb-radius:50%;--title:22px;--body:17px;--btn:var(--accent-soft);--btn-ink:#0A84FF;--btn-r:20px;--fmt-bg:#fff;--sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Segoe UI",Roboto,sans-serif;--mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace}';
+
+const PROMOTE_JS=[
+ 'Array.prototype.slice.call(doc.querySelectorAll(".blk")).forEach(function(b){',
+ '  if(b.classList.contains("tt"))return;',
+ '  var p=document.createElement("span");p.className="promo";p.textContent="↑ Today";',
+ '  p.onmousedown=function(ev){ev.preventDefault()};',
+ '  p.onclick=function(){var t=b.querySelector(".btx").textContent.trim();if(!t)return;',
+ '    parent.postMessage({type:"promote",text:t},"*");',
+ '    p.textContent="✓ Planned";p.classList.add("mv");};',
+ '  b.appendChild(p);});'
+].join("\n");
+
+/* build one embedded-editor document. seed = JS string using B()/DIV(). */
+function editorDoc(seed,promote){
+  var s="";
+  s+='<!DOCTYPE html><html><head><meta charset="UTF-8">';
+  s+='<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">';
+  s+='<link rel="stylesheet" href="./note-base.css"><style>'+VARS;
+  s+='html,body{height:100%}.wrap{max-width:none;border:none;height:100dvh}';
+  s+='.top{display:none}.doc{padding:16px 20px 26px}';
+  s+='.bar{border-top:1px solid var(--rule-2)}';
+  s+='.promo{flex:0 0 auto;margin-top:2px;margin-left:8px;font-size:11.5px;font-weight:700;color:var(--accent);';
+  s+='background:var(--accent-soft);border-radius:12px;padding:3px 10px;cursor:pointer;white-space:nowrap;align-self:flex-start}';
+  s+='.promo.mv{color:var(--ink-faint);background:var(--rule-2)}';
+  s+='</style></head><body><div class="wrap">';
+  s+='<div class="top"><span class="date" id="date"></span><span class="vtag" id="vt"></span></div>';
+  s+='<div class="doc" id="doc"></div>';
+  s+='<div class="bar"><button class="fmt" id="bBul" title="Bullet">•</button>';
+  s+='<button class="fmt" id="bTask" title="Task">☐</button><button class="new" id="bNew">＋ New</button></div>';
+  s+='</div>';
+  s+='<script src="./note.js"><\/script>';
+  s+='<script>(function(){try{doc.innerHTML="";';
+  s+='function B(type,text,o){o=o||{};var b=makeBlock(type,text,o.indent||0,!!o.title);doc.appendChild(b);if(o.done)b.classList.add("done");return b;}';
+  s+='function DIV(){var d=document.createElement("div");d.className="divider";doc.appendChild(d);}';
+  s+=seed;
+  s+='updatePh();';
+  s+=(promote?PROMOTE_JS:'');
+  s+='if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();';
+  s+='}catch(e){document.body.innerHTML="<pre style=\\"padding:18px;color:#b00\\">seed error: "+e+"<\/pre>";}})();<\/script>';
+  s+='</body></html>';
+  return s;
+}
+
+/* ---------- shared sample content (same everywhere) ---------- */
+/* 3 real to-dos + 3 clear non-tasks (an idea, a link, a stray note) */
+const SEED_A=[
+  'B("text","Monday, August 10",{title:true});',
+  'B("task","Reply to Priya about Saturday");',
+  'B("task","Book dentist — 2 crowns overdue");',
+  'B("bullet","Priya mentioned she likes matcha");',
+  'B("text","Idea: reminders that pause while you’re asleep");',
+  'B("text","Read later — roamresearch.com/notes-vs-tasks");',
+  'B("task","Pick up dry cleaning",{done:true});'
+].join("");
+
+const SEED_B_INBOX=[
+  'B("text","Inbox",{title:true});',
+  'B("text","Idea: reminders that pause while you’re asleep");',
+  'B("bullet","Priya likes matcha");',
+  'B("text","roamresearch.com/notes-vs-tasks");',
+  'B("task","Maybe: switch bank — fees creeping up");'
+].join("");
+
+const SEED_C_CAPTURED=[
+  'B("text","Captured today",{title:true});',
+  'B("task","Pick up dry cleaning");',
+  'B("text","Idea: reminders that pause while you’re asleep");',
+  'B("bullet","Priya likes matcha");',
+  'B("text","roamresearch.com/notes-vs-tasks");'
+].join("");
+
+const SEED_D_CAP=[
+  'B("text","Monday, August 10",{title:true});',
+  'B("task","Reply to Priya about Saturday");',
+  'B("text","Idea: reminders that pause while you’re asleep");',
+  'B("text","roamresearch.com/notes-vs-tasks");',
+  'B("bullet","Priya likes matcha");'
+].join("");
+
+/* ---------- parent-DOM interactive task rows ---------- */
+function taskRow(text,done){
+  var el=document.createElement("div");el.className="trow"+(done?" done":"");
+  var cb=document.createElement("button");cb.className="tcb";
+  cb.onclick=function(){el.classList.toggle("done")};
+  var tx=document.createElement("div");tx.className="tx";tx.textContent=text;
+  el.appendChild(cb);el.appendChild(tx);return el;
+}
+function fill(id,rows){var c=document.getElementById(id);rows.forEach(function(r){c.appendChild(taskRow(r[0],r[1]))});}
+fill("bToday",[["Reply to Priya about Saturday",false],["Book dentist — 2 crowns overdue",false],["Pick up dry cleaning",true]]);
+fill("cPlan",[["Reply to Priya about Saturday",false],["Book dentist — 2 crowns overdue",false]]);
+fill("dTodayList",[["Reply to Priya about Saturday",false],["Book dentist — 2 crowns overdue",false],["Pick up dry cleaning",true]]);
+
+/* concept C promote: capture -> plan */
+window.addEventListener("message",function(e){
+  if(e.data&&e.data.type==="promote"){
+    var row=taskRow(e.data.text,false);row.classList.add("fresh");
+    document.getElementById("cPlan").appendChild(row);
+    flash("Lifted into today’s plan");
+  }
+});
+
+/* ---------- lazy-load editors (avoid all iframes grabbing focus at once) ---------- */
+var loaded={};
+function loadEd(id,seed,promote){if(loaded[id])return;loaded[id]=1;document.getElementById(id).srcdoc=editorDoc(seed,promote);}
+
+/* ---------- concept switching ---------- */
+var panels=["pA","pB","pC","pD"];
+function show(i){
+  document.getElementById("cap").innerHTML=CAPS[i];
+  panels.forEach(function(p,k){document.getElementById(p).classList.toggle("on",k===i)});
+  Array.prototype.slice.call(document.querySelectorAll("#seg button")).forEach(function(b){
+    b.classList.toggle("on",+b.dataset.i===i)});
+  if(i===0)loadEd("edA",SEED_A,false);
+  if(i===1)loadEd("edB",SEED_B_INBOX,false);
+  if(i===2)loadEd("edC",SEED_C_CAPTURED,true);
+  if(i===3)loadEd("edD",SEED_D_CAP,false);
+}
+document.getElementById("seg").addEventListener("click",function(e){
+  var b=e.target.closest("button");if(b)show(+b.dataset.i);
+});
+
+/* concept D internal tabs */
+Array.prototype.slice.call(document.querySelectorAll(".dtabs button")).forEach(function(b){
+  b.onclick=function(){
+    document.querySelectorAll(".dtabs button").forEach(function(x){x.classList.remove("on")});
+    b.classList.add("on");
+    document.getElementById("dCap").classList.toggle("on",b.dataset.d==="cap");
+    document.getElementById("dToday").classList.toggle("on",b.dataset.d==="today");
+  };
+});
+
+/* flash toast */
+function flash(m){var f=document.getElementById("flash");f.textContent=m;f.classList.add("on");
+  clearTimeout(f._t);f._t=setTimeout(function(){f.classList.remove("on")},1600);}
+
+/* boot */
+show(0);
+</script>
+</body></html>
