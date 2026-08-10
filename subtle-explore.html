@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme:light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme:dark)">
+<title>Subtle inline suggestions — eight ways (UXBO-8)</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
+<link rel="stylesheet" href="./note-base.css">
+<!--
+ ============================================================================
+ SUBTLE INLINE — UXBO-8.  Anshul: "I mean inline but more subtle, more ideas."
+ The four he saw (chip / ghost / gutter dot / trailing pill) all read as UI
+ chrome sitting ON TOP of his writing. He wants the guess to feel like a quiet
+ annotation on his OWN text. His exact phrasing: "my text, and then below in
+ subtext we can have suggestion."
+
+ WHAT SUBTLE LOOKS LIKE IN SHIPPING APPS (quick scan before building):
+ - Apple Notes / Mail DATA DETECTORS: a detected date/address gets only a thin
+   underline in the *label* colour, never a coloured chip. The text stays the
+   text; the affordance is a tap, not a badge. -> variant 2 (tint/underline).
+ - Apple Reminders NL dates: you type "call mom friday", "friday" quietly turns
+   into a subtitle line under the title — SUBTEXT, not an overlay. -> variant 1.
+ - Gmail Smart Compose / iOS QuickType: prediction rendered in tertiaryLabel
+   grey, inline, no border, dismissed by just continuing to type. -> variant 6.
+ - Things 3 / iA Writer / Ulysses: metadata (project, when) lives as small grey
+   subtitle text, never a filled tag. Confidence never carried by hue.
+ - Notion inline AI: appears only on demand (a tap / "+"), zero ambient noise
+   at rest. -> variant 5.
+ - Linear: a barely-there row highlight to say "this is actionable" and a small
+   end-of-line glyph rather than a persistent control. -> variants 2 & 4.
+
+ GREYS ARE ANCHORED TO APPLE'S REAL SEMANTIC LABEL COLOURS (UIColor), not
+ invented, because subtle greys are the whole game here:
+   LIGHT  label #1C1C1E  secondaryLabel rgba(60,60,67,.60)
+          tertiaryLabel rgba(60,60,67,.30)  quaternaryLabel rgba(60,60,67,.18)
+   DARK   label #EDEDF2  secondaryLabel rgba(235,235,245,.60)
+          tertiaryLabel rgba(235,235,245,.30) quaternaryLabel rgba(235,235,245,.16)
+ iOS system blue: #0A84FF (dark) / #007AFF-ish; we keep #0A84FF per ni.html.
+ Sources: NSHipster dark-mode article, noahgilmore.com system-colour table.
+
+ BEHAVIOUR (fixed): capture is free-flow, nothing classified while writing.
+ Afterwards, per line: todo|note, project, when — mirrors capture-classifier/
+ routing.py, which returns None below threshold = "stays in the inbox".
+ Confidence is ALWAYS carried by a word ("likely / maybe / unsure"), never by
+ colour alone. The editor is the LOCKED note.js — referenced, never forked.
+ ============================================================================
+-->
+<style>
+:root{
+  --bg:#F2F2F7;--card:#FFFFFF;--ink:#1C1C1E;
+  /* Apple semantic label greys (light) */
+  --label:#1C1C1E;
+  --secondary:rgba(60,60,67,.60);
+  --tertiary:rgba(60,60,67,.30);
+  --quaternary:rgba(60,60,67,.18);
+  --rule:#ECECEE;--rule-2:#F5F5F6;--cbrule:#C7C7CC;
+  --accent:#0A84FF;--accent-soft:#E9F2FF;--accent-hair:rgba(10,132,255,.14);
+  --tint:rgba(10,132,255,.045);
+  --body:16px;--mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#000000;--card:#1C1C1E;--ink:#EDEDF2;
+    --label:#EDEDF2;
+    --secondary:rgba(235,235,245,.60);
+    --tertiary:rgba(235,235,245,.30);
+    --quaternary:rgba(235,235,245,.16);
+    --rule:#2A2A2C;--rule-2:#222224;--cbrule:#48484A;
+    --accent:#0A84FF;--accent-soft:#0B294A;--accent-hair:rgba(10,132,255,.22);
+    --tint:rgba(10,132,255,.10);
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;
+  display:flex;flex-direction:column;height:100dvh;overflow:hidden}
+
+.hd{flex:0 0 auto;padding:calc(10px + env(safe-area-inset-top)) 12px 9px;background:var(--bg);border-bottom:1px solid var(--rule)}
+.hd h1{font-size:15px;font-weight:700;letter-spacing:-.01em;margin-bottom:2px}
+.hd .q{font-size:11.5px;color:var(--secondary);line-height:1.35;margin-bottom:9px}
+.seg{display:grid;grid-template-columns:repeat(8,1fr);gap:3px;background:var(--rule-2);border-radius:11px;padding:3px}
+.seg button{border:none;background:none;font-family:inherit;font-size:9px;font-weight:600;
+  color:var(--secondary);padding:6px 0;border-radius:8px;cursor:pointer;transition:.15s;line-height:1.05}
+.seg button .k{display:block;font-size:10px;font-weight:800;color:var(--accent);margin-bottom:1px}
+.seg button.on{background:var(--card);color:var(--label);box-shadow:0 1px 3px rgba(0,0,0,.14)}
+
+.cap{flex:0 0 auto;padding:9px 15px;background:var(--rule-2);border-bottom:1px solid var(--rule);font-size:11.5px;line-height:1.45;color:var(--secondary)}
+.cap b{font-weight:700;color:var(--label)}
+.cap .cost{color:#B26A00;font-weight:600}
+@media (prefers-color-scheme:dark){.cap .cost{color:#E0A64B}}
+.cap .blind{color:#b3261e;font-weight:600}
+@media (prefers-color-scheme:dark){.cap .blind{color:#FF6B61}}
+
+.stage{flex:1;min-height:0;position:relative;display:flex;justify-content:center}
+.panel{position:absolute;inset:0;display:flex;flex-direction:column;width:100%;max-width:440px;
+  background:var(--card);border-left:1px solid var(--rule);border-right:1px solid var(--rule)}
+.edhd{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:11px 18px 7px;border-bottom:1px solid var(--rule-2)}
+.edhd .date{font-family:var(--mono);font-size:11px;color:var(--tertiary)}
+.edhd .lab{font-family:var(--mono);font-size:10px;color:var(--secondary);border:1px solid var(--rule);border-radius:5px;padding:2px 7px;margin-left:auto}
+.doc{flex:1;overflow-y:auto;padding:12px 16px 60px;cursor:text;position:relative}
+.blk{display:flex;gap:10px;align-items:flex-start;padding:6px 0;position:relative}
+.blk .mk{flex:0 0 auto;margin-top:4px;width:20px;display:flex;justify-content:center}
+.blk[data-type="text"] .mk{display:none}
+.blk .mk.bul{color:var(--tertiary);font-size:17px;line-height:1}
+.blk .mk.cb{width:19px;height:19px;border-radius:50%;border:1.5px solid var(--cbrule);cursor:pointer;display:grid;place-items:center;transition:.13s}
+.blk .mk.cb:hover{border-color:var(--accent)}
+.blk.done .mk.cb{background:var(--accent);border-color:var(--accent);animation:cbpop .2s ease}
+@keyframes cbpop{0%{transform:scale(.72)}60%{transform:scale(1.1)}100%{transform:scale(1)}}
+.blk.done .mk.cb::after{content:"✓";color:#fff;font-size:12px;font-weight:700}
+.blk .btx{flex:1;min-width:60%;outline:none;font-size:var(--body);line-height:1.5;min-height:24px;word-break:break-word;color:var(--label)}
+.blk.done .btx{color:var(--tertiary);text-decoration:line-through}
+.blk .btx:empty::before{content:attr(data-ph);color:var(--tertiary)}
+.bar{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:9px 16px calc(9px + env(safe-area-inset-bottom));border-top:1px solid var(--rule)}
+.fmt{width:36px;height:32px;border:1px solid var(--rule);border-radius:8px;background:var(--card);color:var(--secondary);font-size:15px;cursor:pointer;display:grid;place-items:center}
+.new{margin-left:auto;display:inline-flex;align-items:center;gap:6px;background:var(--accent-soft);color:var(--accent);border:none;border-radius:20px;font-size:13px;font-weight:700;padding:8px 15px;cursor:pointer}
+
+/* ===== settled-state subtext (shared once a line is accepted / dismissed) ===== */
+.settled{display:block;margin-top:3px;font-size:12.5px;line-height:1.4;color:var(--tertiary)}
+.settled b{font-weight:600;color:var(--secondary)}
+.settled .undo{color:var(--accent);cursor:pointer;font-weight:600;
+  display:inline-block;padding:6px 2px;margin:-6px 0;min-height:20px}
+.blk.applied .btx{color:var(--label)}
+
+/* the invisible-but-tappable hit expander: keeps 44pt targets on tiny visuals */
+.hit{position:absolute;left:-8px;right:-8px;top:-8px;bottom:-8px}
+
+/* ---------- V1 SUBTEXT LINE ---------- */
+.subline{display:block;margin-top:2px;font-size:12.5px;line-height:1.4;color:var(--tertiary);
+  cursor:pointer;position:relative;padding:5px 0;min-height:22px;-webkit-tap-highlight-color:transparent;
+  animation:fadein .2s ease}
+.subline .kw{color:var(--secondary);font-weight:600}
+.subline .conf{color:var(--tertiary)}
+.subline .act{color:var(--accent);font-weight:600;margin-left:2px}
+.subline .dis{color:var(--tertiary);margin-left:10px;padding:4px}
+.subline.unsure{cursor:default}
+.subline.unsure .kw{color:var(--secondary)}
+@keyframes fadein{from{opacity:0;transform:translateY(-2px)}to{opacity:1;transform:none}}
+
+/* ---------- V2 TINT ONLY ---------- */
+.blk.tinted{border-radius:8px;background:var(--tint);
+  box-shadow:inset 2px 0 0 -0.5px var(--accent-hair);
+  margin-left:-8px;margin-right:-8px;padding-left:8px;padding-right:8px;transition:background .2s}
+.blk.tinted.k-note{background:rgba(110,68,192,.05);box-shadow:inset 2px 0 0 -0.5px rgba(110,68,192,.16)}
+.blk.tinted.k-ref{background:rgba(26,127,55,.05);box-shadow:inset 2px 0 0 -0.5px rgba(26,127,55,.16)}
+.blk.tinted .btx{text-decoration:underline;text-decoration-color:var(--quaternary);
+  text-underline-offset:3px;text-decoration-thickness:1px}
+.tintrow{display:flex;align-items:center;gap:14px;margin-top:6px;font-size:12.5px;color:var(--tertiary);animation:fadein .2s ease}
+.tintrow b{color:var(--secondary);font-weight:600}
+.tintrow .yes{color:var(--accent);font-weight:600;cursor:pointer;padding:6px 2px}
+.tintrow .no{color:var(--tertiary);cursor:pointer;padding:6px 2px}
+
+/* ---------- V3 GHOST CHECKBOX ---------- */
+.gcb{position:absolute;left:-2px;top:5px;width:19px;height:19px;border-radius:50%;
+  border:1.5px solid var(--cbrule);opacity:.22;cursor:pointer;transition:opacity .2s, border-color .15s;
+  display:grid;place-items:center}
+.gcb::after{content:"";width:5px;height:5px;border-radius:50%;background:var(--cbrule)}
+.gcb:hover,.gcb:focus{opacity:.75;border-color:var(--accent);outline:none}
+.gcb .hit{}
+.blk.hasghost{padding-left:26px}
+.gbul{position:absolute;left:4px;top:9px;width:5px;height:5px;border-radius:50%;background:var(--tertiary);opacity:.35;cursor:pointer}
+.gsub{display:block;margin-top:2px;font-size:12px;color:var(--tertiary);opacity:0;transition:opacity .2s}
+.blk.hasghost:hover .gsub,.blk.hasghost:focus-within .gsub{opacity:1}
+
+/* ---------- V4 END MARK ---------- */
+.endmark{display:inline-block;margin-left:6px;color:var(--quaternary);font-size:15px;line-height:1;
+  cursor:pointer;position:relative;vertical-align:baseline;transition:color .15s}
+.endmark:hover{color:var(--secondary)}
+.endmark.unsure{color:var(--quaternary)}
+.endpop{display:block;margin-top:5px;font-size:12.5px;color:var(--tertiary);line-height:1.4;animation:fadein .18s ease}
+.endpop b{color:var(--secondary);font-weight:600}
+.endpop .yes{color:var(--accent);font-weight:600;cursor:pointer;padding:6px 2px;margin-left:2px}
+.endpop .no{color:var(--tertiary);cursor:pointer;padding:6px 6px}
+
+/* ---------- V5 ON DEMAND ---------- */
+.blk.demand{cursor:pointer}
+.demandsub{display:block;margin-top:4px;font-size:12.5px;color:var(--tertiary);line-height:1.4;animation:fadein .18s ease}
+.demandsub b{color:var(--secondary);font-weight:600}
+.demandsub .yes{color:var(--accent);font-weight:600;cursor:pointer;padding:6px 2px;margin-left:2px}
+.demandsub .no{color:var(--tertiary);cursor:pointer;padding:6px 6px}
+.demandhint{font-size:11px;color:var(--quaternary);margin-top:2px;font-style:italic}
+
+/* ---------- V6 NEXT-LINE PLACEHOLDER ---------- */
+.phline{display:flex;gap:10px;align-items:flex-start;padding:6px 0;position:relative}
+.phline .phcaret{width:1.5px;height:19px;background:var(--accent);margin-top:4px;opacity:.6;animation:blink 1.1s step-end infinite}
+@keyframes blink{50%{opacity:0}}
+.phtext{flex:1;font-size:var(--body);line-height:1.5;color:var(--tertiary);cursor:pointer;min-height:24px;padding:2px 0}
+.phtext .kw{color:var(--secondary)}
+.phtext.unsure{color:var(--tertiary);cursor:default}
+@media (prefers-reduced-motion:reduce){.phline .phcaret{animation:none}}
+
+/* ---------- V7 PROGRESSIVE FADE ---------- */
+.fadesub{display:block;margin-top:2px;font-size:12.5px;line-height:1.4;color:var(--tertiary);
+  cursor:pointer;padding:5px 0;min-height:22px;opacity:.12;
+  animation:progfade 5s ease forwards}
+.fadesub .kw{color:var(--secondary);font-weight:600}
+.fadesub .act{color:var(--accent);font-weight:600;margin-left:2px}
+.fadesub .dis{color:var(--tertiary);margin-left:10px;padding:4px}
+.fadesub:hover,.fadesub:focus-within{opacity:1 !important;animation:none}
+@keyframes progfade{0%{opacity:.12}60%{opacity:.12}100%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.fadesub{opacity:1 !important;animation:none}}
+
+/* ---------- V8 AMBIENT SUMMARY ---------- */
+.blk.walking{background:var(--tint);border-radius:8px;margin-left:-8px;margin-right:-8px;padding-left:8px;padding-right:8px}
+.ambient{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;gap:10px;
+  padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:var(--card);
+  border-top:1px solid var(--rule);cursor:pointer;transition:.2s;z-index:6}
+.ambient .txt{font-size:13px;color:var(--secondary);line-height:1.35}
+.ambient .txt b{color:var(--label);font-weight:600}
+.ambient .go{margin-left:auto;font-size:12px;font-weight:700;color:var(--accent)}
+.walkfoot{display:block;margin-top:5px;font-size:12.5px;color:var(--tertiary);line-height:1.4;animation:fadein .18s ease}
+.walkfoot b{color:var(--secondary);font-weight:600}
+.walkfoot .yes{color:var(--accent);font-weight:600;cursor:pointer;padding:6px 2px;margin-left:2px}
+.walkfoot .no{color:var(--tertiary);cursor:pointer;padding:6px 6px}
+
+/* toast */
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);
+  background:#2C2C2E;color:#fff;border-radius:13px;padding:11px 14px;display:flex;align-items:center;gap:14px;
+  font-size:13.5px;opacity:0;pointer-events:none;transition:.22s;z-index:50;box-shadow:0 8px 30px rgba(0,0,0,.28);max-width:360px}
+.toast.on{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0)}
+.toast button{background:none;border:none;color:#5AB1FF;font-weight:700;font-size:13.5px;cursor:pointer;font-family:inherit}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms !important;transition-duration:.05ms !important}}
+</style></head>
+<body>
+
+<div class="hd">
+  <h1>Subtle inline · eight ways</h1>
+  <div class="q">Quieter than the four you saw. The guess should read like a note on your own text, not a control on top of it. Same five captures, quietest first. UXBO-8.</div>
+  <div class="seg" id="seg">
+    <button data-m="1" class="on"><span class="k">1</span>Subtext</button>
+    <button data-m="2"><span class="k">2</span>Tint</button>
+    <button data-m="3"><span class="k">3</span>Ghost&nbsp;□</button>
+    <button data-m="4"><span class="k">4</span>End&nbsp;·</button>
+    <button data-m="5"><span class="k">5</span>On&nbsp;tap</button>
+    <button data-m="6"><span class="k">6</span>Next&nbsp;line</button>
+    <button data-m="7"><span class="k">7</span>Fade&nbsp;in</button>
+    <button data-m="8"><span class="k">8</span>Ambient</button>
+  </div>
+</div>
+<div class="cap" id="cap"></div>
+
+<div class="stage">
+  <div class="panel" id="panel">
+    <div class="edhd"><span class="date" id="date"></span><span class="lab">note.js · live</span></div>
+    <div class="doc" id="doc"></div>
+    <div id="ambientSlot"></div>
+    <div class="bar">
+      <button class="fmt" id="bBul" title="Bullet">•</button>
+      <button class="fmt" id="bTask" title="Task">☐</button>
+      <button class="new" id="bNew">＋ New</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><span id="toastMsg"></span><button onclick="doUndo()">Undo</button></div>
+
+<script src="./note.js"></script>
+<script>
+/* ---------------------------------------------------------------------------
+   Same five mixed captures as inline-explore.html so the treatments compare.
+   Predictions mirror capture-classifier/routing.py: kind + confidence + an
+   explicit inbox abstain (route()->None below threshold = "stays in inbox").
+--------------------------------------------------------------------------- */
+const CAPS = [
+  { id:"c1", text:"Call the plumber about the kitchen leak before Friday",
+    kind:"todo", project:"Home", when:"Fri · Aug 14", conf:0.92,
+    why:"imperative verb + a hard deadline" },
+  { id:"c2", text:"what if Today opened first, before the inbox — would it feel calmer?",
+    kind:"note", project:"Chuckle", when:null, conf:0.74,
+    why:"a question, no action — reads as a product thought" },
+  { id:"c3", text:"arxiv.org/abs/2401.09361 — nearest-centroid routing, read later",
+    kind:"reference", project:"Reading", when:"Someday", conf:0.66,
+    why:"a link + “read later”, not a dated task" },
+  { id:"c4", text:"add cardamom pods to the chai order",
+    kind:"todo", project:"Groceries", when:"Today", conf:0.88,
+    why:"“add …” routes straight to an existing list" },
+  { id:"c5", text:"the whole Bangalore move — still not sure it's the right call",
+    kind:"inbox", project:null, when:null, conf:0.31,
+    why:"below threshold, and top-2 projects tie — it abstains" },
+];
+const KIND_LABEL={todo:"To-do",note:"Note",reference:"Reference",inbox:"Unsure"};
+const KIND_KCLASS={todo:"k-todo",note:"k-note",reference:"k-ref",inbox:"k-inbox"};
+const KIND_TAG={todo:"",note:"note",reference:"ref",inbox:"inbox"};
+function confWord(c){ return c>=0.8?"likely":c>=0.55?"maybe":"unsure"; }
+function routeLine(c){ return c.kind==="inbox" ? "stays in Inbox"
+  : KIND_LABEL[c.kind]+" · "+c.project+(c.when?" · "+c.when:""); }
+/* subtext phrasing — confidence carried by the WORD, never colour alone */
+function subText(c){
+  if(c.kind==="inbox") return "not sure — staying in the inbox";
+  return confWord(c)+" "+KIND_LABEL[c.kind].toLowerCase()+" · "+c.project+(c.when?" · "+c.when:"");
+}
+
+let state={};
+function initState(){ state={}; CAPS.forEach(c=>state[c.id]={status:"pending"}); }
+initState();
+let undoStack=null;
+
+const CAPTIONS={
+ 1:`<b>1 · Subtext line.</b> Your exact ask — the capture in normal weight, the guess directly beneath as true subtext (tertiary grey, no chip, no border, no fill). Tap the subtext to file it. The quietest honest option: it reads like your own annotation. <span class="cost">Cost:</span> a grey line under every capture still adds vertical rhythm; on a 40-line day it's a lot of grey to skim past.`,
+ 2:`<b>2 · Tint only.</b> Nothing is added — the line itself takes a barely-there tint and a hairline underline in the label colour, exactly like a Notes data-detector. Tap the line to see and accept. <span class="cost">Cost:</span> <span class="blind">a first-time user will simply never learn the tint is tappable</span> — it looks like styling, not an offer.`,
+ 3:`<b>3 · Ghost checkbox.</b> A circle checkbox fades in at ~20% in the gutter, where it would live if this became a todo. Tap it to make it real — the suggestion IS the affordance. Notes/links get a faint ghost bullet instead. <span class="cost">Cost:</span> <span class="blind">near-invisible until noticed</span>, and it only expresses todo-or-not — project & when hide until hover.`,
+ 4:`<b>4 · End mark.</b> One small character at the end of the line — a mid-dot for a confident guess, a chevron when unsure — and nothing else. Tap to expand in place. <span class="cost">Cost:</span> a dot at line-end is easy to miss and easy to mistake for punctuation; discoverability is low.`,
+ 5:`<b>5 · On tap.</b> Nothing visible at all until you tap or focus a line; the guess then appears beneath it. Zero ambient noise — the editor is exactly the editor. <span class="cost">Cost:</span> it costs one tap of discovery per line, and <span class="blind">someone who never taps their old lines never discovers it exists</span>.`,
+ 6:`<b>6 · Next-line placeholder.</b> The guess appears as placeholder text on the next empty line — right where your caret goes next, like Smart Compose. Tap to accept; start typing to dismiss. <span class="cost">Cost:</span> it can be misread as text you wrote, and it only surfaces the line you're currently on, not the backlog above.`,
+ 7:`<b>7 · Progressive fade.</b> Suggestions arrive almost invisible and gain contrast only if left unattended, so a fast confident capture is never interrupted; hover or focus reveals instantly. <span class="cost">Cost:</span> during the fade-in window it is deliberately hard to see — quick users get the calm, but may never realise a guess was even offered.`,
+ 8:`<b>8 · Ambient summary.</b> Nothing inline per line. One quiet line at the bottom: “4 of 5 look filed · review”. Tap it to walk the lines in place, one at a time. <span class="cost">Cost:</span> the whole feature hides behind one easily-ignored footer line — highest calm, but the discovery burden is concentrated in a single tap most people won't take.`,
+};
+
+/* ==== editor seeding (real note.js makeBlock) ==== */
+let blockOf={};
+function seedEditor(){
+  const docEl=document.getElementById("doc");
+  docEl.innerHTML=""; blockOf={};
+  CAPS.forEach(c=>{
+    const blk=makeBlock("text",c.text,0,false);
+    blk.dataset.cap=c.id;
+    docEl.appendChild(blk);
+    blockOf[c.id]=blk;
+  });
+  if(typeof updatePh==="function") updatePh();
+}
+function stripDecor(){
+  document.querySelectorAll(".subline,.tintrow,.gcb,.gbul,.gsub,.endmark,.endpop,.demandsub,.demandhint,.phline,.fadesub,.walkfoot,.settled").forEach(n=>n.remove());
+  document.getElementById("ambientSlot").innerHTML="";
+  Object.values(blockOf).forEach(blk=>{
+    blk.className="blk"; blk.dataset.type="text";
+    blk.classList.remove("tinted","hasghost","demand","walking","applied","k-note","k-ref");
+    if(typeof renderMarker==="function") renderMarker(blk);
+    if(typeof setType==="function") setType(blk,"text");
+    blk.onclick=null;
+    const t=blk.querySelector(".applied-tag"); if(t) t.remove();
+  });
+}
+
+/* settled subtext once a line is accepted / dismissed / kept */
+function settle(id){
+  const blk=blockOf[id], c=CAPS.find(x=>x.id===id), s=state[id];
+  if(!blk) return;
+  blk.querySelectorAll(".subline,.tintrow,.gsub,.endpop,.demandsub,.demandhint,.walkfoot,.settled").forEach(n=>n.remove());
+  const nx=blk.nextSibling; if(nx&&nx.classList&&nx.classList.contains("phline")) nx.remove();
+  blk.classList.remove("tinted","hasghost","demand","k-note","k-ref");
+  const gcb=blk.querySelector(".gcb,.gbul"); if(gcb) gcb.remove();
+  const em=blk.querySelector(".endmark"); if(em) em.remove();
+  if(s.status==="pending") return;
+  blk.classList.add("applied");
+  if(s.status==="applied"&&c.kind==="todo"&&typeof setType==="function"){ setType(blk,"task"); }
+  const sub=document.createElement("span");
+  sub.className="settled";
+  const txt = s.status==="skipped" ? "dismissed — left as plain capture"
+            : (c.kind==="inbox" ? "kept in the inbox" : "filed · <b>"+routeLine(c)+"</b>");
+  sub.innerHTML=txt+' <span class="undo">Undo</span>';
+  sub.querySelector(".undo").onclick=(e)=>{ e.stopPropagation(); undoOne(id); };
+  blk.appendChild(sub);
+}
+
+function decide(id,action,{quiet=false}={}){
+  const prev={...state[id]};
+  state[id]= action==="apply" ? {status:"applied"} : {status:"skipped"};
+  const c=CAPS.find(x=>x.id===id);
+  undoStack={ id, prev, restore:()=>{ state[id]=prev; render(); } };
+  settle(id);
+  if(!quiet) showToast(action==="apply"
+    ? (c.kind==="inbox"?"Kept in the inbox":"Filed · "+routeLine(c))
+    : "Dismissed");
+}
+function undoOne(id){ state[id]={status:"pending"}; render(); showToast("Undone"); }
+function doUndo(){ if(undoStack){ undoStack.restore(); undoStack=null; hideToast(); } }
+
+/* ==== mode switch ==== */
+let mode=1;
+function setMode(m){
+  mode=m;
+  document.querySelectorAll("#seg button").forEach(b=>b.classList.toggle("on",+b.dataset.m===m));
+  document.getElementById("cap").innerHTML=CAPTIONS[m];
+  initState(); seedEditor(); render();
+}
+function render(){
+  stripDecor();
+  [renderSubtext,renderTint,renderGhost,renderEnd,renderDemand,renderNextLine,renderFade,renderAmbient][mode-1]();
+}
+
+/* ---------- V1 SUBTEXT LINE ---------- */
+function renderSubtext(){
+  CAPS.forEach(c=>{
+    const blk=blockOf[c.id]; if(state[c.id].status!=="pending"){ settle(c.id); return; }
+    const s=document.createElement("span");
+    s.className="subline"+(c.kind==="inbox"?" unsure":"");
+    if(c.kind==="inbox"){
+      s.innerHTML=`<span class="kw">not sure</span> — staying in the inbox`;
+    }else{
+      s.innerHTML=`<span class="kw">${confWord(c)} ${KIND_LABEL[c.kind].toLowerCase()}</span> · ${c.project}${c.when?" · "+c.when:""}`
+        +` <span class="act">file</span><span class="dis">dismiss</span>`;
+      const hit=document.createElement("span");hit.className="hit";s.appendChild(hit);
+      s.querySelector(".act").onclick=(e)=>{e.stopPropagation();decide(c.id,"apply");};
+      s.querySelector(".dis").onclick=(e)=>{e.stopPropagation();decide(c.id,"skip");};
+      s.onclick=()=>decide(c.id,"apply");
+    }
+    blk.appendChild(s);
+  });
+}
+
+/* ---------- V2 TINT ONLY ---------- */
+function renderTint(){
+  CAPS.forEach(c=>{
+    const blk=blockOf[c.id]; if(state[c.id].status!=="pending"){ settle(c.id); return; }
+    if(c.kind==="inbox") return; // unsure = no tint at all, honestly nothing
+    blk.classList.add("tinted");
+    if(c.kind==="note") blk.classList.add("k-note");
+    if(c.kind==="reference") blk.classList.add("k-ref");
+    blk.style.cursor="pointer";
+    blk.onclick=(e)=>{
+      if(e.target.closest(".tintrow"))return;
+      if(blk.querySelector(".tintrow")){ blk.querySelector(".tintrow").remove(); return; }
+      const r=document.createElement("div");r.className="tintrow";
+      r.innerHTML=`<span><b>${confWord(c)} ${KIND_LABEL[c.kind].toLowerCase()}</b> · ${c.project}${c.when?" · "+c.when:""}</span>`
+        +`<span class="yes">File</span><span class="no">Not this</span>`;
+      r.querySelector(".yes").onclick=(ev)=>{ev.stopPropagation();decide(c.id,"apply");};
+      r.querySelector(".no").onclick=(ev)=>{ev.stopPropagation();decide(c.id,"skip");};
+      blk.appendChild(r);
+    };
+  });
+}
+
+/* ---------- V3 GHOST CHECKBOX ---------- */
+function renderGhost(){
+  CAPS.forEach(c=>{
+    const blk=blockOf[c.id]; if(state[c.id].status!=="pending"){ settle(c.id); return; }
+    if(c.kind==="inbox") return; // unsure offers no affordance
+    blk.classList.add("hasghost");
+    const mark=document.createElement("span");
+    if(c.kind==="todo"){
+      mark.className="gcb";mark.tabIndex=0;mark.title="make this a to-do";
+      const hit=document.createElement("span");hit.className="hit";mark.appendChild(hit);
+      const go=(e)=>{e.stopPropagation();decide(c.id,"apply");};
+      mark.onclick=go; mark.onkeydown=(e)=>{if(e.key==="Enter"||e.key===" ")go(e);};
+    }else{
+      mark.className="gbul";mark.title="file as "+KIND_LABEL[c.kind].toLowerCase();
+      const hit=document.createElement("span");hit.className="hit";mark.appendChild(hit);
+      mark.onclick=(e)=>{e.stopPropagation();decide(c.id,"apply");};
+    }
+    blk.insertBefore(mark,blk.firstChild);
+    const gs=document.createElement("span");gs.className="gsub";
+    gs.textContent=`${confWord(c)} ${KIND_LABEL[c.kind].toLowerCase()} · ${c.project}${c.when?" · "+c.when:""} — tap the mark to file`;
+    blk.appendChild(gs);
+  });
+}
+
+/* ---------- V4 END MARK ---------- */
+function renderEnd(){
+  CAPS.forEach(c=>{
+    const blk=blockOf[c.id]; if(state[c.id].status!=="pending"){ settle(c.id); return; }
+    const em=document.createElement("span");
+    em.className="endmark"+(c.kind==="inbox"?" unsure":"");
+    em.textContent=c.kind==="inbox"?" ›":" ·";
+    em.title="see suggestion";
+    const hit=document.createElement("span");hit.className="hit";em.appendChild(hit);
+    em.onclick=(e)=>{
+      e.stopPropagation();
+      if(blk.querySelector(".endpop")){ blk.querySelector(".endpop").remove(); return; }
+      const p=document.createElement("span");p.className="endpop";
+      if(c.kind==="inbox"){
+        p.innerHTML=`<b>not sure</b> — this one stays in the inbox`;
+      }else{
+        p.innerHTML=`<b>${confWord(c)} ${KIND_LABEL[c.kind].toLowerCase()}</b> · ${c.project}${c.when?" · "+c.when:""}`
+          +`<span class="yes">file</span><span class="no">dismiss</span>`;
+        p.querySelector(".yes").onclick=(ev)=>{ev.stopPropagation();decide(c.id,"apply");};
+        p.querySelector(".no").onclick=(ev)=>{ev.stopPropagation();decide(c.id,"skip");};
+      }
+      blk.appendChild(p);
+    };
+    blk.querySelector(".btx").appendChild(em);
+  });
+}
+
+/* ---------- V5 ON DEMAND ---------- */
+function renderDemand(){
+  CAPS.forEach(c=>{
+    const blk=blockOf[c.id]; if(state[c.id].status!=="pending"){ settle(c.id); return; }
+    blk.classList.add("demand");
+    const reveal=()=>{
+      if(blk.querySelector(".demandsub"))return;
+      const s=document.createElement("span");s.className="demandsub";
+      if(c.kind==="inbox"){
+        s.innerHTML=`<b>not sure</b> — staying in the inbox`;
+      }else{
+        s.innerHTML=`<b>${confWord(c)} ${KIND_LABEL[c.kind].toLowerCase()}</b> · ${c.project}${c.when?" · "+c.when:""}`
+          +`<span class="yes">file</span><span class="no">dismiss</span>`;
+        s.querySelector(".yes").onclick=(ev)=>{ev.stopPropagation();decide(c.id,"apply");};
+        s.querySelector(".no").onclick=(ev)=>{ev.stopPropagation();decide(c.id,"skip");};
+      }
+      blk.appendChild(s);
+    };
+    blk.onclick=reveal;
+    blk.querySelector(".btx").addEventListener("focus",reveal);
+  });
+}
+
+/* ---------- V6 NEXT-LINE PLACEHOLDER ---------- */
+function renderNextLine(){
+  CAPS.forEach(c=>{
+    const blk=blockOf[c.id]; if(state[c.id].status!=="pending"){ settle(c.id); return; }
+    const ph=document.createElement("div");ph.className="phline";
+    if(c.kind==="inbox"){
+      ph.innerHTML=`<span class="mk"></span><span class="phtext unsure">not sure yet — leaving this in the inbox</span>`;
+    }else{
+      ph.innerHTML=`<span class="phcaret"></span><span class="phtext">`
+        +`<span class="kw">${confWord(c)} ${KIND_LABEL[c.kind].toLowerCase()} · ${c.project}${c.when?" · "+c.when:""}</span>`
+        +` — tap to accept, or type to dismiss</span>`;
+      ph.querySelector(".phtext").onclick=()=>decide(c.id,"apply");
+    }
+    blk.parentNode.insertBefore(ph,blk.nextSibling);
+  });
+}
+
+/* ---------- V7 PROGRESSIVE FADE ---------- */
+function renderFade(){
+  CAPS.forEach(c=>{
+    const blk=blockOf[c.id]; if(state[c.id].status!=="pending"){ settle(c.id); return; }
+    const s=document.createElement("span");s.className="fadesub";
+    if(c.kind==="inbox"){
+      s.innerHTML=`<span class="kw">not sure</span> — staying in the inbox`;
+    }else{
+      s.innerHTML=`<span class="kw">${confWord(c)} ${KIND_LABEL[c.kind].toLowerCase()}</span> · ${c.project}${c.when?" · "+c.when:""}`
+        +` <span class="act">file</span><span class="dis">dismiss</span>`;
+      s.querySelector(".act").onclick=(e)=>{e.stopPropagation();decide(c.id,"apply");};
+      s.querySelector(".dis").onclick=(e)=>{e.stopPropagation();decide(c.id,"skip");};
+    }
+    blk.appendChild(s);
+  });
+}
+
+/* ---------- V8 AMBIENT SUMMARY ---------- */
+let walkIdx=-1;
+function renderAmbient(){
+  const pending=CAPS.filter(c=>state[c.id].status==="pending");
+  const filed=CAPS.filter(c=>c.kind!=="inbox");
+  const done=CAPS.filter(c=>state[c.id].status!=="pending").length;
+  const slot=document.getElementById("ambientSlot");
+  const looks=filed.length; // "look filed"
+  slot.innerHTML=`<div class="ambient" id="ambient">
+      <span class="txt">${pending.length
+        ? `<b>${looks} of ${CAPS.length}</b> look filed · ${done?done+" reviewed · ":""}review`
+        : `all ${CAPS.length} reviewed`}</span>
+      <span class="go">${pending.length?(walkIdx<0?"Review ›":"…"):""}</span></div>`;
+  document.getElementById("ambient").onclick=()=>{ if(pending.length){ walkIdx=0; walk(); } };
+  CAPS.forEach(c=>{ if(state[c.id].status!=="pending") settle(c.id); });
+  if(walkIdx>=0) walk();
+}
+function walk(){
+  const pending=CAPS.filter(c=>state[c.id].status==="pending");
+  Object.values(blockOf).forEach(b=>{b.classList.remove("walking");const w=b.querySelector(".walkfoot");if(w)w.remove();});
+  if(!pending.length||walkIdx>=pending.length){ walkIdx=-1; renderAmbient(); return; }
+  const c=pending[walkIdx];const blk=blockOf[c.id];
+  blk.classList.add("walking");
+  blk.scrollIntoView({block:"center",behavior:"smooth"});
+  const f=document.createElement("span");f.className="walkfoot";
+  if(c.kind==="inbox"){
+    f.innerHTML=`<b>not sure</b> — keep in the inbox? <span class="yes">Keep</span><span class="no">Skip</span>`;
+  }else{
+    f.innerHTML=`<b>${confWord(c)} ${KIND_LABEL[c.kind].toLowerCase()}</b> · ${c.project}${c.when?" · "+c.when:""}`
+      +`<span class="yes">File</span><span class="no">Skip</span>`;
+  }
+  f.querySelector(".yes").onclick=(e)=>{e.stopPropagation();decide(c.id,"apply",{quiet:true});walk();};
+  f.querySelector(".no").onclick=(e)=>{e.stopPropagation();decide(c.id,"skip",{quiet:true});walk();};
+  blk.appendChild(f);
+}
+
+/* ==== toast ==== */
+let toastT=null;
+function showToast(msg){ const t=document.getElementById("toast");
+  document.getElementById("toastMsg").textContent=msg; t.classList.add("on");
+  clearTimeout(toastT); toastT=setTimeout(hideToast,3000); }
+function hideToast(){ document.getElementById("toast").classList.remove("on"); }
+
+/* ==== boot ==== */
+document.querySelectorAll("#seg button").forEach(b=>b.onclick=()=>setMode(+b.dataset.m));
+document.getElementById("bNew").onclick=()=>{ const blk=makeBlock("text","",0,false);document.getElementById("doc").appendChild(blk);blk.querySelector(".btx").focus(); };
+document.getElementById("bBul").onclick=()=>{ const s=window.getSelection&&window.getSelection().anchorNode; };
+seedEditor();
+setMode(1);
+</script>
+</body></html>
