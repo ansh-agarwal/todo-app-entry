@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<title>Inline suggestions · production — Chip & Ghost (UXBO-8)</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
+<link rel="stylesheet" href="./note-base.css">
+<style>
+/* ===========================================================================
+   Apple identity, anchored to real system semantics.
+   Greys are Apple's secondaryLabel / tertiaryLabel / quaternaryLabel so the
+   suggestion reads as a genuine annotation, never as UI chrome.
+   Two themes tuned SEPARATELY (ghost grey inverts badly if you just flip it).
+=========================================================================== */
+:root{
+  color-scheme: light dark;
+  --bg:#F2F2F7; --card:#FFFFFF; --ink:#1C1C1E;
+  /* Apple label hierarchy (light) */
+  --label-2:rgba(60,60,67,.60);   /* secondaryLabel  */
+  --label-3:rgba(60,60,67,.30);   /* tertiaryLabel   */
+  --label-4:rgba(60,60,67,.18);   /* quaternaryLabel */
+  --rule:#E4E4E9; --rule-2:#F0F0F3;
+  --cbrule:#C7C7CC;
+  --accent:#0A84FF; --accent-soft:#E9F2FF; --accent-ink:#0A6CFF;
+  --todo:#0A84FF; --todo-soft:#E9F2FF;
+  --note:#6E44C0; --note-soft:#F0EAFA;
+  --ref:#1a7f37;  --ref-soft:#E7F3EB;
+  --unsure:#8A6D00; --unsure-soft:#FBF3DA; /* honest amber = "not sure" */
+  --scrim:#1C1C1E;
+  --body:17px; --sub:13px;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Segoe UI",Roboto,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --ease:cubic-bezier(.32,.72,0,1);       /* Apple spring-ish */
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#000000; --card:#1C1C1E; --ink:#F2F2F7;
+    --label-2:rgba(235,235,245,.62);
+    --label-3:rgba(235,235,245,.32);
+    --label-4:rgba(235,235,245,.20);
+    --rule:#2C2C2E; --rule-2:#242426;
+    --cbrule:#5A5A5E;
+    --accent:#0A84FF; --accent-soft:#0A2540; --accent-ink:#5AB1FF;
+    --todo:#0A84FF; --todo-soft:#10233B;
+    --note:#BF9CF0; --note-soft:#231A33;   /* lifted, not the light purple */
+    --ref:#4CD07A;  --ref-soft:#12271A;
+    --unsure:#E8C25A; --unsure-soft:#2A2413; /* readable amber on black */
+    --scrim:#2C2C2E;
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+  display:flex;flex-direction:column;height:100dvh;overflow:hidden}
+
+/* header + segmented control */
+.hd{flex:0 0 auto;padding:calc(9px + env(safe-area-inset-top)) 14px 9px;background:var(--bg);border-bottom:1px solid var(--rule)}
+.hd h1{font-size:15px;font-weight:700;letter-spacing:-.01em;margin-bottom:2px}
+.hd .q{font-size:11.5px;color:var(--label-2);line-height:1.35;margin-bottom:9px}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:var(--rule);border-radius:11px;padding:3px}
+.seg button{min-height:34px;border:none;background:none;font-family:inherit;font-size:12.5px;font-weight:600;
+  color:var(--label-2);border-radius:8px;cursor:pointer;transition:.18s var(--ease)}
+.seg button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.14)}
+.seg button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* caption — honest trade-off */
+.cap{flex:0 0 auto;padding:9px 15px;background:var(--card);border-bottom:1px solid var(--rule);
+  font-size:11.5px;line-height:1.5;color:var(--label-2)}
+.cap b{font-weight:700;color:var(--ink)}
+.cap .risk{color:var(--unsure);font-weight:700}
+.cap details{margin-top:5px}
+.cap summary{cursor:pointer;color:var(--accent-ink);font-weight:600;font-size:11px;list-style:none}
+.cap summary::-webkit-details-marker{display:none}
+.cap details p{margin-top:5px;color:var(--label-2)}
+.cap details p b{color:var(--ink)}
+
+.stage{flex:1;min-height:0;position:relative;display:flex;justify-content:center}
+.panel{position:absolute;inset:0;display:flex;flex-direction:column;width:100%;max-width:440px;
+  background:var(--card);border-left:1px solid var(--rule);border-right:1px solid var(--rule)}
+
+/* editor surface (real note.js) */
+.edhd{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:11px 18px 7px;border-bottom:1px solid var(--rule-2)}
+.edhd .date{font-family:var(--mono);font-size:11px;color:var(--label-3)}
+.edhd .lab{font-family:var(--mono);font-size:10px;color:var(--label-2);border:1px solid var(--rule);border-radius:5px;padding:2px 7px;margin-left:auto}
+.doc{flex:1;overflow-y:auto;padding:12px 16px 60px;cursor:text;position:relative}
+.blk{display:flex;gap:10px;align-items:flex-start;padding:6px 0;flex-wrap:wrap;position:relative}
+.blk .mk{flex:0 0 auto;margin-top:4px;width:22px;display:flex;justify-content:center}
+.blk[data-type="text"] .mk{display:none}
+.blk .mk.bul{color:var(--label-3);font-size:18px;line-height:1}
+.blk .mk.cb{width:21px;height:21px;border-radius:50%;border:1.6px solid var(--cbrule);cursor:pointer;display:grid;place-items:center;transition:.13s}
+.blk .mk.cb:hover{border-color:var(--accent)}
+.blk.done .mk.cb{background:var(--accent);border-color:var(--accent);animation:cbpop .22s var(--ease)}
+@keyframes cbpop{0%{transform:scale(.6)}62%{transform:scale(1.14)}100%{transform:scale(1)}}
+.blk.done .mk.cb::after{content:"✓";color:#fff;font-size:12px;font-weight:800}
+.blk .btx{flex:1;min-width:60%;outline:none;font-size:var(--body);line-height:1.5;min-height:24px;word-break:break-word;color:var(--ink)}
+.blk.done .btx{color:var(--label-3);text-decoration:line-through}
+.blk .btx:empty::before{content:attr(data-ph);color:var(--label-3)}
+.btx:focus-visible{outline:none}
+
+.bar{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:9px 16px calc(9px + env(safe-area-inset-bottom));border-top:1px solid var(--rule-2)}
+.fmt{width:40px;height:40px;border:1px solid var(--rule);border-radius:9px;background:var(--card);color:var(--label-2);font-size:16px;cursor:pointer;display:grid;place-items:center}
+.fmt:hover{border-color:var(--accent);color:var(--accent)}
+.fmt:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.new{margin-left:auto;min-height:40px;display:inline-flex;align-items:center;gap:6px;background:var(--accent-soft);color:var(--accent-ink);border:none;border-radius:20px;font-size:14px;font-weight:700;padding:8px 16px;cursor:pointer}
+
+/* kind tokens */
+.k-todo{--kc:var(--todo);--kb:var(--todo-soft)}
+.k-note{--kc:var(--note);--kb:var(--note-soft)}
+.k-ref{--kc:var(--ref);--kb:var(--ref-soft)}
+.k-inbox{--kc:var(--unsure);--kb:var(--unsure-soft)}
+
+/* ===== shared confidence glyph — shape + text, NEVER colour alone ===== */
+.conf{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--label-2);font-weight:600}
+.conf .pips{display:inline-flex;gap:2px}
+.conf .pip{width:5px;height:5px;border-radius:1.5px;background:var(--label-4);transform:rotate(45deg)}
+.conf .pip.f{background:currentColor}          /* filled diamonds = confidence, readable w/o hue */
+.conf .word{color:var(--label-2)}
+.conf.k-inbox .word{color:var(--unsure);font-weight:700}
+
+/* ===========================================================================
+   TREATMENT 1 · CHIP BELOW
+   "my text, and then below in subtext the suggestion" — quiet annotation row.
+=========================================================================== */
+.chip{display:block;margin:2px 0 2px 32px;transform-origin:top left}
+.chip .row{display:inline-flex;align-items:center;gap:8px;max-width:100%}
+.chip .btn-accept{
+  display:inline-flex;align-items:center;gap:7px;
+  min-height:30px;padding:3px 6px 3px 10px;border-radius:16px;
+  border:1px solid color-mix(in srgb,var(--kc) 32%,transparent);
+  background:var(--kb);color:var(--kc);
+  font-family:inherit;font-size:var(--sub);font-weight:600;line-height:1.2;
+  cursor:pointer;position:relative;text-align:left}
+.chip .btn-accept:focus-visible{outline:2px solid var(--kc);outline-offset:2px}
+.chip .btn-accept .glyph{width:15px;height:15px;flex:0 0 auto}
+.chip .btn-accept .plus{margin-left:2px;font-weight:800;opacity:.7}
+/* expand touch target to 44 without growing the visual */
+.chip .btn-accept::before{content:"";position:absolute;inset:-7px -6px;border-radius:22px}
+.chip .btn-dismiss{
+  width:30px;height:30px;flex:0 0 auto;position:relative;
+  border:none;background:none;color:var(--label-3);cursor:pointer;
+  display:grid;place-items:center;border-radius:50%}
+.chip .btn-dismiss:hover{color:var(--label-2);background:var(--rule-2)}
+.chip .btn-dismiss:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.chip .btn-dismiss::before{content:"";position:absolute;inset:-7px}
+.chip .btn-dismiss svg{width:13px;height:13px}
+.chip .conf{margin-top:4px;margin-left:2px}
+/* the honest "unsure" chip — not a button, an admission */
+.chip.is-inbox .stay{
+  display:inline-flex;align-items:center;gap:7px;min-height:30px;padding:3px 12px;border-radius:16px;
+  border:1px dashed color-mix(in srgb,var(--unsure) 45%,transparent);
+  background:var(--unsure-soft);color:var(--unsure);font-size:var(--sub);font-weight:600}
+.chip.is-inbox .stay svg{width:14px;height:14px}
+/* resolved states */
+.chip.resolved{margin-top:2px}
+.chip .resolved-row{display:inline-flex;align-items:center;gap:8px;font-size:var(--sub);color:var(--label-2)}
+.chip .resolved-row .tick{color:var(--kc)}
+.chip .resolved-row .undo{min-height:30px;position:relative;background:none;border:none;color:var(--accent-ink);
+  font-family:inherit;font-size:var(--sub);font-weight:700;cursor:pointer;padding:0 4px}
+.chip .resolved-row .undo::before{content:"";position:absolute;inset:-8px -6px}
+.chip .resolved-row .undo:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+/* applied inline tag on the line itself */
+.applied-tag{display:inline-flex;align-items:center;gap:4px;margin-left:8px;padding:1px 8px;border-radius:12px;
+  font-size:11px;font-weight:700;vertical-align:middle;white-space:nowrap;background:var(--kb);color:var(--kc)}
+
+@keyframes chipin{from{opacity:0;transform:translateY(-5px) scale(.98)}to{opacity:1;transform:none}}
+@keyframes chipout{to{opacity:0;transform:translateY(-3px);height:0;margin:0}}
+
+/* ===========================================================================
+   TREATMENT 2 · GHOST TEXT
+   Trails the caret like autocomplete, but it is CLASSIFYING, not completing.
+   Honest fixes (see caption): a leading ⋯ + label prefix so it can't be
+   mistaken for words you wrote; accept is Tab/tap (NOT swipe — swipe-right
+   collides with the iOS system back gesture); reduced opacity so the caret wins.
+=========================================================================== */
+.ghost{display:inline;white-space:normal}
+.ghost .gwrap{
+  display:inline-flex;align-items:center;gap:6px;margin-left:8px;
+  vertical-align:baseline;font-size:var(--body);
+  color:var(--label-3);              /* tertiaryLabel: genuinely recessive */
+  cursor:pointer;position:relative;border-radius:8px;padding:1px 2px}
+.ghost .gwrap:focus-visible{outline:2px solid var(--kc);outline-offset:3px}
+.ghost .gwrap::before{content:"";position:absolute;inset:-11px -6px} /* 44 hit target */
+.ghost .lead{color:var(--label-3);font-weight:400;letter-spacing:.02em} /* the ⋯ marker */
+.ghost .gk{color:var(--kc);opacity:.9;font-weight:600;font-size:var(--sub)}
+.ghost .accept-key{
+  display:inline-flex;align-items:center;gap:3px;font-size:10.5px;font-weight:700;
+  color:var(--kc);background:var(--kb);border:1px solid color-mix(in srgb,var(--kc) 30%,transparent);
+  border-radius:5px;padding:1px 5px;line-height:1.4}
+.ghost.is-inbox .gwrap{cursor:default;color:var(--unsure)}
+.ghost.is-inbox .gk{color:var(--unsure);opacity:1}
+.ghost .conf-inline{margin-left:2px}
+/* simulated caret so reviewers feel the competition the caption describes */
+.ghost .caret{display:inline-block;width:2px;height:1.05em;background:var(--accent);
+  vertical-align:-.18em;margin-left:1px;animation:blink 1.06s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.ghost.resolved .gwrap{display:none}
+
+@keyframes ghostin{from{opacity:0}to{opacity:1}}
+
+/* ===== toast / undo (shared) ===== */
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));
+  transform:translateX(-50%) translateY(24px);
+  background:var(--scrim);color:#fff;border-radius:14px;padding:11px 12px 11px 15px;
+  display:flex;align-items:center;gap:12px;font-size:13.5px;line-height:1.3;
+  opacity:0;pointer-events:none;transition:.24s var(--ease);z-index:50;
+  box-shadow:0 10px 34px rgba(0,0,0,.34);max-width:min(90vw,380px)}
+.toast.on{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0)}
+.toast .tmsg{flex:1}
+.toast button{min-height:34px;background:rgba(255,255,255,.14);border:none;color:#5AB1FF;
+  font-weight:800;font-size:13.5px;cursor:pointer;font-family:inherit;border-radius:9px;padding:6px 12px;white-space:nowrap}
+.toast button:focus-visible{outline:2px solid #5AB1FF;outline-offset:2px}
+
+/* visually-hidden live region for VoiceOver announcements */
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+@media (prefers-reduced-motion: reduce){
+  *{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important}
+  .ghost .caret{animation:none;opacity:1}
+  .conf .pip{transition:none}
+}
+</style></head>
+<body>
+
+<div class="hd">
+  <h1>Inline suggestions · production fidelity</h1>
+  <div class="q">Two treatments at build quality — same five captures — so you can decide. Free capture; the AI annotates <em>after</em>. Accept once, dismiss once, and low confidence honestly stays in the inbox. UXBO-8.</div>
+  <div class="seg" id="seg" role="tablist" aria-label="Treatment">
+    <button role="tab" data-m="chip" class="on" aria-selected="true">1 · Chip below</button>
+    <button role="tab" data-m="ghost" aria-selected="false">2 · Ghost text</button>
+  </div>
+</div>
+<div class="cap" id="cap" role="region" aria-label="Trade-off notes"></div>
+
+<div class="stage">
+  <div class="panel" id="panel">
+    <div class="edhd"><span class="date" id="date"></span><span class="lab">note.js · live</span></div>
+    <div class="doc" id="doc" role="list" aria-label="Captures"></div>
+    <div class="bar">
+      <button class="fmt" id="bBul" title="Bullet" aria-label="Bullet">•</button>
+      <button class="fmt" id="bTask" title="Task" aria-label="Task">☐</button>
+      <button class="new" id="bNew">＋ New</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status">
+  <span class="tmsg" id="toastMsg"></span>
+  <button id="toastUndo" type="button">Undo</button>
+</div>
+<div class="sr" id="live" aria-live="polite"></div>
+
+<script src="./note.js"></script>
+<script>
+/* ---------------------------------------------------------------------------
+   Same five mixed captures as inline-explore.html (kept identical so the two
+   treatments compare against the other agent's build). Predictions mirror the
+   real classifier: kind + confidence, and an explicit inbox abstain when
+   routing.route() returns None (below threshold OR top-2 tie within margin).
+--------------------------------------------------------------------------- */
+const CAPS = [
+  { id:"c1", text:"Call the plumber about the kitchen leak before Friday",
+    kind:"todo", project:"Home", when:"Fri · Aug 14", conf:0.92,
+    why:"imperative verb + a hard deadline" },
+  { id:"c2", text:"what if Today opened first, before the inbox — would it feel calmer?",
+    kind:"note", project:"Chuckle", when:null, conf:0.74,
+    why:"a question, no action — reads as a product thought" },
+  { id:"c3", text:"arxiv.org/abs/2401.09361 — nearest-centroid routing, read later",
+    kind:"reference", project:"Reading", when:"Someday", conf:0.66,
+    why:"a link + “read later”, not a dated task" },
+  { id:"c4", text:"add cardamom pods to the chai order",
+    kind:"todo", project:"Groceries", when:"Today", conf:0.88,
+    why:"“add …” routes straight to an existing list" },
+  { id:"c5", text:"the whole Bangalore move — still not sure it's the right call",
+    kind:"inbox", project:null, when:null, conf:0.31,
+    why:"below threshold, and the top-2 projects tie — it abstains" },
+];
+const KIND_LABEL = { todo:"To-do", note:"Note", reference:"Reference", inbox:"Unsure" };
+const KIND_KCLASS = { todo:"k-todo", note:"k-note", reference:"k-ref", inbox:"k-inbox" };
+function confPips(c){ return c>=0.8?3 : c>=0.55?2 : 1; }
+function confWord(c){ return c>=0.8?"high" : c>=0.55?"fair" : "low"; }
+function routeLine(c){ return c.kind==="inbox" ? "stays in Inbox"
+  : KIND_LABEL[c.kind] + " → " + c.project + (c.when ? " · " + c.when : ""); }
+
+/* per-capture status: pending | applied | skipped  (+ transient meta) */
+let state={};
+function initState(){ state={}; CAPS.forEach(c=>state[c.id]={status:"pending"}); }
+let lastUndo=null;   // single-level undo like iOS
+
+/* ---- captions: honest trade-offs, no marketing ---- */
+const CAPTIONS = {
+ chip:`<b>1 · Chip below.</b> A quiet subtext row under each line: tap the pill to accept, ✕ to dismiss. You always see the full guess and its confidence, and dismiss never edits your words. <span class="risk">Cost:</span> it adds a row under every capture, so a long inbox gains height and visual busyness.
+   <details><summary>How the hard parts are handled</summary>
+   <p><b>Secondary, not chrome.</b> Type is <b>13px on Apple’s secondaryLabel grey</b>, indented under the text — reads as annotation. <b>Confidence</b> is shown as filled diamonds <i>and</i> the word “high/fair/low”, so it never depends on colour. <b>Unsure</b> is a dashed amber “staying in Inbox” tag with an inbox glyph — deliberately not a confident-looking button.</p></details>`,
+ ghost:`<b>2 · Ghost text.</b> The guess trails the caret like autocomplete, in tertiaryLabel grey; press <b>Tab</b> or tap it to accept, keep typing to ignore. Zero extra rows. <span class="risk">Cost:</span> it genuinely competes with the caret and implies the AI is finishing your sentence when it is only classifying it.
+   <details><summary>The three honest problems — and what I actually did</summary>
+   <p><b>1. It competes with the caret.</b> Real, and only partly fixable in a prototype: I hold the ghost at <b>tertiaryLabel</b> (weakest label tier) and render a live blinking caret <i>before</i> it, so the caret visibly wins. In production it should only appear on <b>pause</b>, never mid-keystroke.</p>
+   <p><b>2. Right-swipe to accept collides with the iOS system back gesture.</b> So I <b>dropped swipe entirely</b> — accept is <b>Tab</b> (hardware/again keyboard) or a tap on a 44pt target. The little <span style="font-weight:700">⇥</span> key hint teaches it.</p>
+   <p><b>3. It implies completion, not classification.</b> Mitigated with a leading <b>“⋯”</b> marker and a coloured <b>kind label</b> (“To-do →”) prefixing every ghost — you read it as a tag the system is proposing, not text you wrote. Not 100% solvable; flagged rather than faked.</p></details>`,
+};
+
+/* ==== editor seeding (real note.js blocks) ==== */
+let blockOf={};
+function seedEditor(){
+  const docEl=document.getElementById("doc");
+  docEl.innerHTML=""; blockOf={};
+  CAPS.forEach(c=>{
+    const blk=makeBlock("text",c.text,0,false);
+    blk.dataset.cap=c.id; blk.setAttribute("role","listitem");
+    docEl.appendChild(blk);
+    blockOf[c.id]=blk;
+  });
+  if(typeof updatePh==="function") updatePh();
+}
+function stripDecor(){
+  document.querySelectorAll(".chip,.ghost").forEach(n=>n.remove());
+  document.querySelectorAll(".applied-tag").forEach(n=>n.remove());
+  Object.values(blockOf).forEach(blk=>{
+    blk.classList.remove("done");
+    if(typeof setType==="function") setType(blk,"text");
+  });
+}
+/* reflect applied state on the real block: convert todo→task, add inline tag */
+function syncBlock(id){
+  const blk=blockOf[id]; if(!blk) return;
+  const c=CAPS.find(x=>x.id===id);
+  const old=blk.querySelector(".applied-tag"); if(old) old.remove();
+  blk.classList.remove("done");
+  if(typeof setType==="function") setType(blk,"text");
+  if(state[id].status==="applied" && c.kind!=="inbox"){
+    if(c.kind==="todo" && typeof setType==="function") setType(blk,"task");
+    const tag=document.createElement("span");
+    tag.className="applied-tag "+KIND_KCLASS[c.kind];
+    tag.textContent = routeLine(c);
+    blk.querySelector(".btx").appendChild(tag);
+  }
+}
+
+/* ==== decision engine (shared) ==== */
+function announce(msg){ document.getElementById("live").textContent=msg; }
+function decide(id,action){
+  const c=CAPS.find(x=>x.id===id);
+  const prev={...state[id]};
+  state[id]= action==="apply" ? {status:"applied"} : {status:"skipped"};
+  syncBlock(id);
+  lastUndo={ id, prev };
+  const msg = action==="apply"
+    ? (c.kind==="inbox" ? "Kept in Inbox" : "Applied · "+routeLine(c))
+    : "Dismissed — your capture is untouched";
+  showToast(msg, true);
+  announce(msg);
+  render();
+}
+function undoLast(){
+  if(!lastUndo) return;
+  state[lastUndo.id]=lastUndo.prev;
+  syncBlock(lastUndo.id);
+  const c=CAPS.find(x=>x.id===lastUndo.id);
+  lastUndo=null; hideToast(); render();
+  announce("Undone — suggestion restored for “"+c.text.slice(0,24)+"…”");
+}
+function reopen(id){ state[id]={status:"pending"}; syncBlock(id); render();
+  showToast("Suggestion restored", false); announce("Suggestion restored"); }
+
+/* ==== treatments ==== */
+const svgTick='<svg class="glyph" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="9" stroke="currentColor" stroke-width="1.6" fill="none"/><path d="M6 10.5l2.6 2.6L14 7.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const svgX='<svg viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>';
+const svgInbox='<svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 9.5V4.2C2 3.5 2.5 3 3.2 3h9.6c.7 0 1.2.5 1.2 1.2v5.3M2 9.5h3l1 1.7h4l1-1.7h3M2 9.5v2.3c0 .7.5 1.2 1.2 1.2h9.6c.7 0 1.2-.5 1.2-1.2V9.5" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>';
+
+function confHtml(c){
+  const n=confPips(c), pips=[0,1,2].map(i=>`<span class="pip${i<n?' f':''}"></span>`).join("");
+  return `<span class="conf ${KIND_KCLASS[c.kind]}"><span class="pips" aria-hidden="true">${pips}</span>`+
+         `<span class="word">${confWord(c)} confidence · ${c.conf.toFixed(2)}</span></span>`;
+}
+
+/* ---------- TREATMENT 1 · CHIP BELOW ---------- */
+function renderChip(){
+  CAPS.forEach(c=>{
+    const blk=blockOf[c.id]; const st=state[c.id].status; const kc=KIND_KCLASS[c.kind];
+    const chip=document.createElement("div");
+    chip.className="chip "+kc; chip.style.animation="chipin .24s var(--ease)";
+    if(st==="applied" || st==="skipped"){
+      chip.classList.add("resolved");
+      const label = st==="applied"
+        ? (c.kind==="inbox" ? "Kept in Inbox" : routeLine(c))
+        : "Dismissed";
+      chip.innerHTML=`<span class="resolved-row"><span class="tick" aria-hidden="true">${st==="applied"?"✓":"⊘"}</span>`+
+        `<span>${label}</span><button class="undo" type="button" aria-label="Undo, reopen suggestion">Undo</button></span>`;
+      chip.querySelector(".undo").onclick=()=>reopen(c.id);
+    } else if(c.kind==="inbox"){
+      chip.classList.add("is-inbox");
+      chip.setAttribute("role","note");
+      chip.setAttribute("aria-label",`Suggestion: not confident enough to file. Confidence ${c.conf.toFixed(2)}. Staying in Inbox.`);
+      chip.innerHTML=`<span class="stay">${svgInbox}Not sure — staying in Inbox</span>`+
+        `<div style="margin-top:4px">${confHtml(c)}</div>`;
+    } else {
+      chip.setAttribute("role","group");
+      chip.setAttribute("aria-label",`Suggestion: ${routeLine(c)}. ${confWord(c)} confidence.`);
+      chip.innerHTML=
+        `<span class="row">`+
+          `<button class="btn-accept" type="button" aria-label="Accept: ${routeLine(c)}">`+
+            `${svgTick}<span>${routeLine(c)}</span><span class="plus" aria-hidden="true">＋</span></button>`+
+          `<button class="btn-dismiss" type="button" aria-label="Dismiss suggestion, leave capture untouched">${svgX}</button>`+
+        `</span>`+
+        `<div>${confHtml(c)}</div>`;
+      chip.querySelector(".btn-accept").onclick=()=>decide(c.id,"apply");
+      chip.querySelector(".btn-dismiss").onclick=()=>decide(c.id,"skip");
+    }
+    blk.appendChild(chip);
+  });
+}
+
+/* ---------- TREATMENT 2 · GHOST TEXT ---------- */
+function renderGhost(){
+  CAPS.forEach(c=>{
+    const blk=blockOf[c.id]; const st=state[c.id].status; const kc=KIND_KCLASS[c.kind];
+    const btx=blk.querySelector(".btx");
+    const g=document.createElement("span");
+    g.className="ghost "+kc; g.style.animation="ghostin .2s var(--ease)";
+    if(st==="applied" || st==="skipped"){
+      g.classList.add("resolved");
+      // resolved ghost collapses to a tiny inline tag + undo, staying on the line
+      const label = st==="applied" ? (c.kind==="inbox"?"kept in Inbox":routeLine(c)) : "dismissed";
+      g.innerHTML=`<span class="gwrap" style="display:inline-flex;cursor:default">`+
+        `<span class="gk" style="opacity:1">${st==="applied"?"✓ ":"⊘ "}${label}</span>`+
+        `<button class="accept-key" type="button" style="cursor:pointer" aria-label="Undo">↺ undo</button></span>`;
+      g.querySelector("button").onclick=()=>reopen(c.id);
+    } else if(c.kind==="inbox"){
+      g.classList.add("is-inbox");
+      g.innerHTML=`<span class="caret" aria-hidden="true"></span>`+
+        `<span class="gwrap" role="note" tabindex="0" `+
+        `aria-label="Suggestion: unsure, staying in Inbox. Confidence ${c.conf.toFixed(2)}.">`+
+        `<span class="lead" aria-hidden="true">⋯</span>`+
+        `<span class="gk">unsure — keeping in Inbox</span>`+
+        `<span class="conf-inline">${confHtml(c)}</span></span>`;
+    } else {
+      g.innerHTML=`<span class="caret" aria-hidden="true"></span>`+
+        `<span class="gwrap" role="button" tabindex="0" `+
+        `aria-label="Suggested classification: ${routeLine(c)}. ${confWord(c)} confidence. Press Tab or tap to accept.">`+
+        `<span class="lead" aria-hidden="true">⋯</span>`+
+        `<span class="gk">${routeLine(c)}</span>`+
+        `<span class="accept-key" aria-hidden="true">⇥ accept</span></span>`;
+      const gw=g.querySelector(".gwrap");
+      const accept=()=>decide(c.id,"apply");
+      gw.addEventListener("click",accept);
+      gw.addEventListener("keydown",e=>{ if(e.key==="Tab"||e.key==="Enter"||e.key===" "){ e.preventDefault(); accept(); }});
+    }
+    btx.appendChild(g);
+  });
+}
+
+/* ==== mode switch ==== */
+let mode="chip";
+function setMode(m){
+  mode=m;
+  document.querySelectorAll("#seg button").forEach(b=>{
+    const on=b.dataset.m===m; b.classList.toggle("on",on); b.setAttribute("aria-selected",on);
+  });
+  document.getElementById("cap").innerHTML=CAPTIONS[m];
+  initState(); seedEditor(); render();
+  announce("Treatment: "+(m==="chip"?"chip below":"ghost text")+". Five captures with suggestions.");
+}
+function render(){
+  stripDecor();
+  (mode==="chip"?renderChip:renderGhost)();
+}
+
+/* ==== toast ==== */
+let toastT=null;
+function showToast(msg,withUndo){
+  const t=document.getElementById("toast");
+  document.getElementById("toastMsg").textContent=msg;
+  document.getElementById("toastUndo").style.display = withUndo ? "" : "none";
+  t.classList.add("on");
+  clearTimeout(toastT); toastT=setTimeout(hideToast, withUndo?4200:2200);
+}
+function hideToast(){ document.getElementById("toast").classList.remove("on"); }
+
+/* ==== boot ==== */
+document.getElementById("toastUndo").onclick=undoLast;
+document.querySelectorAll("#seg button").forEach(b=>b.onclick=()=>setMode(b.dataset.m));
+// note.js auto-boots one empty block into #doc; seedEditor() clears it.
+seedEditor();
+setMode("chip");
+</script>
+</body></html>

@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<title>Inline suggestions · Gutter + Pill (production) — UXBO-8</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
+<link rel="stylesheet" href="./note-base.css">
+<style>
+/* =========================================================================
+   PRODUCTION build of two inline-suggestion treatments for Chuckle (UXBO-8):
+     (3) GUTTER MARK   — quiet coded mark in the left margin
+     (4) TRAILING PILL — compact pill at the end of the captured line
+   iPhone-width first. Real states, real motion, dark mode, a11y, undo.
+   Greys anchored to Apple label hierarchy (secondaryLabel / tertiaryLabel).
+   ========================================================================= */
+:root{
+  --bg:#F2F2F7;--card:#FFFFFF;
+  --ink:#1C1C1E;                 /* label */
+  --ink-soft:#3C3C4399;          /* secondaryLabel (60%) */
+  --ink-faint:#3C3C434D;         /* tertiaryLabel (30%) */
+  --ink-quat:#3C3C4326;          /* quaternaryLabel */
+  --rule:#ECECEE;--rule-2:#F5F5F6;--cbrule:#C7C7CC;
+  --accent:#0A84FF;--accent-soft:#E9F2FF;
+  --fill:#78788033;             /* system fill for hit-areas */
+  --good:#248A3D;--warn:#B25000;--risk:#C7362B;--purple:#6E44C0;
+  --scrim:#1C1C1E;--scrim-ink:#fff;--scrim-act:#5AB1FF;
+  --title:22px;--body:16px;--cb-radius:50%;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Segoe UI",Roboto,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --ease:cubic-bezier(.32,.72,0,1);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#000000;--card:#1C1C1E;
+    --ink:#FFFFFF;
+    --ink-soft:#EBEBF599;        /* secondaryLabel dark (60%) */
+    --ink-faint:#EBEBF54D;       /* tertiaryLabel dark (30%) */
+    --ink-quat:#EBEBF529;
+    --rule:#38383A;--rule-2:#2C2C2E;--cbrule:#48484A;
+    --accent:#0A84FF;--accent-soft:#0A84FF26;
+    --fill:#7676803D;
+    /* colours re-tuned for dark, not merely inverted: raised luminance so the
+       coded marks stay legible on near-black without vibrating */
+    --good:#30D158;--warn:#FF9F0A;--risk:#FF6961;--purple:#BF9BFF;
+    --scrim:#2C2C2E;--scrim-ink:#fff;--scrim-act:#64B5FF;
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;
+  display:flex;flex-direction:column;height:100dvh;overflow:hidden}
+
+/* header + segmented control */
+.hd{flex:0 0 auto;padding:calc(9px + env(safe-area-inset-top)) 12px 9px;background:var(--bg);border-bottom:1px solid var(--rule)}
+.hd h1{font-size:15px;font-weight:700;letter-spacing:-.01em;margin-bottom:2px}
+.hd .q{font-size:11.5px;color:var(--ink-soft);line-height:1.35;margin-bottom:9px}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:var(--fill);border-radius:11px;padding:3px}
+.seg button{border:none;background:none;font-family:inherit;font-size:12.5px;font-weight:600;color:var(--ink-soft);
+  padding:8px 4px;border-radius:8px;cursor:pointer;transition:transform .15s var(--ease);line-height:1.1;min-height:36px}
+.seg button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.14)}
+/* scenario row: pending vs resolved vs silent (the "nothing to say" state) */
+.scn{display:flex;gap:6px;margin-top:7px}
+.scn button{flex:1;border:1px solid var(--rule);background:var(--card);color:var(--ink-soft);font-family:inherit;
+  font-size:11px;font-weight:600;border-radius:8px;padding:6px 2px;cursor:pointer;min-height:32px}
+.scn button.on{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+
+/* caption */
+.cap{flex:0 0 auto;padding:9px 15px;background:var(--rule-2);border-bottom:1px solid var(--rule);font-size:11.5px;line-height:1.5;color:var(--ink-soft)}
+.cap b{font-weight:700;color:var(--ink)}
+.cap .risk{color:var(--risk);font-weight:600}
+
+.stage{flex:1;min-height:0;position:relative;display:flex;justify-content:center}
+.panel{position:absolute;inset:0;display:flex;flex-direction:column;width:100%;max-width:430px;
+  background:var(--card);border-left:1px solid var(--rule);border-right:1px solid var(--rule)}
+
+.edhd{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:11px 18px 7px;border-bottom:1px solid var(--rule-2)}
+.edhd .date{font-family:var(--mono);font-size:11px;color:var(--ink-faint)}
+.edhd .lab{font-family:var(--mono);font-size:10px;color:var(--ink-soft);border:1px solid var(--rule);border-radius:5px;padding:2px 7px;margin-left:auto}
+.doc{flex:1;overflow-y:auto;padding:12px 16px 60px;cursor:text;position:relative}
+.blk{display:flex;gap:10px;align-items:flex-start;padding:7px 0;flex-wrap:wrap;position:relative}
+.blk .mk{flex:0 0 auto;margin-top:4px;width:20px;display:flex;justify-content:center}
+.blk[data-type="text"] .mk{display:none}
+.blk .mk.bul{color:var(--ink-faint);font-size:17px;line-height:1}
+.blk .mk.cb{width:19px;height:19px;border-radius:var(--cb-radius,50%);border:1.5px solid var(--cbrule);cursor:pointer;display:grid;place-items:center;transition:.13s}
+.blk .mk.cb:hover{border-color:var(--accent)}
+.blk.done .mk.cb{background:var(--accent);border-color:var(--accent);animation:cbpop .2s var(--ease)}
+@keyframes cbpop{0%{transform:scale(.72)}60%{transform:scale(1.1)}100%{transform:scale(1)}}
+.blk.done .mk.cb::after{content:"✓";color:#fff;font-size:12px;font-weight:700}
+.blk .btx{flex:1;min-width:55%;outline:none;font-size:var(--body,16px);line-height:1.5;min-height:24px;word-break:break-word;color:var(--ink)}
+.blk.done .btx{color:var(--ink-faint);text-decoration:line-through}
+.blk .btx:empty::before{content:attr(data-ph);color:var(--ink-faint)}
+.bar{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:9px 16px calc(9px + env(safe-area-inset-bottom));border-top:1px solid var(--rule)}
+.fmt{width:38px;height:38px;border:1px solid var(--rule);border-radius:9px;background:var(--card);color:var(--ink-soft);font-size:15px;cursor:pointer;display:grid;place-items:center}
+.fmt:hover{border-color:var(--accent);color:var(--accent)}
+.new{margin-left:auto;display:inline-flex;align-items:center;gap:6px;background:var(--accent-soft);color:var(--accent);border:none;border-radius:20px;font-size:13px;font-weight:700;padding:10px 16px;cursor:pointer;min-height:38px}
+
+/* kind colour tokens (colour is ALWAYS paired with a shape or word — never sole carrier) */
+.k-todo{--kc:var(--accent);--kb:var(--accent-soft)}
+.k-note{--kc:var(--purple);--kb:#EFEAF9}
+.k-ref{--kc:var(--good);--kb:#EAF3EE}
+.k-inbox{--kc:var(--ink-soft);--kb:var(--fill)}
+@media (prefers-color-scheme:dark){
+  .k-note{--kb:#6E44C033}.k-ref{--kb:#248A3D33}
+}
+
+/* applied inline tag (result state, shared) */
+.applied-tag{display:inline-flex;align-items:center;gap:5px;margin-left:8px;padding:2px 9px;border-radius:20px;
+  font-size:11px;font-weight:700;vertical-align:middle;white-space:nowrap;background:var(--kb);color:var(--kc)}
+
+/* ===================== (3) GUTTER MARK ===================== */
+.doc.gutter{padding-left:34px}
+/* the visible mark is tiny (12px) but the HIT target is 44x44, centred on it */
+.gwrap{position:absolute;left:-40px;top:-10px;width:44px;height:44px;display:grid;place-items:center;
+  background:none;border:none;cursor:pointer;padding:0;-webkit-tap-highlight-color:transparent}
+.gwrap:focus-visible{outline:none}
+.gwrap:focus-visible .gmark{box-shadow:0 0 0 3px var(--card),0 0 0 5px var(--accent)}
+.gmark{width:13px;height:13px;position:relative;transition:transform .18s var(--ease);color:var(--kc)}
+.gwrap:active .gmark{transform:scale(.86)}
+/* SHAPE encodes kind so colour is never the sole signal (VoiceOver aside) */
+.gmark.todo::before{content:"";position:absolute;inset:0;border-radius:50%;background:var(--kc)}                 /* ● filled disc = to-do */
+.gmark.note::before{content:"";position:absolute;inset:1px;border-radius:50%;border:2px solid var(--kc)}         /* ◯ ring = note */
+.gmark.ref{transform:rotate(45deg)}.gwrap:active .gmark.ref{transform:rotate(45deg) scale(.86)}
+.gmark.ref::before{content:"";position:absolute;inset:1px;background:var(--kc);border-radius:2px}                /* ◆ diamond = reference */
+.gmark.inbox::before{content:"?";position:absolute;inset:0;display:grid;place-items:center;font:800 11px/1 var(--sans);
+  color:var(--ink-soft);border:1.5px dashed var(--ink-faint);border-radius:50%}                                  /* dashed ? = unsure */
+.gmark.applied::after{content:"✓";position:absolute;inset:-3px;display:grid;place-items:center;font:800 9px/1 var(--sans);color:var(--card)}
+/* small pulse to draw the eye ONCE when a suggestion first lands */
+.gmark.fresh{animation:gland .5s var(--ease)}
+@keyframes gland{0%{transform:scale(.2);opacity:0}60%{transform:scale(1.25)}100%{transform:scale(1)}}
+
+/* ===================== (4) TRAILING PILL ===================== */
+/* pill lives at the end of the line; flex-wrap drops it to its own row when the
+   text is long, so it never overlaps the caption text */
+.pwrap{flex:0 0 auto;align-self:flex-start;margin-top:1px;position:relative;display:inline-flex}
+.tpill{display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:5px 11px;border-radius:16px;
+  font-size:12px;font-weight:600;color:var(--kc);background:var(--kb);border:1px solid transparent;
+  cursor:pointer;white-space:nowrap;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;
+  transition:transform .18s var(--ease),box-shadow .18s var(--ease)}
+.tpill:active{transform:scale(.96)}
+.tpill:focus-visible{outline:none;box-shadow:0 0 0 2px var(--card),0 0 0 4px var(--accent)}
+.tpill.fresh{animation:pland .5s var(--ease)}
+@keyframes pland{0%{opacity:0;transform:translateX(6px)}100%{opacity:1;transform:none}}
+/* invisible 44px-tall hit padding around a visually-30px pill */
+.tpill::before{content:"";position:absolute;inset:-7px -4px;border-radius:20px}
+/* confidence as a 3-segment METER (shape), not colour alone */
+.cmeter{display:inline-flex;gap:2px;align-items:center}
+.cmeter i{width:3px;border-radius:2px;background:var(--kc);opacity:.28}
+.cmeter i:nth-child(1){height:6px}.cmeter i:nth-child(2){height:9px}.cmeter i:nth-child(3){height:12px}
+.cmeter.hi i{opacity:1}
+.cmeter.md i:nth-child(1),.cmeter.md i:nth-child(2){opacity:1}
+.cmeter.lo i:nth-child(1){opacity:1}
+/* long-press affordance: a hold ring that fills over the accept duration */
+.tpill .holdring{position:absolute;inset:-2px;border-radius:18px;border:2px solid var(--kc);opacity:0;clip-path:inset(0 100% 0 0)}
+.tpill.holding .holdring{opacity:.9;animation:hold .5s linear forwards}
+@keyframes hold{to{clip-path:inset(0 0 0 0)}}
+
+/* ===================== shared popover (expanded suggestion) ===================== */
+.pop{width:100%;flex-basis:100%;margin:9px 0 2px;background:var(--card);border:1px solid var(--rule);
+  border-left:3px solid var(--kc);border-radius:13px;padding:12px 14px;box-shadow:0 8px 26px rgba(0,0,0,.10);
+  animation:popin .22s var(--ease)}
+@media (prefers-color-scheme:dark){.pop{box-shadow:0 8px 26px rgba(0,0,0,.5);background:var(--rule-2)}}
+@keyframes popin{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:none}}
+.pop .head{display:flex;align-items:center;gap:8px}
+.pop .kind{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700;background:var(--kb);color:var(--kc)}
+.pop .route{margin-top:8px;font-size:14px;color:var(--ink)}
+.pop .confn{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint)}
+.conf{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--ink-soft);margin-top:9px}
+.confbar{height:5px;border-radius:3px;background:var(--fill);overflow:hidden;width:96px}
+.confbar i{display:block;height:100%;border-radius:3px}
+.conf.hi i{background:var(--good)}.conf.md i{background:var(--warn)}.conf.lo i{background:var(--risk)}
+.why{font-size:12px;color:var(--ink-faint);margin-top:7px;line-height:1.45}
+.unsure{margin-top:9px;font-size:12.5px;line-height:1.45;color:var(--warn);background:var(--kb);border:1px solid var(--kc);border-radius:10px;padding:9px 11px}
+.unsure b{color:var(--warn)}
+.hint{font-size:11px;color:var(--ink-faint);margin-top:8px}
+.popact{display:flex;gap:9px;margin-top:12px}
+.popact button{flex:1;border:none;border-radius:11px;padding:12px 0;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;min-height:44px}
+.pa-skip{background:var(--fill);color:var(--ink-soft)}
+.pa-apply{background:var(--kc);color:#fff}
+.pa-keep{background:var(--fill);color:var(--ink)}
+
+/* resolved marker row (accepted / dismissed) with inline undo */
+.resmark{display:inline-flex;align-items:center;gap:7px;margin-left:9px;font-size:11.5px;color:var(--ink-soft);vertical-align:middle}
+.resmark .u{min-height:32px;display:inline-flex;align-items:center;padding:0 9px;border-radius:8px;background:var(--fill);
+  color:var(--accent);font-weight:700;font-size:11.5px;cursor:pointer;border:none;font-family:inherit}
+
+/* empty / nothing-to-say state */
+.silent{margin:2px 0 0 2px;font-size:11px;color:var(--ink-faint);font-style:italic}
+
+/* toast (undo) */
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);
+  background:var(--scrim);color:var(--scrim-ink);border-radius:13px;padding:11px 8px 11px 15px;display:flex;align-items:center;gap:10px;
+  font-size:13.5px;opacity:0;pointer-events:none;transition:opacity .22s var(--ease),transform .22s var(--ease);z-index:50;
+  box-shadow:0 8px 30px rgba(0,0,0,.34);max-width:360px}
+.toast.on{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0)}
+.toast button{background:none;border:none;color:var(--scrim-act);font-weight:700;font-size:13.5px;cursor:pointer;font-family:inherit;min-height:38px;padding:0 10px}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important}
+  .tpill.holding .holdring{clip-path:inset(0 0 0 0);animation:none}
+}
+</style></head>
+<body>
+
+<div class="hd">
+  <h1>Inline suggestions · production · Gutter + Pill</h1>
+  <div class="q">Two of the four approved treatments at real fidelity. Same five captures as the exploration, so they compare with the other build. UXBO-8.</div>
+  <div class="seg" id="seg" role="tablist" aria-label="Treatment">
+    <button data-m="g" class="on" role="tab" aria-selected="true">3 · Gutter mark</button>
+    <button data-m="p" role="tab" aria-selected="false">4 · Trailing pill</button>
+  </div>
+  <div class="scn" id="scn" role="group" aria-label="Scenario">
+    <button data-s="pending" class="on">Fresh suggestions</button>
+    <button data-s="mixed">Part-resolved</button>
+    <button data-s="silent">Nothing to suggest</button>
+  </div>
+</div>
+<div class="cap" id="cap" aria-live="polite"></div>
+
+<div class="stage">
+  <div class="panel" id="panel">
+    <div class="edhd"><span class="date" id="date"></span><span class="lab" id="lab">note.js · live</span></div>
+    <div class="doc" id="doc"></div>
+    <div class="bar">
+      <button class="fmt" id="bBul" title="Bullet" aria-label="Bullet">•</button>
+      <button class="fmt" id="bTask" title="Task" aria-label="Task">☐</button>
+      <button class="new" id="bNew">＋ New</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"><span id="toastMsg"></span><button onclick="doUndo()">Undo</button></div>
+<div class="sr-only" id="live" aria-live="assertive"></div>
+
+<script src="./note.js"></script>
+<script>
+/* -------------------------------------------------------------------------
+   Same five mixed captures as inline-explore.html, mirroring the real
+   capture-classifier: kind + confidence, explicit inbox abstain below
+   threshold (routing.route() -> None = "stays in the inbox").
+   ------------------------------------------------------------------------- */
+const CAPS = [
+  { id:"c1", text:"Call the plumber about the kitchen leak before Friday",
+    kind:"todo", project:"Home", when:"Fri · Aug 14", conf:0.92,
+    why:"imperative verb + a hard deadline" },
+  { id:"c2", text:"what if Today opened first, before the inbox — would it feel calmer?",
+    kind:"note", project:"Chuckle", when:null, conf:0.74,
+    why:"a question, no action — reads as a product thought" },
+  { id:"c3", text:"arxiv.org/abs/2401.09361 — nearest-centroid routing, read later",
+    kind:"reference", project:"Reading", when:"Someday", conf:0.66,
+    why:"a link + “read later”, not a dated task" },
+  { id:"c4", text:"add cardamom pods to the chai order",
+    kind:"todo", project:"Groceries", when:"Today", conf:0.88,
+    why:"“add …” routes straight to an existing list" },
+  { id:"c5", text:"the whole Bangalore move — still not sure it's the right call",
+    kind:"inbox", project:null, when:null, conf:0.31,
+    why:"below threshold, and top-2 projects tie — it abstains" },
+];
+const KIND_LABEL = { todo:"To-do", note:"Note", reference:"Reference", inbox:"Unsure" };
+const KIND_KCLASS = { todo:"k-todo", note:"k-note", reference:"k-ref", inbox:"k-inbox" };
+const SHAPE = { todo:"todo", note:"note", reference:"ref", inbox:"inbox" };
+const SHAPE_WORD = { todo:"filled dot", note:"ring", reference:"diamond", inbox:"dashed question mark" };
+function confClass(c){ return c>=0.8?"hi":c>=0.55?"md":"lo"; }
+function confWord(c){ return c>=0.8?"high":c>=0.55?"fair":"low"; }
+function routeLine(c){ return c.kind==="inbox" ? "stays in Inbox"
+  : KIND_LABEL[c.kind]+" → "+c.project+(c.when?" · "+c.when:""); }
+
+/* per-capture status: pending | applied | skipped ; scenario controls initial */
+let state={}, mode="g", scenario="pending";
+function initState(){
+  state={};
+  CAPS.forEach((c,i)=>{
+    if(scenario==="mixed"){
+      // c1 already accepted, c4 already dismissed, rest pending — shows result + undo live
+      if(c.id==="c1") state[c.id]={status:"applied"};
+      else if(c.id==="c4") state[c.id]={status:"skipped"};
+      else state[c.id]={status:"pending"};
+    } else {
+      state[c.id]={status:"pending"};
+    }
+  });
+}
+let undoStack=null;
+
+const CAPTIONS={
+ g:`<b>3 · Gutter mark.</b> A coded mark in the left margin; tap to expand in place. Quietest at rest — the editor stays clean. Kind is carried by <b>shape</b> (● to-do, ◯ note, ◆ reference, dashed ? = unsure), never colour alone, and each mark's <b>44×44 hit target</b> extends invisibly into the text so the thumb-hostile margin still works. <span class="risk">Honest cost:</span> the mark is genuinely easy to never notice — discoverability is its real risk — and on a phone the left edge is awkward for the thumb; a right-handed grip half-covers it. If the whole idea is “quiet”, quiet also means missable.`,
+ p:`<b>4 · Trailing pill.</b> A compact pill after the line: project + a confidence <b>meter</b> (bars, not just colour). Tap expands; <b>long-press</b> accepts (hold-ring shows progress). Dense and glanceable. When the caption runs to the edge the pill <b>drops to its own row</b> rather than overlapping (see the two long lines). <span class="risk">Honest cost:</span> long-press is invisible until taught — in a static prototype it is undiscoverable, so tap-to-expand must carry first-run users, and the pill still eats horizontal room on long lines even after wrapping.`,
+};
+
+/* ==== editor seeding ==== */
+let blockOf={};
+function seedEditor(){
+  const docEl=document.getElementById("doc");
+  docEl.innerHTML=""; blockOf={};
+  CAPS.forEach(c=>{
+    const blk=makeBlock("text",c.text,0,false);
+    blk.dataset.cap=c.id;
+    docEl.appendChild(blk);
+    blockOf[c.id]=blk;
+  });
+  if(typeof updatePh==="function") updatePh();
+}
+function stripDecor(){
+  document.querySelectorAll(".gwrap,.pwrap,.pop,.resmark,.silent").forEach(n=>n.remove());
+  document.getElementById("doc").classList.remove("gutter");
+}
+/* reflect an accepted suggestion on the real block: task conversion + route tag */
+function syncBlock(id){
+  const blk=blockOf[id]; if(!blk) return;
+  const c=CAPS.find(x=>x.id===id);
+  const old=blk.querySelector(".applied-tag"); if(old) old.remove();
+  blk.classList.remove("done");
+  if(typeof setType==="function") setType(blk,"text");
+  if(state[id].status==="applied" && c.kind!=="inbox"){
+    if(c.kind==="todo"&&typeof setType==="function") setType(blk,"task");
+    const tag=document.createElement("span");
+    tag.className="applied-tag "+KIND_KCLASS[c.kind];
+    tag.textContent = routeLine(c);
+    blk.querySelector(".btx").appendChild(tag);
+  }
+}
+
+function announce(msg){ document.getElementById("live").textContent=msg; }
+
+/* ==== decision engine ==== */
+function decide(id,action,{quiet=false}={}){
+  const prev={...state[id]};
+  state[id]= action==="apply" ? {status:"applied"} : {status:"skipped"};
+  syncBlock(id);
+  const c=CAPS.find(x=>x.id===id);
+  undoStack={ id, prev, restore:()=>{ state[id]=prev; syncBlock(id); render(); } };
+  if(!quiet){
+    const m = action==="apply"
+      ? (c.kind==="inbox"?"Kept in Inbox":"Applied · "+routeLine(c))
+      : "Dismissed — capture left untouched";
+    showToast(m); announce(m);
+  }
+}
+function undoOne(id){ state[id]={status:"pending"}; syncBlock(id); render(); showToast("Restored"); announce("Suggestion restored"); }
+function doUndo(){ if(undoStack){ undoStack.restore(); undoStack=null; hideToast(); announce("Undone"); } }
+
+/* ==== mode / scenario switch ==== */
+function setMode(m){
+  mode=m;
+  document.querySelectorAll("#seg button").forEach(b=>{const on=b.dataset.m===m;b.classList.toggle("on",on);b.setAttribute("aria-selected",on);});
+  document.getElementById("cap").innerHTML=CAPTIONS[m];
+  initState(); seedEditor(); render();
+}
+function setScenario(s){
+  scenario=s;
+  document.querySelectorAll("#scn button").forEach(b=>b.classList.toggle("on",b.dataset.s===s));
+  initState(); seedEditor(); render();
+}
+function render(){
+  stripDecor();
+  if(mode==="g") renderGutter(); else renderPill();
+}
+
+/* resolved marker (accepted/dismissed) with a live undo affordance */
+function resolvedMark(blk,c){
+  const st=state[c.id].status;
+  const m=document.createElement("span");
+  m.className="resmark";
+  const label = st==="applied"
+    ? (c.kind==="inbox"?"Kept in Inbox":"Filed ✓")
+    : "Dismissed";
+  m.innerHTML=`<span>${label}</span><button class="u" aria-label="Undo, restore suggestion">Undo</button>`;
+  m.querySelector(".u").onclick=(e)=>{ e.stopPropagation(); undoOne(c.id); };
+  blk.querySelector(".btx").appendChild(m);
+}
+
+/* ---------- (3) GUTTER MARK ---------- */
+function renderGutter(){
+  document.getElementById("doc").classList.add("gutter");
+  CAPS.forEach(c=>{
+    const blk=blockOf[c.id]; const st=state[c.id].status;
+    if(scenario==="silent"){ addSilent(blk); return; }
+    if(st!=="pending"){ addGutterResolved(blk,c); return; }
+    const btn=document.createElement("button");
+    btn.className="gwrap";
+    btn.setAttribute("role","button");
+    btn.setAttribute("aria-expanded","false");
+    // VoiceOver reads the full suggestion + that it's a suggestion + shape word
+    btn.setAttribute("aria-label",
+      c.kind==="inbox"
+        ? `Suggestion, unsure. ${SHAPE_WORD.inbox} mark. Not confident enough to file, stays in Inbox, low confidence. Activate to review.`
+        : `Suggestion: ${KIND_LABEL[c.kind]}. ${SHAPE_WORD[c.kind]} mark. ${routeLine(c)}, ${confWord(c.conf)} confidence. Activate to review.`);
+    const mk=document.createElement("span");
+    mk.className="gmark "+SHAPE[c.kind]+(scenario==="pending"?" fresh":"");
+    mk.classList.add(KIND_KCLASS[c.kind]);
+    btn.appendChild(mk);
+    btn.onclick=()=>toggleGpop(blk,c,btn);
+    blk.appendChild(btn);
+  });
+}
+function addGutterResolved(blk,c){
+  const btn=document.createElement("button");
+  btn.className="gwrap";
+  btn.setAttribute("aria-label",(state[c.id].status==="applied"?"Filed. ":"Dismissed. ")+"Activate to undo.");
+  const mk=document.createElement("span");
+  mk.className="gmark "+(state[c.id].status==="applied"?SHAPE[c.kind]+" applied":"note")+" "+KIND_KCLASS[c.kind];
+  if(state[c.id].status==="skipped") mk.style.opacity=".4";
+  btn.appendChild(mk);
+  btn.onclick=()=>undoOne(c.id);
+  blk.appendChild(btn);
+  resolvedMark(blk,c);
+}
+function toggleGpop(blk,c,btn){
+  const ex=blk.querySelector(".pop");
+  document.querySelectorAll(".pop").forEach(n=>n.remove());
+  document.querySelectorAll(".gwrap").forEach(b=>b.setAttribute("aria-expanded","false"));
+  if(ex){ return; }
+  btn.setAttribute("aria-expanded","true");
+  const p=buildPop(c);
+  blk.appendChild(p);
+  p.querySelector("button").focus();
+}
+
+/* ---------- (4) TRAILING PILL ---------- */
+function renderPill(){
+  CAPS.forEach(c=>{
+    const blk=blockOf[c.id]; const st=state[c.id].status;
+    if(scenario==="silent"){ addSilent(blk); return; }
+    if(st!=="pending"){ resolvedPill(blk,c); return; }
+    const wrap=document.createElement("span");
+    wrap.className="pwrap";
+    const pill=document.createElement("button");
+    pill.className="tpill "+KIND_KCLASS[c.kind]+(scenario==="pending"?" fresh":"");
+    pill.setAttribute("aria-label",
+      c.kind==="inbox"
+        ? `Suggestion, unsure. Stays in Inbox, low confidence. Tap to review. Long press to accept.`
+        : `Suggestion: ${routeLine(c)}, ${confWord(c.conf)} confidence. Tap to review. Long press to accept.`);
+    const label = c.kind==="inbox" ? "Unsure" : c.project;
+    pill.innerHTML=
+      `<span class="cmeter ${confClass(c.conf)}" aria-hidden="true"><i></i><i></i><i></i></span>`+
+      `<span>${label}</span>`+
+      (c.kind==="inbox"?"":`<span class="holdring" aria-hidden="true"></span>`);
+    wireLongPress(pill,blk,c);
+    wrap.appendChild(pill);
+    blk.appendChild(wrap);
+  });
+}
+function resolvedPill(blk,c){
+  resolvedMark(blk,c);
+}
+function wireLongPress(pill,blk,c){
+  let held=false,t=null;
+  const HOLD=500;
+  const start=(e)=>{
+    held=false;
+    if(c.kind!=="inbox"){ pill.classList.add("holding"); }
+    t=setTimeout(()=>{ held=true; pill.classList.remove("holding");
+      if(c.kind!=="inbox"){ decide(c.id,"apply"); render(); } },HOLD);
+  };
+  const cancel=()=>{ clearTimeout(t); pill.classList.remove("holding"); };
+  const end=(e)=>{ clearTimeout(t); pill.classList.remove("holding");
+    if(!held){ if(e&&e.cancelable)e.preventDefault(); togglePillPop(blk,c,pill); } };
+  pill.addEventListener("touchstart",start,{passive:true});
+  pill.addEventListener("touchend",end);
+  pill.addEventListener("touchcancel",cancel);
+  pill.addEventListener("mousedown",start);
+  pill.addEventListener("mouseup",end);
+  pill.addEventListener("mouseleave",cancel);
+  // keyboard: Enter/Space expands (long-press has no keyboard equiv, so expand carries)
+  pill.addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); togglePillPop(blk,c,pill); } });
+}
+function togglePillPop(blk,c,pill){
+  const ex=blk.querySelector(".pop");
+  document.querySelectorAll(".pop").forEach(n=>n.remove());
+  if(ex){ return; }
+  const p=buildPop(c,/*pillHint*/c.kind!=="inbox");
+  blk.appendChild(p);
+  p.querySelector("button").focus();
+}
+
+/* ---------- shared popover ---------- */
+function buildPop(c,pillHint){
+  const p=document.createElement("div");
+  p.className="pop "+KIND_KCLASS[c.kind];
+  p.setAttribute("role","group");
+  p.setAttribute("aria-label","Suggestion detail");
+  if(c.kind==="inbox"){
+    p.innerHTML=
+      `<div class="head"><span class="kind">Unsure</span><span class="confn">score ${c.conf.toFixed(2)}</span></div>`+
+      `<div class="unsure"><b>Not confident enough to file.</b> Two projects tied and it's below threshold, so it won't guess — this stays in the Inbox as plain text.</div>`+
+      `<div class="why">why: ${c.why}</div>`+
+      `<div class="popact">`+
+        `<button class="pa-skip">Dismiss</button>`+
+        `<button class="pa-keep">Keep in Inbox</button>`+
+      `</div>`;
+  } else {
+    p.innerHTML=
+      `<div class="head"><span class="kind">${KIND_LABEL[c.kind]}</span><span class="confn">score ${c.conf.toFixed(2)}</span></div>`+
+      `<div class="route">${routeLine(c)}</div>`+
+      `<div class="conf ${confClass(c.conf)}"><span>${confWord(c.conf)} confidence</span>`+
+        `<span class="confbar"><i style="width:${Math.round(c.conf*100)}%"></i></span></div>`+
+      `<div class="why">why: ${c.why}</div>`+
+      (pillHint?`<div class="hint">Tip: long-press the pill to accept without opening this.</div>`:``)+
+      `<div class="popact">`+
+        `<button class="pa-skip">Dismiss</button>`+
+        `<button class="pa-apply">Apply</button>`+
+      `</div>`;
+  }
+  p.querySelector(".pa-skip").onclick=()=>{ decide(c.id,"skip"); render(); };
+  const acc=p.querySelector(".pa-apply")||p.querySelector(".pa-keep");
+  acc.onclick=()=>{ decide(c.id,"apply"); render(); };
+  return p;
+}
+
+function addSilent(blk){
+  const s=document.createElement("span");
+  s.className="silent";
+  s.textContent="";                 // truly nothing — see note below
+  // Honest "nothing to say": the AI adds NO decoration. We show a faint,
+  // dev-only marker so the state is visible in the prototype; in the real app
+  // this line simply has no suggestion attached at all.
+  s.textContent="· no suggestion";
+  s.setAttribute("aria-hidden","true");
+  blk.appendChild(s);
+}
+
+/* ==== toast ==== */
+let toastT=null;
+function showToast(msg){ const t=document.getElementById("toast");
+  document.getElementById("toastMsg").textContent=msg; t.classList.add("on");
+  clearTimeout(toastT); toastT=setTimeout(hideToast,3200); }
+function hideToast(){ document.getElementById("toast").classList.remove("on"); }
+
+/* ==== boot ==== */
+document.querySelectorAll("#seg button").forEach(b=>b.onclick=()=>setMode(b.dataset.m));
+document.querySelectorAll("#scn button").forEach(b=>b.onclick=()=>setScenario(b.dataset.s));
+seedEditor();
+setMode("g");
+</script>
+</body></html>
