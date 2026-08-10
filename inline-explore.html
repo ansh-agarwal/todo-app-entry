@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#F2F2F7">
+<title>Inline suggestions — six ways (UXBO-8)</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
+<link rel="stylesheet" href="./note-base.css">
+<style>
+:root{
+  --bg:#F2F2F7;--card:#FFFFFF;--ink:#1C1C1E;--ink-soft:#6B6B70;--ink-faint:#AEAEB2;
+  --rule:#ECECEE;--rule-2:#F5F5F6;--cbrule:#C7C7CC;--accent:#0A84FF;--accent-soft:#E9F2FF;
+  --title:22px;--body:16px;--cb-radius:50%;
+  --good:#1a7f37;--warn:#B26A00;--risk:#b3261e;--purple:#6E44C0;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Segoe UI",Roboto,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;
+  display:flex;flex-direction:column;height:100dvh;overflow:hidden}
+
+/* header + segmented control */
+.hd{flex:0 0 auto;padding:calc(10px + env(safe-area-inset-top)) 12px 9px;background:var(--bg);border-bottom:1px solid var(--rule)}
+.hd h1{font-size:15px;font-weight:700;letter-spacing:-.01em;margin-bottom:2px}
+.hd .q{font-size:11.5px;color:var(--ink-soft);line-height:1.35;margin-bottom:9px}
+.seg{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;background:#E4E4EA;border-radius:11px;padding:3px}
+.seg button{border:none;background:none;font-family:inherit;font-size:10.5px;font-weight:600;
+  color:var(--ink-soft);padding:6px 1px;border-radius:8px;cursor:pointer;transition:.15s;line-height:1.08}
+.seg button .k{display:block;font-size:10px;font-weight:800;color:var(--accent);margin-bottom:1px}
+.seg button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+
+/* caption */
+.cap{flex:0 0 auto;padding:9px 15px;background:#FBFBFD;border-bottom:1px solid var(--rule);font-size:11.5px;line-height:1.45;color:var(--ink-soft)}
+.cap b{font-weight:700;color:var(--ink)}
+.cap .risk{color:var(--risk);font-weight:600}
+
+.stage{flex:1;min-height:0;position:relative;display:flex;justify-content:center}
+.panel{position:absolute;inset:0;display:flex;flex-direction:column;width:100%;max-width:440px;
+  background:var(--card);border-left:1px solid var(--rule);border-right:1px solid var(--rule)}
+
+/* editor surface (real note.js) */
+.edhd{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:11px 18px 7px;border-bottom:1px solid var(--rule-2)}
+.edhd .date{font-family:var(--mono);font-size:11px;color:var(--ink-faint)}
+.edhd .lab{font-family:var(--mono);font-size:10px;color:var(--ink-soft);border:1px solid var(--rule);border-radius:5px;padding:2px 7px;margin-left:auto}
+.doc{flex:1;overflow-y:auto;padding:12px 16px 40px;cursor:text;position:relative}
+.blk{display:flex;gap:10px;align-items:flex-start;padding:7px 0;flex-wrap:wrap;position:relative}
+.blk .mk{flex:0 0 auto;margin-top:4px;width:20px;display:flex;justify-content:center}
+.blk[data-type="text"] .mk{display:none}
+.blk .mk.bul{color:var(--ink-faint);font-size:17px;line-height:1}
+.blk .mk.cb{width:19px;height:19px;border-radius:var(--cb-radius,50%);border:1.5px solid var(--cbrule);cursor:pointer;display:grid;place-items:center;transition:.13s}
+.blk .mk.cb:hover{border-color:var(--accent)}
+.blk.done .mk.cb{background:var(--accent);border-color:var(--accent);animation:cbpop .2s ease}
+@keyframes cbpop{0%{transform:scale(.72)}60%{transform:scale(1.1)}100%{transform:scale(1)}}
+.blk.done .mk.cb::after{content:"✓";color:#fff;font-size:12px;font-weight:700}
+.blk .btx{flex:1;min-width:60%;outline:none;font-size:var(--body,16px);line-height:1.5;min-height:24px;word-break:break-word;color:var(--ink)}
+.blk.done .btx{color:var(--ink-faint);text-decoration:line-through}
+.blk .btx:empty::before{content:attr(data-ph);color:var(--ink-faint)}
+.bar{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:9px 16px calc(9px + env(safe-area-inset-bottom));border-top:1px solid var(--rule)}
+.fmt{width:36px;height:32px;border:1px solid var(--rule);border-radius:8px;background:#fff;color:var(--ink-soft);font-size:15px;cursor:pointer;display:grid;place-items:center}
+.fmt:hover{border-color:var(--accent);color:var(--accent)}
+.new{margin-left:auto;display:inline-flex;align-items:center;gap:6px;background:var(--accent-soft);color:var(--accent);border:none;border-radius:20px;font-size:13px;font-weight:700;padding:8px 15px;cursor:pointer}
+
+/* applied tag inside a block */
+.applied-tag{display:inline-flex;align-items:center;gap:5px;margin-left:8px;padding:2px 8px;border-radius:20px;
+  font-size:11px;font-weight:700;vertical-align:middle;white-space:nowrap;background:var(--accent-soft);color:var(--accent)}
+.applied-tag.note{background:#EFEAF9;color:var(--purple)}
+.applied-tag.ref{background:#EAF3EE;color:var(--good)}
+.applied-tag.inbox{background:#F1F1F4;color:var(--ink-soft)}
+
+/* kind colour tokens */
+.k-todo{--kc:var(--accent);--kb:var(--accent-soft)}
+.k-note{--kc:var(--purple);--kb:#EFEAF9}
+.k-ref{--kc:var(--good);--kb:#EAF3EE}
+.k-inbox{--kc:var(--ink-soft);--kb:#F1F1F4}
+
+/* ---------- V1 CHIP BELOW ---------- */
+.sg-chip{display:inline-flex;align-items:center;gap:7px;margin:4px 0 0 30px;padding:5px 6px 5px 11px;border-radius:20px;
+  font-size:12px;font-weight:600;border:1px solid var(--kc);color:var(--kc);background:var(--kb);width:auto;animation:chipin .3s ease}
+.sg-chip .dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+.sg-chip .acc{cursor:pointer}
+.sg-chip .x{width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font-weight:800;opacity:.55;cursor:pointer;margin-left:1px}
+.sg-chip .x:hover{opacity:1;background:rgba(0,0,0,.06)}
+.sg-chip.inbox-c{cursor:default}
+@keyframes chipin{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+
+/* ---------- V2 GHOST TEXT ---------- */
+.ghost{color:var(--ink-faint);font-style:normal;opacity:.85;cursor:pointer;white-space:normal}
+.ghost .sep{color:var(--kc,var(--ink-faint));opacity:.55;margin:0 5px}
+.ghost .gk{color:var(--kc);font-weight:600}
+.ghost .swipe{font-size:10.5px;color:var(--ink-faint);margin-left:6px;border:1px solid var(--rule);border-radius:5px;padding:1px 5px}
+
+/* ---------- V3 GUTTER MARK ---------- */
+.doc.gutter{padding-left:30px}
+.gmark{position:absolute;left:-22px;top:11px;width:11px;height:11px;border-radius:50%;background:var(--kc);cursor:pointer;
+  box-shadow:0 0 0 3px var(--kb);transition:.15s}
+.gmark.inbox-m{background:#fff;border:2px dashed var(--kc)}
+.gmark:hover{transform:scale(1.18)}
+.gpop{width:100%;margin:8px 0 0 0;background:#fff;border:1px solid var(--rule);border-left:3px solid var(--kc);border-radius:12px;
+  padding:11px 13px;box-shadow:0 6px 18px rgba(0,0,0,.07);animation:chipin .22s ease}
+
+/* ---------- V4 TRAILING PILL ---------- */
+.tpill{flex:0 0 auto;align-self:flex-start;margin-top:2px;display:inline-flex;align-items:center;gap:6px;
+  padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600;color:var(--kc);background:var(--kb);
+  border:1px solid transparent;cursor:pointer;white-space:nowrap;user-select:none;-webkit-user-select:none}
+.tpill:active{border-color:var(--kc)}
+.tpill .cdot{width:7px;height:7px;border-radius:50%}
+.tpill.hint-hold{animation:pulse 1.2s ease infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 transparent}50%{box-shadow:0 0 0 3px var(--kb)}}
+
+/* ---------- V5 REVIEW SWEEP ---------- */
+.sweepbar{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--accent-soft);
+  border-bottom:1px solid #D6E7FF;cursor:pointer}
+.sweepbar .n{width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;font-size:12px;font-weight:800;display:grid;place-items:center}
+.sweepbar .t{font-size:13px;font-weight:600;color:var(--accent)}
+.sweepbar .go{margin-left:auto;font-size:12px;font-weight:700;color:var(--accent)}
+.blk.sweeping{background:#FFFBEA;border-radius:10px;box-shadow:0 0 0 2px #FCE9A8;padding-left:8px;padding-right:8px}
+.sweepfoot{position:absolute;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--rule);
+  padding:12px 16px calc(12px + env(safe-area-inset-bottom));box-shadow:0 -6px 20px rgba(0,0,0,.06);transform:translateY(110%);transition:.25s;z-index:8}
+.sweepfoot.on{transform:none}
+.sweepfoot .sug{font-size:13px;color:var(--ink-soft);margin-bottom:10px;line-height:1.4}
+.sweepfoot .sug b{color:var(--ink)}
+.sweepfoot .row{display:flex;gap:9px}
+.sweepfoot .row button{flex:1;border:none;border-radius:12px;padding:12px 0;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer}
+.sf-skip{background:#F1F1F4;color:var(--ink-soft)}
+.sf-apply{background:var(--accent);color:#fff}
+.sf-keep{background:#EFECE3;color:#6b5a2e}
+.sweepfoot .cnt{font-size:11px;color:var(--ink-faint);margin-bottom:8px}
+
+/* ---------- V6 AUTO-APPLIED ---------- */
+.autobadge{display:inline-flex;align-items:center;gap:4px;margin-left:8px;font-size:11px;color:var(--ink-faint);vertical-align:middle}
+.autobadge .adot{width:5px;height:5px;border-radius:50%;background:var(--kc)}
+.undostrip{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:10px 14px;background:#1C1C1E;color:#fff;font-size:12.5px}
+.undostrip .txt{line-height:1.35}
+.undostrip .txt b{font-weight:700}
+.undostrip button{margin-left:auto;background:rgba(255,255,255,.14);border:none;color:#5AB1FF;font-weight:700;font-size:12.5px;
+  border-radius:8px;padding:6px 12px;cursor:pointer;font-family:inherit;white-space:nowrap}
+.askchip{display:inline-flex;align-items:center;gap:7px;margin:4px 0 0 30px;padding:5px 11px;border-radius:20px;font-size:12px;
+  font-weight:600;border:1px dashed var(--kc);color:var(--kc);background:var(--kb);width:auto}
+.askchip .b{cursor:pointer;font-weight:700}
+
+/* shared confidence dot */
+.cdot.hi{background:var(--good)}.cdot.md{background:var(--warn)}.cdot.lo{background:var(--risk)}
+.conf{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--ink-soft);margin-top:7px}
+.confbar{height:5px;border-radius:3px;background:#EDEDF0;overflow:hidden;width:100px}
+.confbar i{display:block;height:100%;border-radius:3px}
+.conf.hi i{background:var(--good)}.conf.md i{background:var(--warn)}.conf.lo i{background:var(--risk)}
+.confn{font-family:var(--mono);font-size:10.5px}
+.why{font-size:12px;color:var(--ink-faint);margin-top:6px;line-height:1.4}
+.popact{display:flex;gap:8px;margin-top:11px}
+.popact button{flex:1;border:none;border-radius:10px;padding:9px 0;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.pa-skip{background:#F1F1F4;color:var(--ink-soft)}
+.pa-apply{background:var(--kc);color:#fff}
+.pa-keep{background:#EFECE3;color:#6b5a2e}
+
+/* toast */
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);
+  background:#1C1C1E;color:#fff;border-radius:13px;padding:11px 14px;display:flex;align-items:center;gap:14px;
+  font-size:13.5px;opacity:0;pointer-events:none;transition:.22s;z-index:50;box-shadow:0 8px 30px rgba(0,0,0,.28);max-width:360px}
+.toast.on{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0)}
+.toast button{background:none;border:none;color:#5AB1FF;font-weight:700;font-size:13.5px;cursor:pointer;font-family:inherit}
+</style></head>
+<body>
+
+<div class="hd">
+  <h1>Inline suggestions · six ways</h1>
+  <div class="q">You picked inline. Here's the range of what inline can mean — same five captures, six ways the AI surfaces its guess without lifting the note out of the editor. UXBO-8.</div>
+  <div class="seg" id="seg">
+    <button data-m="1" class="on"><span class="k">1</span>Chip</button>
+    <button data-m="2"><span class="k">2</span>Ghost</button>
+    <button data-m="3"><span class="k">3</span>Gutter</button>
+    <button data-m="4"><span class="k">4</span>Pill</button>
+    <button data-m="5"><span class="k">5</span>Sweep</button>
+    <button data-m="6"><span class="k">6</span>Auto</button>
+  </div>
+</div>
+<div class="cap" id="cap"></div>
+
+<div class="stage">
+  <div class="panel" id="panel">
+    <div class="edhd"><span class="date" id="date"></span><span class="lab" id="lab">note.js · live</span></div>
+    <div id="sweepbarSlot"></div>
+    <div id="undostripSlot"></div>
+    <div class="doc" id="doc"></div>
+    <div class="sweepfoot" id="sweepfoot"></div>
+    <div class="bar">
+      <button class="fmt" id="bBul" title="Bullet">•</button>
+      <button class="fmt" id="bTask" title="Task">☐</button>
+      <button class="new" id="bNew">＋ New</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><span id="toastMsg"></span><button onclick="doUndo()">Undo</button></div>
+
+<script src="./note.js"></script>
+<script>
+/* ---------------------------------------------------------------------------
+   Five mixed captures — identical to triage-explore.html so variants compare.
+   Predictions mirror capture-classifier: kind + confidence + explicit inbox
+   abstain (routing.route() -> None below threshold = "stays in the inbox").
+--------------------------------------------------------------------------- */
+const CAPS = [
+  { id:"c1", text:"Call the plumber about the kitchen leak before Friday",
+    kind:"todo", project:"Home", when:"Fri · Aug 14", conf:0.92,
+    why:"imperative verb + a hard deadline" },
+  { id:"c2", text:"what if Today opened first, before the inbox — would it feel calmer?",
+    kind:"note", project:"Chuckle", when:null, conf:0.74,
+    why:"a question, no action — reads as a product thought" },
+  { id:"c3", text:"arxiv.org/abs/2401.09361 — nearest-centroid routing, read later",
+    kind:"reference", project:"Reading", when:"Someday", conf:0.66,
+    why:"a link + “read later”, not a dated task" },
+  { id:"c4", text:"add cardamom pods to the chai order",
+    kind:"todo", project:"Groceries", when:"Today", conf:0.88,
+    why:"“add …” routes straight to an existing list" },
+  { id:"c5", text:"the whole Bangalore move — still not sure it's the right call",
+    kind:"inbox", project:null, when:null, conf:0.31,
+    why:"below threshold, and top-2 projects tie — it abstains" },
+];
+const KIND_LABEL = { todo:"To-do", note:"Note", reference:"Reference", inbox:"Unsure" };
+const KIND_KCLASS = { todo:"k-todo", note:"k-note", reference:"k-ref", inbox:"k-inbox" };
+const KIND_TAG = { todo:"", note:"note", reference:"ref", inbox:"inbox" };
+function confClass(c){ return c>=0.8?"hi":c>=0.55?"md":"lo"; }
+function confWord(c){ return c>=0.8?"high":c>=0.55?"fair":"low"; }
+function routeLine(c){ return c.kind==="inbox" ? "stays in Inbox"
+  : KIND_LABEL[c.kind]+" → "+c.project+(c.when?" · "+c.when:""); }
+const AUTO_HI = c => c.kind!=="inbox" && c.conf>=0.85;   // auto-apply threshold (V6)
+
+/* per-capture status: pending | applied | skipped */
+let state={};
+function initState(){ state={}; CAPS.forEach(c=>state[c.id]={status:"pending"}); }
+initState();
+let undoStack=null;
+
+/* ---- captions (honest trade-offs) ---- */
+const CAPTIONS={
+ 1:`<b>1 · Chip below.</b> A small chip under each line: accept, or ✕ to dismiss. Clearest of the six — you always see the full guess. <span class="risk">Cost:</span> it adds a row under every capture, so a busy inbox gets noisy.`,
+ 2:`<b>2 · Ghost text.</b> The guess trails the line like autocomplete; swipe/tap to accept, keep typing to ignore. Zero extra chrome. <span class="risk">Cost:</span> it competes with the caret and can be misread as text you wrote — easy to accept by reflex.`,
+ 3:`<b>3 · Gutter mark.</b> A colour-coded dot in the margin; tap to expand in place. Quietest at rest — the editor stays clean. <span class="risk">Cost:</span> the dot is easy to never notice, and colour alone under-explains.`,
+ 4:`<b>4 · Trailing pill.</b> A compact pill at the right edge shows just the project + a confidence dot. Tap to expand, long-press to accept. Dense, glanceable. <span class="risk">Cost:</span> long-press is invisible until taught, and it crowds long lines.`,
+ 5:`<b>5 · Review sweep.</b> A "5 suggestions" bar walks you through captures one at a time, highlighting each in place. Best for batch focus without leaving the editor. <span class="risk">Cost:</span> it's a mode — you stop editing to review.`,
+ 6:`<b>6 · Auto-applied + undo.</b> High-confidence guesses file themselves silently, shown as a quiet marker, with a standing undo strip; only the unsure ones ask. Least effort. <span class="risk">Cost:</span> silent wrong filing you never see — the highest-trust, highest-risk option.`,
+};
+
+/* ==== editor seeding (shared) ==== */
+let blockOf={};
+function seedEditor(){
+  const docEl=document.getElementById("doc");
+  docEl.innerHTML=""; blockOf={};
+  CAPS.forEach(c=>{
+    const blk=makeBlock("text",c.text,0,false);
+    blk.dataset.cap=c.id;
+    docEl.appendChild(blk);
+    blockOf[c.id]=blk;
+  });
+  if(typeof updatePh==="function") updatePh();
+}
+
+/* remove all variant decorations + reset block to plain text */
+function stripDecor(){
+  document.querySelectorAll(".sg-chip,.ghost,.gmark,.gpop,.tpill,.autobadge,.askchip").forEach(n=>n.remove());
+  document.getElementById("doc").classList.remove("gutter");
+  document.getElementById("sweepbarSlot").innerHTML="";
+  document.getElementById("undostripSlot").innerHTML="";
+  document.getElementById("sweepfoot").classList.remove("on");
+  Object.values(blockOf).forEach(blk=>blk.classList.remove("sweeping"));
+}
+/* reflect applied state on the real block (task conversion + tag) */
+function syncBlock(id){
+  const blk=blockOf[id]; if(!blk) return;
+  const c=CAPS.find(x=>x.id===id);
+  const old=blk.querySelector(".applied-tag"); if(old) old.remove();
+  blk.classList.remove("done");
+  if(typeof setType==="function") setType(blk,"text");
+  if(state[id].status==="applied"){
+    if(c.kind==="todo"&&typeof setType==="function") setType(blk,"task");
+    const tag=document.createElement("span");
+    tag.className="applied-tag "+KIND_TAG[c.kind];
+    tag.textContent = c.kind==="inbox" ? "Inbox" : routeLine(c);
+    blk.querySelector(".btx").appendChild(tag);
+  }
+}
+
+/* ==== decision engine (shared) ==== */
+function decide(id,action,{quiet=false}={}){
+  const prev={...state[id]};
+  state[id]= action==="apply" ? {status:"applied"} : {status:"skipped"};
+  syncBlock(id);
+  const c=CAPS.find(x=>x.id===id);
+  undoStack={ id, prev, restore:()=>{ state[id]=prev; syncBlock(id); render(); } };
+  if(!quiet){
+    showToast(action==="apply"
+      ? (c.kind==="inbox"?"Kept in Inbox":"Applied · "+routeLine(c))
+      : "Skipped — capture left untouched");
+  }
+}
+function undoOne(id){ state[id]={status:"pending"}; syncBlock(id); render(); showToast("Undone"); }
+function doUndo(){ if(undoStack){ undoStack.restore(); undoStack=null; hideToast(); } }
+
+/* ==== mode switch ==== */
+let mode=1;
+function setMode(m){
+  mode=m;
+  document.querySelectorAll("#seg button").forEach(b=>b.classList.toggle("on",+b.dataset.m===m));
+  document.getElementById("cap").innerHTML=CAPTIONS[m];
+  initState(); seedEditor();          // fresh demo per variant so they compare cleanly
+  render();
+}
+function render(){
+  stripDecor();
+  [renderChip,renderGhost,renderGutter,renderPill,renderSweep,renderAuto][mode-1]();
+}
+
+/* ---------- V1 CHIP BELOW ---------- */
+function renderChip(){
+  CAPS.forEach(c=>{
+    const blk=blockOf[c.id]; const st=state[c.id].status;
+    if(st!=="pending"){ appliedChip(blk,c,st); return; }
+    const chip=document.createElement("div");
+    chip.className="sg-chip "+KIND_KCLASS[c.kind]+(c.kind==="inbox"?" inbox-c":"");
+    if(c.kind==="inbox"){
+      chip.innerHTML=`<span class="dot"></span><span>Unsure — staying in Inbox <span style="opacity:.7">(low conf ${c.conf.toFixed(2)})</span></span>`;
+    }else{
+      chip.innerHTML=`<span class="dot"></span><span class="acc">${routeLine(c)}</span>
+        <span class="x" title="dismiss">&times;</span>`;
+      chip.querySelector(".acc").onclick=()=>{ decide(c.id,"apply"); render(); };
+      chip.querySelector(".x").onclick=()=>{ decide(c.id,"skip"); render(); };
+    }
+    blk.appendChild(chip);
+  });
+}
+function appliedChip(blk,c,st){
+  const chip=document.createElement("div");
+  chip.className="sg-chip "+KIND_KCLASS[c.kind]+" inbox-c";
+  chip.style.opacity=".8";
+  chip.innerHTML= st==="applied"
+    ? `<span class="dot"></span>✓ ${c.kind==="inbox"?"Kept in Inbox":routeLine(c)} <span class="x" title="undo">&#8630;</span>`
+    : `<span class="dot"></span>dismissed <span class="x" title="undo">&#8630;</span>`;
+  chip.querySelector(".x").onclick=()=>undoOne(c.id);
+  blk.appendChild(chip);
+}
+
+/* ---------- V2 GHOST TEXT ---------- */
+function renderGhost(){
+  CAPS.forEach(c=>{
+    const blk=blockOf[c.id]; const st=state[c.id].status;
+    if(st!=="pending"){ appliedChip(blk,c,st); return; }
+    const g=document.createElement("span");
+    g.className="ghost "+KIND_KCLASS[c.kind];
+    if(c.kind==="inbox"){
+      g.innerHTML=`<span class="sep">—</span><span class="gk">unsure, keeping in Inbox</span>`;
+    }else{
+      g.innerHTML=`<span class="sep">→</span><span class="gk">${routeLine(c)}</span>
+        <span class="swipe">swipe → or tap</span>`;
+      g.onclick=()=>{ decide(c.id,"apply"); render(); };
+    }
+    // ghost trails the text, inside the same line
+    blk.querySelector(".btx").appendChild(g);
+  });
+}
+
+/* ---------- V3 GUTTER MARK ---------- */
+function renderGutter(){
+  document.getElementById("doc").classList.add("gutter");
+  CAPS.forEach(c=>{
+    const blk=blockOf[c.id]; const st=state[c.id].status;
+    if(st!=="pending"){ appliedChip(blk,c,st); return; }
+    const m=document.createElement("span");
+    m.className="gmark "+KIND_KCLASS[c.kind]+(c.kind==="inbox"?" inbox-m":"");
+    m.title=c.kind==="inbox"?"unsure":KIND_LABEL[c.kind];
+    m.onclick=()=>toggleGpop(blk,c);
+    blk.appendChild(m);
+  });
+}
+function toggleGpop(blk,c){
+  const ex=blk.querySelector(".gpop"); if(ex){ ex.remove(); return; }
+  document.querySelectorAll(".gpop").forEach(n=>n.remove());
+  const p=document.createElement("div");
+  p.className="gpop "+KIND_KCLASS[c.kind];
+  p.innerHTML=popInner(c);
+  wirePop(p,c);
+  blk.appendChild(p);
+}
+
+/* ---------- V4 TRAILING PILL ---------- */
+function renderPill(){
+  CAPS.forEach(c=>{
+    const blk=blockOf[c.id]; const st=state[c.id].status;
+    if(st!=="pending"){ appliedChip(blk,c,st); return; }
+    const p=document.createElement("span");
+    p.className="tpill "+KIND_KCLASS[c.kind]+(c.kind==="inbox"?"":" hint-hold");
+    const label=c.kind==="inbox"?"?":c.project;
+    p.innerHTML=`<span class="cdot ${confClass(c.conf)}"></span>${label}`;
+    // tap = expand, long-press = accept
+    let held=false,t=null;
+    const start=()=>{ held=false; t=setTimeout(()=>{ held=true; if(c.kind!=="inbox"){ decide(c.id,"apply"); render(); } },480); };
+    const end=e=>{ clearTimeout(t); if(!held){ e.preventDefault(); togglePillPop(blk,c); } };
+    p.addEventListener("touchstart",start,{passive:true});
+    p.addEventListener("touchend",end);
+    p.addEventListener("mousedown",start);
+    p.addEventListener("mouseup",end);
+    p.addEventListener("mouseleave",()=>clearTimeout(t));
+    blk.appendChild(p);
+  });
+}
+function togglePillPop(blk,c){
+  const ex=blk.querySelector(".gpop"); if(ex){ ex.remove(); return; }
+  document.querySelectorAll(".gpop").forEach(n=>n.remove());
+  const p=document.createElement("div");
+  p.className="gpop "+KIND_KCLASS[c.kind];
+  p.innerHTML=popInner(c)+`<div class="why" style="margin-top:8px;color:var(--ink-soft)">Long-press the pill to accept without opening this.</div>`;
+  wirePop(p,c);
+  blk.appendChild(p);
+}
+
+/* shared popover body (gutter + pill) */
+function popInner(c){
+  const kc=`<span class="applied-tag ${KIND_TAG[c.kind]}" style="margin:0">${KIND_LABEL[c.kind]}</span>`;
+  const meta=c.kind==="inbox"
+    ? `<div class="why" style="color:#6b5a2e;background:#FBF6EC;border:1px solid #F0E4C8;border-radius:9px;padding:8px 10px;margin-top:8px"><b>Not confident enough to file.</b> Two projects tied — it won't guess. Stays in the inbox.</div>`
+    : `<div style="margin-top:6px;font-size:13px;color:var(--ink)">${routeLine(c)}</div>`;
+  return `<div style="display:flex;align-items:center;gap:8px">${kc}
+      <span class="confn" style="margin-left:auto;color:var(--ink-faint)">${c.conf.toFixed(2)}</span></div>
+    ${meta}
+    <div class="conf ${confClass(c.conf)}"><span>${confWord(c.conf)} confidence</span>
+      <span class="confbar"><i style="width:${Math.round(c.conf*100)}%"></i></span></div>
+    <div class="why">why: ${c.why}</div>
+    <div class="popact">
+      <button class="pa-skip">${c.kind==="inbox"?"Dismiss":"Skip"}</button>
+      <button class="${c.kind==="inbox"?"pa-keep":"pa-apply"}">${c.kind==="inbox"?"Keep in Inbox":"Apply"}</button>
+    </div>`;
+}
+function wirePop(p,c){
+  p.querySelector(".pa-skip").onclick=()=>{ decide(c.id,"skip"); render(); };
+  const acc=p.querySelector(".pa-apply")||p.querySelector(".pa-keep");
+  acc.onclick=()=>{ decide(c.id,"apply"); render(); };
+}
+
+/* ---------- V5 REVIEW SWEEP ---------- */
+let sweepIdx=-1;
+function renderSweep(){
+  const pending=CAPS.filter(c=>state[c.id].status==="pending");
+  const slot=document.getElementById("sweepbarSlot");
+  slot.innerHTML=`<div class="sweepbar" id="sweepbar">
+     <span class="n">${pending.length}</span>
+     <span class="t">${pending.length?pending.length+" suggestion"+(pending.length>1?"s":"")+" to review":"All reviewed"}</span>
+     <span class="go">${sweepIdx<0?(pending.length?"Start ›":""):"Reviewing"}</span></div>`;
+  document.getElementById("sweepbar").onclick=()=>{ if(pending.length){ sweepIdx=0; showSweep(); } };
+  // applied/skipped markers
+  CAPS.forEach(c=>{ if(state[c.id].status!=="pending") appliedChip(blockOf[c.id],c,state[c.id].status); });
+  if(sweepIdx>=0) showSweep();
+}
+function showSweep(){
+  const pending=CAPS.filter(c=>state[c.id].status==="pending");
+  Object.values(blockOf).forEach(b=>b.classList.remove("sweeping"));
+  const foot=document.getElementById("sweepfoot");
+  if(!pending.length||sweepIdx>=pending.length){ sweepIdx=-1; foot.classList.remove("on"); render(); return; }
+  const c=pending[sweepIdx];
+  const blk=blockOf[c.id]; blk.classList.add("sweeping");
+  blk.scrollIntoView({block:"center",behavior:"smooth"});
+  foot.innerHTML=`<div class="cnt">Reviewing ${sweepIdx+1} of ${pending.length}</div>
+    <div class="sug">${c.kind==="inbox"
+        ? `<b>Not sure about this one.</b> It stays in the Inbox unless you file it — confidence ${c.conf.toFixed(2)}.`
+        : `Suggest <b>${routeLine(c)}</b> — ${confWord(c.conf)} confidence (${c.conf.toFixed(2)}). ${c.why}.`}</div>
+    <div class="row">
+      <button class="sf-skip">Skip</button>
+      ${c.kind==="inbox"
+        ? `<button class="sf-keep">Keep in Inbox</button>`
+        : `<button class="sf-apply">Apply</button>`}
+    </div>`;
+  foot.classList.add("on");
+  foot.querySelector(".sf-skip").onclick=()=>{ decide(c.id,"skip",{quiet:true}); afterSweep(); };
+  (foot.querySelector(".sf-apply")||foot.querySelector(".sf-keep")).onclick=()=>{ decide(c.id,"apply",{quiet:true}); afterSweep(); };
+}
+function afterSweep(){
+  // list shrank by one; keep same index to land on the next pending
+  showSweep();
+  // refresh the top counter
+  const pending=CAPS.filter(c=>state[c.id].status==="pending").length;
+  const bar=document.querySelector("#sweepbar .n"); if(bar) bar.textContent=pending;
+}
+
+/* ---------- V6 AUTO-APPLIED + UNDO ---------- */
+function renderAuto(){
+  // auto-apply the high-confidence, silently — unless the user already reversed it
+  CAPS.forEach(c=>{ if(AUTO_HI(c)&&state[c.id].status==="pending"&&!state[c.id].reversed){ state[c.id]={status:"applied",auto:true}; syncBlock(c.id); } });
+  // quiet marker on auto-applied; ask-chip on the medium ones; inbox note on the abstainer
+  CAPS.forEach(c=>{
+    const blk=blockOf[c.id]; const s=state[c.id];
+    if(s.status==="applied"){
+      const b=document.createElement("span");
+      b.className="autobadge "+KIND_KCLASS[c.kind];
+      b.innerHTML=`<span class="adot"></span>${s.auto?"auto":"filed"}`;
+      b.style.cursor="pointer"; b.title="tap to reverse";
+      b.onclick=()=>{ state[c.id]={status:"pending",reversed:true}; syncBlock(c.id); render(); showToast("Reversed — "+c.project+" left in inbox"); };
+      blk.appendChild(b);
+    }else if(s.status==="skipped"){
+      appliedChip(blk,c,"skipped");
+    }else{
+      // still pending = the uncertain ones that must ask
+      const chip=document.createElement("div");
+      chip.className="askchip "+KIND_KCLASS[c.kind];
+      if(c.kind==="inbox"){
+        chip.innerHTML=`<span>Left in Inbox — too unsure to file (${c.conf.toFixed(2)})</span>`;
+      }else{
+        chip.innerHTML=`<span>Not sure: ${routeLine(c)}? (${c.conf.toFixed(2)})</span>
+          <span class="b" data-a="y">Yes</span><span class="b" data-a="n" style="opacity:.6">No</span>`;
+        chip.querySelector('[data-a="y"]').onclick=()=>{ decide(c.id,"apply"); render(); };
+        chip.querySelector('[data-a="n"]').onclick=()=>{ decide(c.id,"skip"); render(); };
+      }
+      blk.appendChild(chip);
+    }
+  });
+  // persistent undo strip listing what was auto-filed
+  const autoNow=CAPS.filter(c=>state[c.id].status==="applied"&&state[c.id].auto);
+  const slot=document.getElementById("undostripSlot");
+  if(autoNow.length){
+    slot.innerHTML=`<div class="undostrip">
+      <span class="adot" style="width:6px;height:6px;border-radius:50%;background:#5AB1FF"></span>
+      <span class="txt"><b>${autoNow.length} filed automatically</b> — ${autoNow.map(c=>c.project).join(", ")}. Tap any “auto” marker to reverse.</span>
+      <button id="autoUndoAll">Undo all</button></div>`;
+    document.getElementById("autoUndoAll").onclick=()=>{ const n=autoNow.length; autoNow.forEach(c=>{ state[c.id]={status:"pending",reversed:true}; syncBlock(c.id); }); render(); showToast("Reversed "+n+" auto-files — back in inbox"); };
+  }
+}
+
+/* ==== toast ==== */
+let toastT=null;
+function showToast(msg){ const t=document.getElementById("toast");
+  document.getElementById("toastMsg").textContent=msg; t.classList.add("on");
+  clearTimeout(toastT); toastT=setTimeout(hideToast,3000); }
+function hideToast(){ document.getElementById("toast").classList.remove("on"); }
+
+/* ==== boot ==== */
+document.querySelectorAll("#seg button").forEach(b=>b.onclick=()=>setMode(+b.dataset.m));
+seedEditor();
+setMode(1);
+</script>
+</body></html>

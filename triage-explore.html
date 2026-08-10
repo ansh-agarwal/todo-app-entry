@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#F2F2F7">
+<title>AI Triage — apply or skip (UXBO-8)</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
+<link rel="stylesheet" href="./note-base.css">
+<style>
+:root{
+  --bg:#F2F2F7;--card:#FFFFFF;--ink:#1C1C1E;--ink-soft:#6B6B70;--ink-faint:#AEAEB2;
+  --rule:#ECECEE;--rule-2:#F5F5F6;--cbrule:#C7C7CC;--accent:#0A84FF;--accent-soft:#E9F2FF;
+  --title:22px;--body:16px;--cb-radius:50%;
+  --good:#1a7f37;--warn:#B26A00;--risk:#b3261e;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Segoe UI",Roboto,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;
+  display:flex;flex-direction:column;height:100dvh;overflow:hidden}
+
+/* header + segmented control */
+.hd{flex:0 0 auto;padding:calc(10px + env(safe-area-inset-top)) 14px 10px;background:var(--bg);border-bottom:1px solid var(--rule)}
+.hd h1{font-size:15px;font-weight:700;letter-spacing:-.01em;margin-bottom:2px}
+.hd .q{font-size:12px;color:var(--ink-soft);line-height:1.35;margin-bottom:9px}
+.seg{display:flex;gap:5px;background:#E4E4EA;border-radius:11px;padding:3px}
+.seg button{flex:1;border:none;background:none;font-family:inherit;font-size:12.5px;font-weight:600;
+  color:var(--ink-soft);padding:7px 2px;border-radius:8px;cursor:pointer;transition:.15s;line-height:1.1}
+.seg button .k{display:block;font-size:11px;font-weight:800;color:var(--accent);margin-bottom:1px}
+.seg button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+
+/* caption */
+.cap{flex:0 0 auto;padding:9px 15px;background:#FBFBFD;border-bottom:1px solid var(--rule);font-size:11.5px;line-height:1.45;color:var(--ink-soft)}
+.cap b{font-weight:700;color:var(--ink)}
+
+.stage{flex:1;min-height:0;position:relative;display:flex;justify-content:center}
+.panel{position:absolute;inset:0;display:none;flex-direction:column;width:100%;max-width:440px;
+  background:var(--card);border-left:1px solid var(--rule);border-right:1px solid var(--rule)}
+.panel.on{display:flex}
+
+/* the real note.js editor surface */
+.edwrap{display:flex;flex-direction:column;min-height:0;flex:1}
+.edhd{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:11px 18px 7px;border-bottom:1px solid var(--rule-2)}
+.edhd .date{font-family:var(--mono);font-size:11px;color:var(--ink-faint)}
+.edhd .lab{font-family:var(--mono);font-size:10px;color:var(--ink-soft);border:1px solid var(--rule);border-radius:5px;padding:2px 7px;margin-left:auto}
+.doc{flex:1;overflow-y:auto;padding:14px 18px 30px;cursor:text}
+.blk{display:flex;gap:10px;align-items:flex-start;padding:6px 0}
+.blk .mk{flex:0 0 auto;margin-top:4px;width:20px;display:flex;justify-content:center}
+.blk[data-type="text"] .mk{display:none}
+.blk .mk.bul{color:var(--ink-faint);font-size:17px;line-height:1}
+.blk .mk.cb{width:19px;height:19px;border-radius:var(--cb-radius,50%);border:1.5px solid var(--cbrule);cursor:pointer;display:grid;place-items:center;transition:.13s}
+.blk .mk.cb:hover{border-color:var(--accent)}
+.blk.done .mk.cb{background:var(--accent);border-color:var(--accent);animation:cbpop .2s ease}
+@keyframes cbpop{0%{transform:scale(.72)}60%{transform:scale(1.1)}100%{transform:scale(1)}}
+.blk.done .mk.cb::after{content:"✓";color:#fff;font-size:12px;font-weight:700}
+.blk .btx{flex:1;outline:none;font-size:var(--body,16px);line-height:1.5;min-height:24px;word-break:break-word;color:var(--ink)}
+.blk.done .btx{color:var(--ink-faint);text-decoration:line-through}
+.blk .btx:empty::before{content:attr(data-ph);color:var(--ink-faint)}
+.divider{height:1px;background:var(--rule);margin:14px 0}
+.bar{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:9px 16px calc(9px + env(safe-area-inset-bottom));border-top:1px solid var(--rule)}
+.fmt{width:36px;height:32px;border:1px solid var(--rule);border-radius:8px;background:#fff;color:var(--ink-soft);font-size:15px;cursor:pointer;display:grid;place-items:center}
+.fmt:hover{border-color:var(--accent);color:var(--accent)}
+.new{margin-left:auto;display:inline-flex;align-items:center;gap:6px;background:var(--accent-soft);color:var(--accent);border:none;border-radius:20px;font-size:13px;font-weight:700;padding:8px 15px;cursor:pointer}
+
+/* applied-state chip appended inside a block */
+.applied-tag{display:inline-flex;align-items:center;gap:5px;margin-left:8px;padding:2px 8px;border-radius:20px;
+  font-size:11px;font-weight:700;vertical-align:middle;white-space:nowrap;background:var(--accent-soft);color:var(--accent)}
+.applied-tag.note{background:#EFEAF9;color:#6E44C0}
+.applied-tag.ref{background:#EAF3EE;color:var(--good)}
+.applied-tag.inbox{background:#F1F1F4;color:var(--ink-soft)}
+
+/* kind + confidence pills reused by all three UIs */
+.kpill{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:800;letter-spacing:.02em;text-transform:uppercase}
+.kpill.todo{background:var(--accent-soft);color:var(--accent)}
+.kpill.note{background:#EFEAF9;color:#6E44C0}
+.kpill.ref{background:#EAF3EE;color:var(--good)}
+.kpill.inbox{background:#F1F1F4;color:var(--ink-soft)}
+.meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.chipm{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--ink-soft);background:#F5F5F7;border-radius:8px;padding:3px 8px}
+.chipm b{color:var(--ink);font-weight:600}
+.conf{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--ink-soft);margin-top:2px}
+.confbar{flex:1;height:5px;border-radius:3px;background:#EDEDF0;overflow:hidden;max-width:120px}
+.confbar i{display:block;height:100%;border-radius:3px}
+.conf.hi i{background:var(--good)} .conf.md i{background:var(--warn)} .conf.lo i{background:var(--risk)}
+.confn{font-family:var(--mono);font-size:10.5px}
+
+/* ---- A: DECK ---- */
+.deck{flex:1;min-height:0;display:flex;flex-direction:column;padding:16px 16px 8px}
+.dots{display:flex;gap:7px;justify-content:center;padding:6px 0 14px}
+.dots span{width:7px;height:7px;border-radius:50%;background:#D6D6DC;transition:.2s}
+.dots span.cur{background:var(--accent);transform:scale(1.25)}
+.dots span.done{background:#BFCBD8}
+.cardstack{flex:1;min-height:0;position:relative}
+.dcard{position:absolute;inset:0;background:var(--card);border:1px solid var(--rule);border-radius:20px;
+  box-shadow:0 10px 34px rgba(0,0,0,.09);padding:20px 20px 18px;display:flex;flex-direction:column;
+  transition:transform .28s cubic-bezier(.3,.9,.35,1),opacity .28s}
+.dcard .orig{font-size:17px;line-height:1.42;color:var(--ink);margin:12px 0 16px;font-weight:500}
+.dcard .toplbl{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-faint)}
+.dcard .spacer{flex:1}
+.dcard .unsure{background:#FBF6EC;border:1px solid #F0E4C8;border-radius:12px;padding:11px 13px;font-size:13px;line-height:1.45;color:#6b5a2e;margin-bottom:4px}
+.dcard.gone-l{transform:translateX(-120%) rotate(-7deg);opacity:0}
+.dcard.gone-r{transform:translateX(120%) rotate(7deg);opacity:0}
+.dact{display:flex;gap:10px;margin-top:16px}
+.btn{flex:1;border:none;border-radius:14px;padding:14px 0;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer}
+.btn.skip{background:#F1F1F4;color:var(--ink-soft)}
+.btn.apply{background:var(--accent);color:#fff}
+.btn.keep{background:#EFECE3;color:#6b5a2e}
+.btn:active{transform:scale(.98)}
+
+/* ---- B: LIST ---- */
+.listwrap{flex:1;min-height:0;display:flex;flex-direction:column}
+.listtop{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:12px 16px 8px}
+.listtop .ct{font-size:13px;color:var(--ink-soft)}
+.applyall{margin-left:auto;background:var(--accent);color:#fff;border:none;border-radius:11px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer}
+.applyall:disabled{background:#C9C9CF;cursor:default}
+.listbody{flex:1;overflow-y:auto;padding:4px 14px 20px}
+.lcard{background:var(--card);border:1px solid var(--rule);border-radius:16px;padding:14px 15px;margin-bottom:11px;transition:.25s}
+.lcard.resolved{opacity:.55}
+.lcard .orig{font-size:15.5px;line-height:1.4;margin:9px 0 11px;font-weight:500}
+.lact{display:flex;gap:9px;margin-top:12px}
+.lbtn{flex:1;border:none;border-radius:11px;padding:10px 0;font-family:inherit;font-size:13.5px;font-weight:700;cursor:pointer}
+.lbtn.skip{background:#F1F1F4;color:var(--ink-soft)}
+.lbtn.apply{background:var(--accent);color:#fff}
+.lbtn.keep{background:#EFECE3;color:#6b5a2e}
+.resolvedbar{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;padding:2px 0}
+.resolvedbar .undo{margin-left:auto;background:none;border:none;color:var(--accent);font-weight:700;font-size:13px;cursor:pointer;font-family:inherit}
+.resolvedbar .ok{color:var(--good)} .resolvedbar .sk{color:var(--ink-faint)}
+
+/* ---- C: INLINE ---- */
+.inlinehint{flex:0 0 auto;padding:9px 18px;font-size:12px;color:var(--ink-soft);background:#FBFBFD;border-bottom:1px solid var(--rule-2)}
+.icchip{display:inline-flex;align-items:center;gap:6px;margin-top:6px;padding:5px 10px;border-radius:20px;
+  font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--accent);color:var(--accent);background:var(--accent-soft);animation:chipin .3s ease}
+.icchip .dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+.icchip.note{border-color:#6E44C0;color:#6E44C0;background:#EFEAF9}
+.icchip.ref{border-color:var(--good);color:var(--good);background:#EAF3EE}
+.icchip.inbox{border-color:#C7C7CC;color:var(--ink-soft);background:#F5F5F7;cursor:default}
+.icchip .x{opacity:.6;font-weight:800;margin-left:2px}
+@keyframes chipin{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.caprow{padding:9px 0}
+.caprow .captx{font-size:16px;line-height:1.45}
+
+/* finished state */
+.done-state{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px;background:var(--card)}
+.done-state.on{display:flex}
+.done-state .r{width:46px;height:46px;border-radius:50%;background:#EAF3EE;color:var(--good);display:grid;place-items:center;font-size:22px;margin-bottom:14px}
+.done-state h3{font-size:18px;font-weight:700;margin-bottom:6px}
+.done-state p{font-size:13.5px;color:var(--ink-soft);line-height:1.5;max-width:280px}
+.done-state .reset{margin-top:18px;background:none;border:1px solid var(--rule);border-radius:11px;padding:9px 18px;font-size:13px;font-weight:600;color:var(--ink-soft);cursor:pointer;font-family:inherit}
+
+/* undo toast */
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);
+  background:#1C1C1E;color:#fff;border-radius:13px;padding:11px 14px;display:flex;align-items:center;gap:14px;
+  font-size:13.5px;opacity:0;pointer-events:none;transition:.22s;z-index:50;box-shadow:0 8px 30px rgba(0,0,0,.28);max-width:360px}
+.toast.on{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0)}
+.toast button{background:none;border:none;color:#5AB1FF;font-weight:700;font-size:13.5px;cursor:pointer;font-family:inherit}
+</style></head>
+<body>
+
+<div class="hd">
+  <h1>AI Triage · apply or skip</h1>
+  <div class="q">Capture stayed free-flowing. Five notes piled up — now the app comes back with suggestions. Same five cards, three ways to decide. UXBO-8.</div>
+  <div class="seg">
+    <button data-m="A" class="on"><span class="k">A</span>Deck</button>
+    <button data-m="B"><span class="k">B</span>List</button>
+    <button data-m="C"><span class="k">C</span>Inline</button>
+  </div>
+</div>
+<div class="cap" id="cap"></div>
+
+<div class="stage">
+  <!-- shared capture editor lives inside INLINE panel; A & B are card panels -->
+
+  <!-- A: DECK -->
+  <div class="panel on" id="pA">
+    <div class="deck">
+      <div class="dots" id="dotsA"></div>
+      <div class="cardstack" id="stackA"></div>
+      <div class="done-state" id="doneA">
+        <div class="r">✓</div><h3>Inbox is clear.</h3>
+        <p>Five captures triaged. Four routed, one left in the inbox on purpose — it wasn't sure, and neither were you.</p>
+        <button class="reset" onclick="resetAll()">Run it again</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- B: LIST -->
+  <div class="panel" id="pB">
+    <div class="listwrap">
+      <div class="listtop">
+        <span class="ct" id="ctB"></span>
+        <button class="applyall" id="applyAllB" onclick="applyAllConfident()">Apply 3 confident</button>
+      </div>
+      <div class="listbody" id="bodyB"></div>
+      <div class="done-state" id="doneB">
+        <div class="r">✓</div><h3>Inbox is clear.</h3>
+        <p>All five handled. Nothing was moved without your tap.</p>
+        <button class="reset" onclick="resetAll()">Run it again</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- C: INLINE (the real note.js editor) -->
+  <div class="panel" id="pC">
+    <div class="edwrap">
+      <div class="edhd"><span class="date" id="date"></span><span class="lab">note.js · live editor</span></div>
+      <div class="inlinehint">Suggestions sit under each line. Tap a chip to accept — the note becomes what the chip says. Ignore it and the capture is untouched.</div>
+      <div class="doc" id="doc"></div>
+      <div class="bar">
+        <button class="fmt" id="bBul" title="Bullet">•</button>
+        <button class="fmt" id="bTask" title="Task">☐</button>
+        <button class="new" id="bNew">＋ New</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><span id="toastMsg"></span><button onclick="doUndo()">Undo</button></div>
+
+<script src="./note.js"></script>
+<script>
+/* ---------------------------------------------------------------------------
+   The five captures. Mixed on purpose so the AI's job is visibly hard.
+   Mock predictions mirror what capture-classifier actually emits:
+     kind ∈ todo|note|reference  + confidence, and an explicit inbox abstain
+     (routing.route() returns None below threshold -> "stays in the inbox").
+--------------------------------------------------------------------------- */
+const CAPS = [
+  { id:"c1", text:"Call the plumber about the kitchen leak before Friday",
+    kind:"todo", project:"Home", when:"Fri · Aug 14", conf:0.92,
+    why:"imperative verb + a hard deadline" },
+  { id:"c2", text:"what if Today opened first, before the inbox — would it feel calmer?",
+    kind:"note", project:"Chuckle", when:null, conf:0.74,
+    why:"a question, no action — reads as a product thought" },
+  { id:"c3", text:"arxiv.org/abs/2401.09361 — nearest-centroid routing, read later",
+    kind:"reference", project:"Reading", when:"Someday", conf:0.66,
+    why:"a link + “read later”, not a dated task" },
+  { id:"c4", text:"add cardamom pods to the chai order",
+    kind:"todo", project:"Groceries", when:"Today", conf:0.88,
+    why:"“add …” routes straight to an existing list" },
+  { id:"c5", text:"the whole Bangalore move — still not sure it's the right call",
+    kind:"inbox", project:null, when:null, conf:0.31,
+    why:"below threshold, and top-2 projects tie — it abstains" },
+];
+
+const KIND_LABEL = { todo:"To-do", note:"Note", reference:"Reference", inbox:"Unsure" };
+const KIND_CLASS = { todo:"todo", note:"note", reference:"ref", inbox:"inbox" };
+
+/* runtime state per capture: status = pending|applied|skipped */
+let state = {};
+function initState(){ state = {}; CAPS.forEach(c=>state[c.id]={status:"pending"}); }
+initState();
+
+let deckIdx = 0;
+let undoStack = null; // {id, prev, mode, restore()}
+
+/* ---------- confidence helpers ---------- */
+function confClass(c){ return c>=0.8?"hi":c>=0.55?"md":"lo"; }
+function confWord(c){ return c>=0.8?"high":c>=0.55?"fair":"low"; }
+
+/* ---------- shared: meta row markup ---------- */
+function metaHTML(c){
+  if(c.kind==="inbox"){
+    return `<div class="meta"><span class="chipm">stays in <b>Inbox</b></span></div>`;
+  }
+  let bits = `<span class="chipm">→ <b>${c.project}</b></span>`;
+  if(c.when) bits += `<span class="chipm">when <b>${c.when}</b></span>`;
+  return `<div class="meta">${bits}</div>`;
+}
+function confHTML(c){
+  const cl = confClass(c.conf);
+  return `<div class="conf ${cl}"><span>${confWord(c.conf)} confidence</span>
+    <span class="confbar"><i style="width:${Math.round(c.conf*100)}%"></i></span>
+    <span class="confn">${c.conf.toFixed(2)}</span></div>`;
+}
+
+/* =========================================================================
+   CAPTIONS (honest trade-offs)
+========================================================================= */
+const CAPTIONS = {
+  A:`<b>Deck.</b> One card, full attention, decide and it's gone. Calmest read of each suggestion — but you can't see how many are left or compare, and it's the most taps.`,
+  B:`<b>List.</b> All five at once with an <b>Apply&nbsp;3&nbsp;confident</b> shortcut. Fastest to clear — but it invites rubber-stamping, and the unsure one is easy to sweep along.`,
+  C:`<b>Inline.</b> No triage screen at all — chips sit under each capture in the editor. Keeps capture frictionless, nothing interrupts. But suggestions are easy to never notice.`,
+};
+
+/* =========================================================================
+   MODE SWITCH
+========================================================================= */
+let mode = "A";
+function setMode(m){
+  mode = m;
+  document.querySelectorAll(".seg button").forEach(b=>b.classList.toggle("on",b.dataset.m===m));
+  document.getElementById("pA").classList.toggle("on",m==="A");
+  document.getElementById("pB").classList.toggle("on",m==="B");
+  document.getElementById("pC").classList.toggle("on",m==="C");
+  document.getElementById("cap").innerHTML = CAPTIONS[m];
+  if(m==="A") renderDeck();
+  if(m==="B") renderList();
+  if(m==="C") renderInline();
+}
+document.querySelectorAll(".seg button").forEach(b=>b.onclick=()=>setMode(b.dataset.m));
+
+/* =========================================================================
+   A — DECK
+========================================================================= */
+function renderDeck(){
+  const dots = document.getElementById("dotsA");
+  dots.innerHTML = CAPS.map((c,i)=>{
+    const done = state[c.id].status!=="pending";
+    return `<span class="${i===deckIdx&&!allDone()?'cur':done?'done':''}"></span>`;
+  }).join("");
+
+  const stack = document.getElementById("stackA");
+  const done = document.getElementById("doneA");
+  if(allDone()){ stack.innerHTML=""; done.classList.add("on"); return; }
+  done.classList.remove("on");
+
+  // advance past already-resolved
+  while(deckIdx<CAPS.length && state[CAPS[deckIdx].id].status!=="pending") deckIdx++;
+  if(deckIdx>=CAPS.length){ stack.innerHTML=""; done.classList.add("on"); return; }
+
+  const c = CAPS[deckIdx];
+  const isInbox = c.kind==="inbox";
+  stack.innerHTML = `
+    <div class="dcard" id="dc">
+      <div class="toplbl">Capture ${deckIdx+1} of ${CAPS.length}</div>
+      <div class="orig">${c.text}</div>
+      <div class="meta" style="margin-bottom:9px">
+        <span class="kpill ${KIND_CLASS[c.kind]}">${KIND_LABEL[c.kind]}</span>
+      </div>
+      ${metaHTML(c)}
+      <div style="margin-top:10px">${confHTML(c)}</div>
+      <div style="font-size:12px;color:var(--ink-faint);margin-top:8px">why: ${c.why}</div>
+      ${isInbox?`<div class="spacer"></div><div class="unsure"><b>Not confident enough to file this.</b> Leaving it in the inbox until you decide — that's the intended default, not a miss.</div>`:`<div class="spacer"></div>`}
+      <div class="dact">
+        <button class="btn skip" onclick="deckDecide('skip')">Skip</button>
+        <button class="btn ${isInbox?'keep':'apply'}" onclick="deckDecide('apply')">${isInbox?'Keep in Inbox':'Apply'}</button>
+      </div>
+    </div>`;
+}
+function deckDecide(action){
+  const c = CAPS[deckIdx];
+  const card = document.getElementById("dc");
+  card.classList.add(action==="apply"?"gone-r":"gone-l");
+  applyDecision(c.id, action, "A");
+  setTimeout(()=>{ deckIdx++; renderDeck(); }, 240);
+}
+
+/* =========================================================================
+   B — LIST
+========================================================================= */
+function renderList(){
+  const body = document.getElementById("bodyB");
+  const done = document.getElementById("doneB");
+  const pending = CAPS.filter(c=>state[c.id].status==="pending").length;
+  document.getElementById("ctB").textContent = pending? `${pending} suggestion${pending>1?'s':''} waiting` : "all handled";
+
+  // Apply-all only touches the confident, non-inbox, still-pending ones
+  const confIds = CAPS.filter(c=>c.kind!=="inbox" && c.conf>=0.8 && state[c.id].status==="pending");
+  const aa = document.getElementById("applyAllB");
+  aa.disabled = confIds.length===0;
+  aa.textContent = confIds.length? `Apply ${confIds.length} confident` : "Nothing confident left";
+
+  if(allDone()){ body.innerHTML=""; done.classList.add("on"); return; }
+  done.classList.remove("on");
+
+  body.innerHTML = CAPS.map(c=>{
+    const st = state[c.id].status;
+    if(st!=="pending"){
+      return `<div class="lcard resolved">
+        <div class="resolvedbar">
+          ${st==="applied"
+            ? `<span class="ok">✓ ${c.kind==="inbox"?"Kept in Inbox":KIND_LABEL[c.kind]+" → "+c.project}</span>`
+            : `<span class="sk">Skipped — left as a note</span>`}
+          <button class="undo" onclick="undoOne('${c.id}')">Undo</button>
+        </div>
+        <div class="orig" style="margin:6px 0 0;opacity:.7">${c.text}</div>
+      </div>`;
+    }
+    const isInbox=c.kind==="inbox";
+    return `<div class="lcard">
+      <div class="meta"><span class="kpill ${KIND_CLASS[c.kind]}">${KIND_LABEL[c.kind]}</span></div>
+      <div class="orig">${c.text}</div>
+      ${metaHTML(c)}
+      <div style="margin-top:9px">${confHTML(c)}</div>
+      ${isInbox?`<div class="unsure" style="margin-top:10px"><b>Unsure — defaulting to Inbox.</b> Two projects scored almost the same; it won't guess.</div>`:``}
+      <div class="lact">
+        <button class="lbtn skip" onclick="listDecide('${c.id}','skip')">Skip</button>
+        <button class="lbtn ${isInbox?'keep':'apply'}" onclick="listDecide('${c.id}','apply')">${isInbox?'Keep in Inbox':'Apply'}</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+function listDecide(id,action){ applyDecision(id,action,"B"); renderList(); }
+function applyAllConfident(){
+  const ids = CAPS.filter(c=>c.kind!=="inbox" && c.conf>=0.8 && state[c.id].status==="pending").map(c=>c.id);
+  if(!ids.length) return;
+  ids.forEach(id=>{ state[id]={status:"applied"}; syncBlock(id); });
+  // one grouped undo
+  undoStack = { multi:ids, restore:()=>{ ids.forEach(id=>{ state[id]={status:"pending"}; syncBlock(id); }); } };
+  showToast(`Applied ${ids.length} confident suggestions`);
+  renderList();
+}
+
+/* =========================================================================
+   C — INLINE (real note.js editor, seeded, chips under each block)
+========================================================================= */
+let blockOf = {}; // id -> block element
+function seedEditor(){
+  const docEl = document.getElementById("doc");
+  docEl.innerHTML = "";
+  blockOf = {};
+  CAPS.forEach((c,i)=>{
+    // real note.js block; free-flowing text (not a title/task) — capture stays raw
+    const blk = makeBlock("text", c.text, 0, false);
+    blk.dataset.cap = c.id;
+    docEl.appendChild(blk);
+    blockOf[c.id] = blk;
+  });
+  if(typeof updatePh==="function") updatePh();
+}
+function renderInline(){
+  // (re)draw chips under each block per current state
+  CAPS.forEach(c=>{
+    const blk = blockOf[c.id];
+    if(!blk) return;
+    let chip = blk.querySelector(".icchip");
+    if(chip) chip.remove();
+    const st = state[c.id].status;
+    if(st==="skipped") return; // dismissed, untouched
+    chip = document.createElement("div");
+    if(st==="applied"){
+      if(c.kind==="inbox"){ chip.className="icchip inbox"; chip.innerHTML=`<span class="dot"></span>Kept in Inbox`; }
+      else { chip.className=`icchip ${KIND_CLASS[c.kind]}`;
+        chip.innerHTML=`<span class="dot"></span>✓ ${KIND_LABEL[c.kind]} → ${c.project}${c.when?" · "+c.when:""}`;
+        chip.style.opacity=".85"; }
+      chip.onclick=()=>{ undoOne(c.id); };
+      chip.title="tap to undo";
+    } else {
+      // pending suggestion chip
+      if(c.kind==="inbox"){
+        chip.className="icchip inbox";
+        chip.innerHTML=`<span class="dot"></span>Unsure — staying in Inbox`;
+      } else {
+        chip.className=`icchip ${KIND_CLASS[c.kind]}`;
+        chip.innerHTML=`<span class="dot"></span>${KIND_LABEL[c.kind]} → ${c.project}${c.when?" · "+c.when:""}
+          <span class="x">accept</span>`;
+        chip.onclick=()=>{ applyDecision(c.id,"apply","C"); renderInline(); };
+      }
+    }
+    // place chip after the block's text row
+    blk.appendChild(chip);
+  });
+}
+
+/* =========================================================================
+   DECISION ENGINE  (shared) + block state sync + undo
+========================================================================= */
+function applyDecision(id, action, from){
+  const prev = { ...state[id] };
+  if(action==="apply"){
+    state[id] = { status:"applied" };
+  } else {
+    state[id] = { status:"skipped" };
+  }
+  syncBlock(id);
+  const c = CAPS.find(x=>x.id===id);
+  undoStack = { id, prev, restore:()=>{ state[id]=prev; syncBlock(id); reRenderCurrent(); } };
+  if(action==="apply"){
+    showToast(c.kind==="inbox" ? "Kept in Inbox" : `Applied · ${KIND_LABEL[c.kind]} → ${c.project}`);
+  } else {
+    showToast("Skipped — capture left untouched");
+  }
+}
+/* reflect applied state onto the real editor block (so all three views agree) */
+function syncBlock(id){
+  const blk = blockOf[id]; if(!blk) return;
+  const c = CAPS.find(x=>x.id===id);
+  const st = state[id].status;
+  // remove any prior applied tag
+  const old = blk.querySelector(".applied-tag"); if(old) old.remove();
+  blk.classList.remove("done");
+  // reset to plain text block
+  if(typeof setType==="function") setType(blk,"text");
+  if(st==="applied" && c.kind!=="inbox"){
+    if(c.kind==="todo" && typeof setType==="function") setType(blk,"task");
+    const tag = document.createElement("span");
+    tag.className = "applied-tag "+(c.kind==="reference"?"ref":c.kind==="note"?"note":"");
+    tag.textContent = c.kind==="inbox" ? "Inbox"
+      : (KIND_LABEL[c.kind]+" · "+c.project+(c.when?" · "+c.when:""));
+    blk.querySelector(".btx").appendChild(tag);
+  } else if(st==="applied" && c.kind==="inbox"){
+    const tag=document.createElement("span"); tag.className="applied-tag inbox"; tag.textContent="Inbox";
+    blk.querySelector(".btx").appendChild(tag);
+  }
+}
+function undoOne(id){
+  const prev = { status:"pending" };
+  state[id]=prev; syncBlock(id); reRenderCurrent(); showToast("Undone");
+}
+function doUndo(){ if(undoStack){ undoStack.restore(); undoStack=null; hideToast(); reRenderCurrent(); } }
+function reRenderCurrent(){ if(mode==="A")renderDeck(); if(mode==="B")renderList(); if(mode==="C")renderInline(); }
+
+function allDone(){ return CAPS.every(c=>state[c.id].status!=="pending"); }
+function resetAll(){ initState(); deckIdx=0; seedEditor(); reRenderCurrent(); }
+
+/* ---------- toast ---------- */
+let toastT=null;
+function showToast(msg){
+  const t=document.getElementById("toast");
+  document.getElementById("toastMsg").textContent=msg;
+  t.classList.add("on");
+  clearTimeout(toastT); toastT=setTimeout(hideToast,3200);
+}
+function hideToast(){ document.getElementById("toast").classList.remove("on"); }
+
+/* =========================================================================
+   BOOT
+========================================================================= */
+document.getElementById("date").textContent =
+  new Date().toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"});
+seedEditor();      // build the real editor blocks once (shared source of truth)
+setMode("A");      // start on Deck
+</script>
+</body></html>
