@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme:light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme:dark)">
+<title>Lull · Apple — Capture ↔ Today</title>
+<style>
+/* ============================================================
+   UXBO-2 · Apple idiom (iOS 17 / macOS Sonoma)
+   Large title · inset grouped lists · translucent tab bar
+   Capture is home. Today is one tap (or one swipe) away.
+   ============================================================ */
+:root{
+  --accent:#0A84FF; --accent-soft:#E9F2FF; --accent-ink:#0060DF;
+  --bg:#F2F2F7; --surface:#FFFFFF; --surface-2:#FFFFFF;
+  --ink:#1C1C1E; --ink-soft:#3C3C4399; --ink-faint:#3C3C434D; --ink-mid:#6E6E73;
+  --rule:#3C3C431F; --good:#34C759; --warn:#FF3B30; --evening:#AF52DE;
+  --chrome:rgba(249,249,249,.82);
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Helvetica Neue",sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,monospace;
+  --r:10px; --shadow:0 1px 2px rgba(0,0,0,.04),0 10px 30px rgba(0,0,0,.06);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --accent:#0A84FF; --accent-soft:#0A84FF26; --accent-ink:#64B0FF;
+    --bg:#000000; --surface:#1C1C1E; --surface-2:#2C2C2E;
+    --ink:#FFFFFF; --ink-soft:#EBEBF599; --ink-faint:#EBEBF54D; --ink-mid:#98989F;
+    --rule:#54545899; --chrome:rgba(28,28,30,.78);
+    --shadow:0 1px 2px rgba(0,0,0,.5);
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.45;
+     -webkit-font-smoothing:antialiased;overflow:hidden;font-size:17px}
+
+.app{height:100dvh;display:grid;grid-template-columns:1fr;grid-template-rows:1fr auto}
+
+/* ---------- macOS sidebar (desktop) ---------- */
+.rail{display:none}
+
+/* ---------- pane deck ---------- */
+.deck{grid-row:1;position:relative;overflow:hidden;background:var(--bg)}
+.pane{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;
+      -webkit-overflow-scrolling:touch;opacity:0;pointer-events:none;
+      transform:translateX(14px);transition:opacity .22s ease,transform .26s cubic-bezier(.32,.72,0,1)}
+.pane.on{opacity:1;pointer-events:auto;transform:none}
+.pane.left{transform:translateX(-14px)}
+.inner{max-width:640px;margin:0 auto;padding:0 16px 150px}
+
+/* ---------- large title ---------- */
+.eyebrow{font-size:13px;font-weight:600;color:var(--ink-mid);letter-spacing:.01em;
+         padding-top:calc(18px + env(safe-area-inset-top))}
+h1.big{font-size:34px;font-weight:700;letter-spacing:-.022em;margin:1px 0 2px}
+.sub{font-size:15px;color:var(--ink-mid);margin-bottom:14px}
+
+/* ---------- inset grouped list ---------- */
+.group{background:var(--surface);border-radius:var(--r);overflow:hidden;margin:0 0 22px;
+       box-shadow:var(--shadow)}
+.ghead{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;
+       color:var(--ink-mid);padding:0 4px 7px;display:flex;align-items:center;gap:8px}
+.ghead .n{margin-left:auto;font-weight:600;letter-spacing:0;text-transform:none;font-size:13px}
+.row{display:flex;gap:12px;align-items:flex-start;padding:11px 15px;position:relative;
+     border-top:.5px solid var(--rule)}
+.row:first-child{border-top:0}
+.row:active{background:var(--bg)}
+
+/* circle checkbox — the Apple tell */
+.cb{width:23px;height:23px;border-radius:50%;border:1.6px solid var(--ink-faint);flex:0 0 auto;
+    margin-top:1px;cursor:pointer;display:grid;place-items:center;background:none;transition:.15s}
+.cb:hover{border-color:var(--accent)}
+.cb.on{background:var(--accent);border-color:var(--accent);animation:pop .26s cubic-bezier(.3,1.5,.5,1)}
+.cb.on::after{content:"✓";color:#fff;font-size:13px;font-weight:700;line-height:1}
+@keyframes pop{0%{transform:scale(.55)}62%{transform:scale(1.14)}100%{transform:scale(1)}}
+
+.body{flex:1;min-width:0}
+.t{font-size:17px;letter-spacing:-.01em}
+.row.done .t{color:var(--ink-mid);text-decoration:line-through}
+.meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;align-items:center;
+      font-size:13px;color:var(--ink-mid)}
+.dot{width:3px;height:3px;border-radius:50%;background:var(--ink-faint)}
+.pill{font-size:12px;font-weight:600;padding:1.5px 8px;border-radius:20px;background:var(--bg);
+      color:var(--ink-mid)}
+@media (prefers-color-scheme:dark){.pill{background:var(--surface-2)}}
+.pill.now{background:var(--accent-soft);color:var(--accent-ink)}
+.pill.late{background:#FF3B301F;color:var(--warn)}
+.pill.eve{background:#AF52DE1F;color:var(--evening)}
+.chev{color:var(--ink-faint);font-size:15px;align-self:center;flex:0 0 auto}
+.why{font-size:14px;color:var(--ink-mid);margin-top:5px;padding-left:9px;
+     border-left:2px solid var(--rule)}
+
+/* ---------- progress strip ---------- */
+.strip{display:flex;align-items:center;gap:11px;padding:0 4px 16px}
+.strip .bar{flex:1;height:5px;border-radius:99px;background:var(--rule);overflow:hidden}
+.strip .bar>i{display:block;height:100%;background:var(--accent);border-radius:99px;transition:width .4s}
+.strip span{font-size:13px;color:var(--ink-mid);font-variant-numeric:tabular-nums}
+
+/* ---------- capture pane ---------- */
+.capcard{background:var(--surface);border-radius:14px;padding:15px 16px;margin-bottom:20px;
+         box-shadow:var(--shadow)}
+.capcard h3{font-size:16px;font-weight:650;letter-spacing:-.01em}
+.capcard p{font-size:14px;color:var(--ink-mid);margin-top:3px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}
+.chip{border:0;font-family:inherit;font-size:14px;font-weight:600;padding:7px 14px;border-radius:20px;
+      background:var(--bg);color:var(--accent);cursor:pointer;transition:.14s}
+@media (prefers-color-scheme:dark){.chip{background:var(--surface-2)}}
+.chip:hover{background:var(--accent);color:#fff}
+.chip.ghost{color:var(--ink-mid)}
+.chip.ghost:hover{background:var(--ink-faint);color:var(--ink)}
+
+/* persistent capture bar — sits above the tab bar, always reachable */
+.capbar{position:absolute;left:0;right:0;bottom:0;z-index:20;
+        padding:9px 14px calc(9px + env(safe-area-inset-bottom));
+        background:var(--chrome);backdrop-filter:saturate(180%) blur(22px);
+        -webkit-backdrop-filter:saturate(180%) blur(22px);
+        border-top:.5px solid var(--rule);display:flex;gap:10px;align-items:center}
+.capbar input{flex:1;border:0;outline:none;background:var(--surface);color:var(--ink);
+              font:inherit;font-size:17px;padding:9px 14px;border-radius:19px}
+.capbar .send{width:32px;height:32px;border-radius:50%;border:0;background:var(--accent);color:#fff;
+              font-size:17px;cursor:pointer;flex:0 0 auto;display:grid;place-items:center}
+.capbar .send:disabled{opacity:.35}
+
+/* ---------- translucent tab bar (the Apple signature) ---------- */
+.tabbar{grid-row:2;display:flex;background:var(--chrome);
+        backdrop-filter:saturate(180%) blur(22px);-webkit-backdrop-filter:saturate(180%) blur(22px);
+        border-top:.5px solid var(--rule);z-index:30}
+.tabbar button{flex:1;border:0;background:none;font-family:inherit;cursor:pointer;
+               padding:7px 0 calc(6px + env(safe-area-inset-bottom));
+               color:var(--ink-mid);font-size:10px;font-weight:500;letter-spacing:.01em}
+.tabbar button .i{display:block;font-size:23px;line-height:1.15;margin-bottom:2px}
+.tabbar button.on{color:var(--accent)}
+.tabbar .badge{display:inline-block;min-width:16px;padding:0 4px;margin-left:3px;border-radius:9px;
+               background:var(--warn);color:#fff;font-size:10px;font-weight:700;vertical-align:1px}
+
+/* ---------- toast ---------- */
+.toast{position:fixed;left:50%;transform:translate(-50%,20px);bottom:calc(96px + env(safe-area-inset-bottom));
+       background:var(--surface);color:var(--ink);border-radius:22px;padding:10px 8px 10px 18px;
+       display:flex;align-items:center;gap:12px;box-shadow:0 6px 30px rgba(0,0,0,.22);
+       font-size:15px;opacity:0;pointer-events:none;transition:.25s cubic-bezier(.32,.72,0,1);z-index:60}
+.toast.on{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+.toast button{border:0;background:none;color:var(--accent);font:inherit;font-weight:650;
+              cursor:pointer;padding:4px 12px}
+
+.hintbar{font-size:12.5px;color:var(--ink-faint);text-align:center;padding:4px 0 16px}
+.empty{text-align:center;color:var(--ink-mid);padding:40px 20px;font-size:15px}
+.empty .b{display:block;font-size:32px;opacity:.4;margin-bottom:8px}
+
+/* ---------- desktop: macOS sidebar ---------- */
+@media(min-width:768px){
+  .app{grid-template-columns:238px 1fr;grid-template-rows:1fr}
+  .rail{display:flex;flex-direction:column;grid-column:1;grid-row:1;padding:14px 10px;
+        background:var(--chrome);backdrop-filter:saturate(180%) blur(22px);
+        border-right:.5px solid var(--rule)}
+  .rail .brand{display:flex;align-items:center;gap:9px;padding:8px 10px 16px}
+  .rail .brand .m{width:24px;height:24px;border-radius:7px;background:var(--accent);color:#fff;
+                  display:grid;place-items:center;font-size:13px;font-weight:700}
+  .rail .brand b{font-size:15px;font-weight:650;letter-spacing:-.01em}
+  .rail .ri{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:7px;
+            font-size:14px;font-weight:500;color:var(--ink);cursor:pointer}
+  .rail .ri .i{font-size:16px;width:20px;text-align:center;color:var(--accent)}
+  .rail .ri:hover{background:var(--rule)}
+  .rail .ri.on{background:var(--accent);color:#fff}
+  .rail .ri.on .i{color:#fff}
+  .rail .ri .c{margin-left:auto;font-size:12px;color:var(--ink-mid)}
+  .rail .ri.on .c{color:#ffffffcc}
+  .rail .foot{margin-top:auto;font-size:11.5px;color:var(--ink-faint);padding:10px}
+  .deck{grid-column:2;grid-row:1}
+  .tabbar{display:none}
+  .inner{padding-bottom:120px}
+  .capbar{max-width:672px;left:50%;transform:translateX(-50%);border-radius:0;background:var(--chrome)}
+  .toast{left:calc(50% + 119px)}
+}
+</style></head>
+<body>
+<div class="app">
+
+  <!-- macOS sidebar -->
+  <nav class="rail">
+    <div class="brand"><div class="m">◍</div><b>Lull</b></div>
+    <div class="ri on" data-p="capture"><span class="i">✎</span> Capture <span class="c">⌘1</span></div>
+    <div class="ri" data-p="today"><span class="i">◔</span> Today <span class="c">⌘2</span></div>
+    <div class="ri" data-p="inbox"><span class="i">⌂</span> Inbox <span class="c" id="rInbox">4</span></div>
+    <div class="foot">← → to move between panes.<br>Capture is always home.</div>
+  </nav>
+
+  <div class="deck" id="deck">
+
+    <!-- ============ CAPTURE (home) ============ -->
+    <section class="pane on" id="p-capture">
+      <div class="inner">
+        <div class="eyebrow" id="capDate">Monday 10 August</div>
+        <h1 class="big">Capture</h1>
+        <div class="sub">Everything lands here first. Nothing is sorted until you say so.</div>
+
+        <div class="ghead">Just captured <span class="n" id="capCount"></span></div>
+        <div id="capList"></div>
+
+        <div class="ghead" style="margin-top:4px">How this works</div>
+        <div class="capcard">
+          <h3>Capture never asks you to decide</h3>
+          <p>Type and hit return — it goes nowhere but here. Later you pick what deserves
+             Today. Today only ever shows what you chose.</p>
+          <div class="chips">
+            <button class="chip" onclick="go(1)">Open Today →</button>
+            <button class="chip ghost" onclick="go(2)">See Inbox</button>
+          </div>
+        </div>
+        <div class="hintbar">Swipe left, or press → , to reach Today</div>
+      </div>
+      <div class="capbar">
+        <input id="capInput" placeholder="What's on your mind?" autocomplete="off">
+        <button class="send" id="capSend" disabled>↑</button>
+      </div>
+    </section>
+
+    <!-- ============ TODAY ============ -->
+    <section class="pane" id="p-today">
+      <div class="inner">
+        <div class="eyebrow">Monday 10 August · you chose 6</div>
+        <h1 class="big">Today</h1>
+        <div class="sub">Only what you accepted. Nothing lands here on its own.</div>
+        <div class="strip"><div class="bar"><i id="bar"></i></div><span id="pct"></span></div>
+        <div id="todayList"></div>
+        <div class="hintbar">Swipe right, or press ← , to go back to Capture</div>
+      </div>
+    </section>
+
+    <!-- ============ INBOX ============ -->
+    <section class="pane" id="p-inbox">
+      <div class="inner">
+        <div class="eyebrow">Unsorted</div>
+        <h1 class="big">Inbox</h1>
+        <div class="sub">Captures waiting on one decision each. This is the only place that nags.</div>
+        <div id="inboxList"></div>
+        <div class="hintbar">Deciding here is what fills Today</div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- iOS tab bar -->
+  <nav class="tabbar">
+    <button class="on" data-p="capture"><span class="i">✎</span>Capture</button>
+    <button data-p="today"><span class="i">◔</span>Today</button>
+    <button data-p="inbox"><span class="i">⌂</span>Inbox<span class="badge" id="tInbox">4</span></button>
+  </nav>
+</div>
+
+<div class="toast" id="toast"><span id="toastText"></span><button id="toastBtn">View</button></div>
+
+<script>
+/* ===================== state ===================== */
+const PANES = ["capture","today","inbox"];
+let cur = 0;
+
+let TODAY = [
+  {id:1, t:"Draft the WhatsApp BI radar spec — one page, the radar → suggest → act loop.",
+   sec:"now", when:"now", proj:"SME BI", flag:"now", done:false,
+   why:"You chose this Sunday night as the one thing that unblocks the pilot."},
+  {id:2, t:"Reply on the deployment thread. Confirm the rollout window, nothing more.",
+   sec:"now", when:"10h late", proj:"Ankit", flag:"late", done:false},
+  {id:3, t:"Review the TSM backtest output — check Sharpe held ~0.6 after costs.",
+   sec:"next", when:"tonight · 90m", proj:"Factor track", done:false,
+   why:"The only validated edge you have."},
+  {id:4, t:"Write one STAR story — the migration you led. Keep the result quantified.",
+   sec:"next", when:"anytime · 25m", proj:"Career", done:false},
+  {id:5, t:"Wind-down set — neck, shoulders, wrists.",
+   sec:"eve", when:"22:15 · 12d streak", proj:"Tai chi", flag:"eve", done:false},
+  {id:6, t:"Clear priority email", sec:"next", when:"9:15", proj:"Inbox", done:true},
+];
+
+let CAPTURED = [
+  {id:101, t:"look into the hotel thing before Sept", when:"9:04", src:"WhatsApp"},
+  {id:102, t:"ask Saloni where the row-level policy review landed", when:"9:41", src:"typed"},
+  {id:103, t:"idea — the briefing should read like a person, not a report", when:"11:12", src:"typed"},
+];
+
+let INBOX = [
+  {id:201, t:"Book the Pullman for the Delhi trip if a weekend night clears ₹8,000", when:"Fri"},
+  {id:202, t:"Read: “Manufacturing runs on shitty 90s software” — UMH is hiring", when:"Fri"},
+  {id:203, t:"Renew the domain before it lapses", when:"Thu"},
+  {id:204, t:"Pull the Q3 dispatch numbers for the pilot deck", when:"Wed"},
+];
+
+let nextId = 300;
+
+/* ===================== navigation ===================== */
+function go(i){
+  i = Math.max(0, Math.min(PANES.length-1, i));
+  const prev = cur; cur = i;
+  document.querySelectorAll(".pane").forEach((p,n)=>{
+    p.classList.toggle("on", n===i);
+    p.classList.toggle("left", n<i);
+  });
+  document.querySelectorAll("[data-p]").forEach(b=>
+    b.classList.toggle("on", b.dataset.p===PANES[i]));
+  if(prev!==i) document.getElementById("p-"+PANES[i]).scrollTop = 0;
+}
+document.querySelectorAll("[data-p]").forEach(b=>
+  b.addEventListener("click", ()=>go(PANES.indexOf(b.dataset.p))));
+
+addEventListener("keydown", e=>{
+  if(document.activeElement && document.activeElement.tagName==="INPUT") return;
+  if(e.key==="ArrowRight") go(cur+1);
+  if(e.key==="ArrowLeft")  go(cur-1);
+  if(e.key>="1" && e.key<="3") go(+e.key-1);
+});
+
+/* swipe */
+let sx=0, sy=0, tracking=false;
+const deck = document.getElementById("deck");
+deck.addEventListener("touchstart", e=>{
+  sx=e.touches[0].clientX; sy=e.touches[0].clientY; tracking=true;
+},{passive:true});
+deck.addEventListener("touchend", e=>{
+  if(!tracking) return; tracking=false;
+  const dx=e.changedTouches[0].clientX-sx, dy=e.changedTouches[0].clientY-sy;
+  if(Math.abs(dx)>60 && Math.abs(dx)>Math.abs(dy)*1.6) go(cur + (dx<0?1:-1));
+},{passive:true});
+
+/* ===================== render ===================== */
+const SECS = [["now","Now"],["next","Next"],["eve","Evening"]];
+
+function esc(s){return s.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));}
+
+function taskRow(t){
+  return `<div class="row ${t.done?"done":""}">
+    <button class="cb ${t.done?"on":""}" onclick="check(${t.id})" aria-label="complete"></button>
+    <div class="body">
+      <div class="t">${esc(t.t)}</div>
+      <div class="meta">
+        ${t.flag==="now"?`<span class="pill now">now</span>`:""}
+        ${t.flag==="late"?`<span class="pill late">${esc(t.when)}</span>`:""}
+        ${t.flag==="eve"?`<span class="pill eve">evening</span>`:""}
+        ${t.flag!=="late"?`<span>${esc(t.when)}</span>`:""}
+        <span class="dot"></span><span>${esc(t.proj)}</span>
+      </div>
+      ${t.why?`<div class="why">${esc(t.why)}</div>`:""}
+    </div>
+    <span class="chev">›</span>
+  </div>`;
+}
+
+function renderToday(){
+  const open = TODAY.filter(t=>!t.done), done = TODAY.filter(t=>t.done);
+  let html = "";
+  for(const [key,label] of SECS){
+    const rows = open.filter(t=>t.sec===key);
+    if(!rows.length) continue;
+    html += `<div class="ghead">${label}<span class="n">${rows.length}</span></div>
+             <div class="group">${rows.map(taskRow).join("")}</div>`;
+  }
+  if(done.length)
+    html += `<div class="ghead">Done<span class="n">${done.length}</span></div>
+             <div class="group">${done.map(taskRow).join("")}</div>`;
+  if(!TODAY.length)
+    html = `<div class="empty"><span class="b">◔</span>Today is empty — and that's allowed.<br>
+            Pick something from Capture when you're ready.</div>`;
+  document.getElementById("todayList").innerHTML = html;
+
+  const pct = TODAY.length ? Math.round(done.length/TODAY.length*100) : 0;
+  document.getElementById("bar").style.width = pct+"%";
+  document.getElementById("pct").textContent = `${done.length} of ${TODAY.length} done`;
+}
+
+function renderCapture(){
+  document.getElementById("capCount").textContent = CAPTURED.length;
+  document.getElementById("capList").innerHTML = CAPTURED.length
+    ? `<div class="group">` + CAPTURED.map(c=>`
+        <div class="row" style="display:block">
+          <div class="t">${esc(c.t)}</div>
+          <div class="meta"><span>${esc(c.when)}</span><span class="dot"></span>
+            <span>${esc(c.src)}</span></div>
+          <div class="chips">
+            <button class="chip" onclick="toToday(${c.id})">Do today</button>
+            <button class="chip ghost" onclick="toInbox(${c.id})">Later</button>
+            <button class="chip ghost" onclick="drop(${c.id})">Bin</button>
+          </div>
+        </div>`).join("") + `</div>`
+    : `<div class="empty"><span class="b">✎</span>Nothing captured yet today.</div>`;
+}
+
+function renderInbox(){
+  document.getElementById("inboxList").innerHTML = INBOX.length
+    ? `<div class="ghead">Waiting on you<span class="n">${INBOX.length}</span></div>
+       <div class="group">` + INBOX.map(c=>`
+        <div class="row" style="display:block">
+          <div class="t">${esc(c.t)}</div>
+          <div class="meta"><span>captured ${esc(c.when)}</span></div>
+          <div class="chips">
+            <button class="chip" onclick="inboxToToday(${c.id})">Do today</button>
+            <button class="chip ghost" onclick="dropInbox(${c.id})">Not now</button>
+          </div>
+        </div>`).join("") + `</div>`
+    : `<div class="empty"><span class="b">⌂</span>Inbox zero. Genuinely.</div>`;
+  document.getElementById("tInbox").textContent = INBOX.length;
+  document.getElementById("tInbox").style.display = INBOX.length?"":"none";
+  document.getElementById("rInbox").textContent = INBOX.length;
+}
+
+function render(){ renderToday(); renderCapture(); renderInbox(); }
+
+/* ===================== actions ===================== */
+function check(id){
+  const t = TODAY.find(x=>x.id===id); if(!t) return;
+  t.done = !t.done; renderToday();
+}
+function toToday(id){
+  const i = CAPTURED.findIndex(c=>c.id===id); if(i<0) return;
+  const c = CAPTURED.splice(i,1)[0];
+  TODAY.unshift({id:nextId++, t:c.t, sec:"next", when:"today", proj:"Captured", done:false});
+  render(); toast("Added to Today — because you chose it");
+}
+function inboxToToday(id){
+  const i = INBOX.findIndex(c=>c.id===id); if(i<0) return;
+  const c = INBOX.splice(i,1)[0];
+  TODAY.unshift({id:nextId++, t:c.t, sec:"next", when:"today", proj:"From inbox", done:false});
+  render(); toast("Moved to Today");
+}
+function toInbox(id){
+  const i = CAPTURED.findIndex(c=>c.id===id); if(i<0) return;
+  const c = CAPTURED.splice(i,1)[0];
+  INBOX.unshift({id:c.id, t:c.t, when:"today"});
+  render(); toast("Parked in Inbox", 2);
+}
+function drop(id){ CAPTURED = CAPTURED.filter(c=>c.id!==id); render(); }
+function dropInbox(id){ INBOX = INBOX.filter(c=>c.id!==id); render(); }
+
+let toastTimer, toastTarget = 1;
+function toast(msg, target){
+  toastTarget = target===undefined ? 1 : target;
+  document.getElementById("toastText").textContent = msg;
+  document.getElementById("toastBtn").textContent = toastTarget===1 ? "View Today" : "View Inbox";
+  const el = document.getElementById("toast");
+  el.classList.add("on");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>el.classList.remove("on"), 3600);
+}
+document.getElementById("toastBtn").onclick = ()=>{
+  go(toastTarget); document.getElementById("toast").classList.remove("on");
+};
+
+/* capture bar */
+const input = document.getElementById("capInput"), send = document.getElementById("capSend");
+input.addEventListener("input", ()=> send.disabled = !input.value.trim());
+function commit(){
+  const v = input.value.trim(); if(!v) return;
+  const d = new Date();
+  CAPTURED.unshift({id:nextId++, t:v, src:"typed",
+    when:String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")});
+  input.value=""; send.disabled=true; renderCapture();
+}
+input.addEventListener("keydown", e=>{ if(e.key==="Enter") commit(); });
+send.addEventListener("click", commit);
+
+render();
+</script>
+</body></html>

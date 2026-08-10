@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#F5F5F2">
+<title>UXBO-2 · Today view + capture ↔ today navigation</title>
+<style>
+:root{--bg:#F5F5F2;--panel:#fff;--ink:#22262B;--ink-soft:#5C636C;--ink-faint:#A6ABB2;--rule:#E9E9E3;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,monospace;
+  --shadow:0 1px 2px rgba(20,24,28,.05),0 8px 22px rgba(20,24,28,.05)}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#131416;--panel:#1B1D20;--ink:#E9EAEC;--ink-soft:#9BA1A9;--ink-faint:#6B7178;
+        --rule:#2A2D31;--shadow:0 1px 2px rgba(0,0,0,.4),0 8px 22px rgba(0,0,0,.3)}
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.5;
+     -webkit-font-smoothing:antialiased}
+.wrap{max-width:760px;margin:0 auto;padding:52px 22px 80px}
+
+.head{margin-bottom:22px}
+.head .k{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);
+         font-weight:700;font-family:var(--mono)}
+.head h1{font-size:30px;font-weight:700;margin:9px 0 10px;letter-spacing:-.015em}
+.head p{color:var(--ink-soft);font-size:15.5px;max-width:64ch}
+
+.note{background:var(--panel);border:1px solid var(--rule);border-radius:12px;padding:15px 17px;
+      margin:22px 0;font-size:14px;color:var(--ink-soft);box-shadow:var(--shadow)}
+.note b{color:var(--ink)}
+.note ul{margin:9px 0 0 18px}
+.note li{margin:4px 0}
+
+.cards{display:grid;gap:14px}
+.card{display:flex;gap:16px;align-items:flex-start;background:var(--panel);border:1px solid var(--rule);
+      border-radius:16px;padding:19px;text-decoration:none;color:inherit;box-shadow:var(--shadow);
+      transition:.14s}
+.card:hover{transform:translateY(-2px);border-color:var(--ink-faint)}
+.sw{width:50px;height:50px;border-radius:13px;flex:0 0 auto;display:grid;place-items:center;
+    font-size:22px;color:#fff}
+.card h2{font-size:18px;font-weight:650;margin-bottom:3px;letter-spacing:-.01em}
+.card p{font-size:14px;color:var(--ink-soft)}
+.card .tell{margin-top:9px;font-size:12.5px;color:var(--ink-faint);font-family:var(--mono)}
+.card .go{margin-left:auto;color:var(--ink-faint);font-size:20px;align-self:center}
+
+h3.sec{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);
+       font-weight:700;margin:34px 0 12px;font-family:var(--mono)}
+table{width:100%;border-collapse:collapse;font-size:13.5px;background:var(--panel);
+      border:1px solid var(--rule);border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
+th,td{text-align:left;padding:10px 13px;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint)}
+tr:last-child td{border-bottom:0}
+td b{font-weight:650}
+.foot{margin-top:34px;color:var(--ink-soft);font-size:14px}
+.foot a{color:var(--ink);text-decoration:none;font-weight:600;border-bottom:1px solid var(--rule)}
+</style></head>
+<body>
+<div class="wrap">
+
+  <div class="head">
+    <div class="k">UXBO-2 · Today view + capture ↔ today navigation</div>
+    <h1>Getting to Today, three native ways</h1>
+    <p>One approved interaction model, wearing each platform's own clothes. Capture stays home;
+       Today is one tap — or one swipe — away; and Today shows only what you actually chose.
+       Open any build, resize the window, and flip your system theme: all three are responsive
+       and follow light/dark.</p>
+  </div>
+
+  <div class="note">
+    <b>The model being demonstrated (already signed off):</b>
+    <ul>
+      <li><b>Capture is the home destination.</b> It opens on an empty field. Nothing asks you to
+        categorise at the moment of capture.</li>
+      <li><b>Today is one move away</b> — bottom tab on phones, left rail on desktop, plus a
+        horizontal swipe (or ← / → , or 1 / 2 / 3) as a bonus gesture.</li>
+      <li><b>Today = what you chose.</b> Items only appear there via an explicit “Do today”.
+        Everything else waits in Inbox, which is the one screen allowed to nag.</li>
+      <li><b>The loop is visible:</b> capture something → “Do today” → a toast/snackbar offers
+        “View Today” → you land in Today with it at the top. That round trip is the whole point of
+        this prototype.</li>
+    </ul>
+  </div>
+
+  <div class="cards">
+    <a class="card" href="./uxbo2-apple.html">
+      <div class="sw" style="background:#0A84FF">◔</div>
+      <div>
+        <h2>Apple — iOS 17 / macOS Sonoma</h2>
+        <p>Large title over inset grouped lists, circle checkboxes, iOS blue, and a translucent
+           blurred tab bar that the content scrolls under. On desktop it becomes a translucent
+           macOS sidebar with ⌘-style shortcut hints.</p>
+        <div class="tell">SF type ramp · 10px grouped cards · frosted chrome · pill toast</div>
+      </div>
+      <span class="go">→</span>
+    </a>
+
+    <a class="card" href="./uxbo2-windows.html">
+      <div class="sw" style="background:#0067C0">▣</div>
+      <div>
+        <h2>Windows — Fluent 2 / WinUI 3</h2>
+        <p>A real NavigationView: title bar with window controls, left rail whose selected item
+           carries the WinUI selection indicator bar, Mica-tinted backdrop behind layered cards,
+           square checkboxes, and an acrylic command bar for capture.</p>
+        <div class="tell">Segoe ramp · 4–7px radii · InfoBar teaching card · bottom InfoBar toast</div>
+      </div>
+      <span class="go">→</span>
+    </a>
+
+    <a class="card" href="./uxbo2-android.html">
+      <div class="sw" style="background:#6750A4">◪</div>
+      <div>
+        <h2>Android — Material 3 / Material You</h2>
+        <p>M3 tonal palette on both schemes, a bottom navigation bar with the pill-shaped active
+           indicator, an extended FAB that throws you back to Capture from anywhere, ripples on
+           rows, and a proper snackbar with an action. Wide windows swap to a navigation rail.</p>
+        <div class="tell">Roboto ramp · 12–16dp shapes · tonal surfaces · FAB + snackbar</div>
+      </div>
+      <span class="go">→</span>
+    </a>
+  </div>
+
+  <h3 class="sec">Same model, different tells</h3>
+  <table>
+    <tr><th>Concern</th><th>Apple</th><th>Windows</th><th>Android</th></tr>
+    <tr><td><b>Phone nav</b></td><td>Translucent tab bar, numeric badge</td>
+        <td>Flat bar with a top accent underline</td><td>Nav bar with pill indicator behind the icon</td></tr>
+    <tr><td><b>Desktop nav</b></td><td>Frosted sidebar, filled selected row</td>
+        <td>NavigationView rail + selection indicator bar</td><td>88px navigation rail + mini FAB</td></tr>
+    <tr><td><b>Capture entry</b></td><td>Rounded field docked above the tab bar</td>
+        <td>Acrylic command bar, underlined text field</td><td>Filled 28dp field + circular send, plus FAB</td></tr>
+    <tr><td><b>Checkbox</b></td><td>Circle, spring pop</td><td>4px square, hover fill</td>
+        <td>2px square, 40dp state layer</td></tr>
+    <tr><td><b>Confirmation</b></td><td>Centred pill toast</td><td>Bottom-right InfoBar</td>
+        <td>Snackbar with action</td></tr>
+    <tr><td><b>Dark mode</b></td><td>True black, elevated grey cards</td>
+        <td>Dark Mica + #4CC2FF accent</td><td>M3 tonal surface ramp, #D0BCFF primary</td></tr>
+  </table>
+
+  <h3 class="sec">What to try in each</h3>
+  <div class="note">
+    <ul>
+      <li>Type something into the capture field and press Enter — it appears in “Just captured”.</li>
+      <li>Hit <b>Do today</b> on it, then tap the toast's action — that's the capture → Today trip.</li>
+      <li>Press <b>→</b> / <b>←</b> (or swipe on a touch screen) to move between the three panes.</li>
+      <li>Narrow the window below 768px to get the phone nav; widen it for the rail.</li>
+      <li>Flip your OS appearance to dark — no reload needed.</li>
+    </ul>
+  </div>
+
+  <div class="foot">
+    Background: <a href="./today-research.html">Today research</a> ·
+    <a href="./today-layouts-v2.html">layout explorations</a> ·
+    <a href="./today-feed-sample.html">feed direction</a> ·
+    <a href="./app-platform.html">earlier per-platform builds</a>
+  </div>
+</div>
+</body></html>

@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#FEF7FF" media="(prefers-color-scheme:light)">
+<meta name="theme-color" content="#141218" media="(prefers-color-scheme:dark)">
+<title>Lull · Android — Capture ↔ Today</title>
+<style>
+/* ============================================================
+   UXBO-2 · Android idiom (Material 3 / Material You)
+   Tonal surfaces · pill navigation indicator · FAB · snackbar
+   Roboto ramp · fully rounded shape scale
+   ============================================================ */
+:root{
+  --primary:#6750A4; --on-primary:#FFFFFF;
+  --primary-container:#EADDFF; --on-primary-container:#21005D;
+  --secondary-container:#E8DEF8; --on-secondary-container:#1D192B;
+  --tertiary:#7D5260; --error:#B3261E; --error-container:#F9DEDC; --on-error-container:#410E0B;
+  --surface:#FEF7FF; --surface-1:#F7F2FA; --surface-2:#F3EDF7; --surface-3:#EEE8F4;
+  --surface-var:#E7E0EC; --on-surface:#1D1B20; --on-surface-var:#49454F;
+  --outline:#79747E; --outline-var:#CAC4D0;
+  --inverse-surface:#322F35; --inverse-on-surface:#F5EFF7; --inverse-primary:#D0BCFF;
+  --sans:Roboto,"Roboto Flex","Google Sans",-apple-system,"Segoe UI",sans-serif;
+  --el1:0 1px 2px rgba(0,0,0,.30),0 1px 3px 1px rgba(0,0,0,.15);
+  --el3:0 4px 8px 3px rgba(0,0,0,.15),0 1px 3px rgba(0,0,0,.30);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --primary:#D0BCFF; --on-primary:#381E72;
+    --primary-container:#4F378B; --on-primary-container:#EADDFF;
+    --secondary-container:#4A4458; --on-secondary-container:#E8DEF8;
+    --tertiary:#EFB8C8; --error:#F2B8B5; --error-container:#8C1D18; --on-error-container:#F9DEDC;
+    --surface:#141218; --surface-1:#1D1B20; --surface-2:#211F26; --surface-3:#2B2930;
+    --surface-var:#49454F; --on-surface:#E6E0E9; --on-surface-var:#CAC4D0;
+    --outline:#938F99; --outline-var:#49454F;
+    --inverse-surface:#E6E0E9; --inverse-on-surface:#322F35; --inverse-primary:#6750A4;
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{background:var(--surface);color:var(--on-surface);font-family:var(--sans);
+     font-size:14px;line-height:1.45;overflow:hidden;-webkit-font-smoothing:antialiased}
+
+.app{height:100dvh;display:grid;grid-template-columns:1fr;grid-template-rows:auto 1fr auto}
+
+/* ---------- top app bar (small) ---------- */
+.topbar{grid-row:1;display:flex;align-items:center;gap:16px;height:64px;padding:0 16px;
+        background:var(--surface);padding-top:env(safe-area-inset-top)}
+.topbar .ttl{font-size:22px;font-weight:400;letter-spacing:0}
+.topbar .act{margin-left:auto;display:flex;gap:4px}
+.topbar .act span{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;
+                  color:var(--on-surface-var);font-size:18px;cursor:pointer}
+.topbar .act span:hover{background:var(--surface-2)}
+
+/* ---------- nav rail (desktop) ---------- */
+.rail{display:none}
+
+/* ---------- panes ---------- */
+.deck{grid-row:2;position:relative;overflow:hidden}
+.pane{position:absolute;inset:0;overflow-y:auto;opacity:0;pointer-events:none;
+      transform:translateX(16px);
+      transition:opacity .2s cubic-bezier(.2,0,0,1),transform .3s cubic-bezier(.2,0,0,1)}
+.pane.on{opacity:1;pointer-events:auto;transform:none}
+.pane.left{transform:translateX(-16px)}
+.inner{max-width:700px;padding:0 16px 190px}
+
+.headline{font-size:32px;font-weight:400;letter-spacing:0;line-height:1.2;margin:4px 0 6px}
+.eyebrow{font-size:11px;font-weight:500;letter-spacing:.09em;text-transform:uppercase;
+         color:var(--primary)}
+.sub{font-size:14px;color:var(--on-surface-var);margin-bottom:18px;max-width:60ch}
+
+/* ---------- M3 cards ---------- */
+.card{background:var(--surface-1);border-radius:12px;overflow:hidden;margin-bottom:20px}
+.card.outlined{background:var(--surface);border:1px solid var(--outline-var)}
+.ghead{font-size:14px;font-weight:500;color:var(--on-surface-var);padding:0 4px 8px;
+       display:flex;align-items:center;gap:8px}
+.ghead .n{margin-left:auto;font-size:11px;font-weight:500;background:var(--secondary-container);
+          color:var(--on-secondary-container);border-radius:8px;padding:2px 8px}
+.row{display:flex;gap:16px;align-items:flex-start;padding:14px 16px;position:relative;
+     overflow:hidden;transition:background .15s}
+.row+.row{border-top:1px solid var(--outline-var)}
+.row:hover{background:var(--surface-2)}
+
+/* ripple */
+.row::after{content:"";position:absolute;inset:0;background:var(--primary);opacity:0;
+            transition:opacity .4s}
+.row:active::after{opacity:.08;transition:opacity 0s}
+
+/* square Material checkbox */
+.cb{width:18px;height:18px;border-radius:2px;border:2px solid var(--on-surface-var);flex:0 0 auto;
+    margin:3px 3px 0;background:none;cursor:pointer;display:grid;place-items:center;
+    position:relative;transition:.15s;z-index:1}
+.cb::before{content:"";position:absolute;width:40px;height:40px;border-radius:50%;
+            background:var(--primary);opacity:0;transition:opacity .2s}
+.cb:hover::before{opacity:.08}
+.cb.on{background:var(--primary);border-color:var(--primary)}
+.cb.on::after{content:"✓";color:var(--on-primary);font-size:12px;font-weight:700;line-height:1}
+
+.body{flex:1;min-width:0;z-index:1}
+.t{font-size:16px;letter-spacing:.005em}
+.row.done .t{color:var(--on-surface-var);text-decoration:line-through}
+.meta{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:5px;
+      font-size:12px;color:var(--on-surface-var)}
+.why{font-size:13px;color:var(--on-surface-var);margin-top:6px;padding-left:10px;
+     border-left:2px solid var(--primary-container)}
+
+/* assist / filter chips */
+.chip{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 14px;border-radius:8px;
+      border:1px solid var(--outline);background:none;color:var(--on-surface);
+      font-family:inherit;font-size:14px;font-weight:500;cursor:pointer;transition:.15s}
+.chip:hover{background:var(--surface-2)}
+.chip.sel{background:var(--secondary-container);color:var(--on-secondary-container);
+          border-color:transparent}
+.chip.tone{background:var(--primary-container);color:var(--on-primary-container);border-color:transparent}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.tag{font-size:11px;font-weight:500;padding:2px 8px;border-radius:8px;
+     background:var(--surface-3);color:var(--on-surface-var)}
+.tag.now{background:var(--primary-container);color:var(--on-primary-container)}
+.tag.late{background:var(--error-container);color:var(--on-error-container)}
+.tag.eve{background:var(--secondary-container);color:var(--on-secondary-container)}
+
+/* ---------- linear progress ---------- */
+.strip{display:flex;align-items:center;gap:14px;margin-bottom:20px}
+.strip .bar{flex:1;height:4px;border-radius:2px;background:var(--surface-var);overflow:hidden}
+.strip .bar>i{display:block;height:100%;border-radius:2px;background:var(--primary);transition:width .4s}
+.strip span{font-size:12px;color:var(--on-surface-var)}
+
+/* ---------- FAB ---------- */
+.fab{position:absolute;right:16px;bottom:16px;z-index:25;height:56px;min-width:56px;
+     border:0;border-radius:16px;background:var(--primary-container);
+     color:var(--on-primary-container);box-shadow:var(--el3);cursor:pointer;
+     display:flex;align-items:center;gap:10px;padding:0 18px;font-family:inherit;
+     font-size:14px;font-weight:500;transition:.2s cubic-bezier(.2,0,0,1)}
+.fab .i{font-size:22px;line-height:1}
+.fab:hover{box-shadow:0 6px 12px 4px rgba(0,0,0,.18),0 2px 4px rgba(0,0,0,.3)}
+.fab.small{padding:0;width:56px;justify-content:center}
+
+/* ---------- capture sheet / docked input ---------- */
+.capbar{position:absolute;left:0;right:0;bottom:0;z-index:20;padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+        background:var(--surface-2);display:flex;gap:10px;align-items:center}
+.capbar .field{flex:1;position:relative;background:var(--surface-3);border-radius:28px;
+               display:flex;align-items:center;padding:0 6px 0 18px;height:56px}
+.capbar input{flex:1;border:0;outline:none;background:none;font:inherit;font-size:16px;
+              color:var(--on-surface)}
+.capbar .go{width:44px;height:44px;border-radius:50%;border:0;background:var(--primary);
+            color:var(--on-primary);font-size:19px;cursor:pointer;flex:0 0 auto}
+.capbar .go:disabled{opacity:.38}
+
+/* ---------- bottom navigation bar ---------- */
+.navbar{grid-row:3;display:flex;height:calc(80px + env(safe-area-inset-bottom));
+        padding-bottom:env(safe-area-inset-bottom);background:var(--surface-2);z-index:30}
+.navbar button{flex:1;border:0;background:none;font-family:inherit;cursor:pointer;
+               display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+               color:var(--on-surface-var);font-size:12px;font-weight:500;padding-top:12px}
+.navbar .ind{width:64px;height:32px;border-radius:16px;display:grid;place-items:center;
+             font-size:22px;transition:background .2s cubic-bezier(.2,0,0,1);position:relative}
+.navbar button.on{color:var(--on-surface);font-weight:600}
+.navbar button.on .ind{background:var(--secondary-container);color:var(--on-secondary-container)}
+.navbar .badge{position:absolute;top:2px;right:12px;min-width:16px;height:16px;line-height:16px;
+               border-radius:8px;background:var(--error);color:#fff;font-size:11px;font-weight:500;
+               padding:0 4px}
+
+/* ---------- snackbar ---------- */
+.snack{position:fixed;left:16px;right:16px;bottom:calc(96px + env(safe-area-inset-bottom));
+       max-width:520px;margin:0 auto;z-index:60;background:var(--inverse-surface);
+       color:var(--inverse-on-surface);border-radius:4px;box-shadow:var(--el3);
+       padding:14px 8px 14px 16px;display:flex;align-items:center;gap:8px;font-size:14px;
+       opacity:0;transform:translateY(12px);pointer-events:none;transition:.2s cubic-bezier(.2,0,0,1)}
+.snack.on{opacity:1;transform:none;pointer-events:auto}
+.snack button{margin-left:auto;border:0;background:none;color:var(--inverse-primary);
+              font-family:inherit;font-size:14px;font-weight:500;cursor:pointer;padding:8px 12px;
+              border-radius:20px}
+
+.banner{background:var(--surface-2);border-radius:16px;padding:16px;margin-bottom:20px}
+.banner h3{font-size:16px;font-weight:500;margin-bottom:4px}
+.banner p{font-size:14px;color:var(--on-surface-var)}
+.hintbar{font-size:12px;color:var(--on-surface-var);opacity:.8;padding:2px 4px 12px}
+.empty{text-align:center;color:var(--on-surface-var);padding:40px 16px;font-size:14px}
+.empty .b{display:block;font-size:34px;opacity:.45;margin-bottom:8px}
+
+/* ---------- expanded window: navigation rail ---------- */
+@media(min-width:768px){
+  .app{grid-template-columns:88px 1fr;grid-template-rows:auto 1fr}
+  .topbar{grid-column:2;grid-row:1}
+  .rail{display:flex;flex-direction:column;align-items:center;gap:12px;grid-column:1;grid-row:1/-1;
+        background:var(--surface);padding:16px 0}
+  .rail .fabmini{width:56px;height:56px;border-radius:16px;background:var(--primary-container);
+                 color:var(--on-primary-container);display:grid;place-items:center;font-size:22px;
+                 box-shadow:var(--el1);margin-bottom:12px;cursor:pointer}
+  .rail .ri{width:100%;display:flex;flex-direction:column;align-items:center;gap:4px;
+            font-size:12px;font-weight:500;color:var(--on-surface-var);cursor:pointer}
+  .rail .ri .ind{width:56px;height:32px;border-radius:16px;display:grid;place-items:center;
+                 font-size:22px;transition:background .2s;position:relative}
+  .rail .ri.on{color:var(--on-surface)}
+  .rail .ri.on .ind{background:var(--secondary-container);color:var(--on-secondary-container)}
+  .rail .ri .badge{position:absolute;top:0;right:6px;min-width:16px;height:16px;line-height:16px;
+                   border-radius:8px;background:var(--error);color:#fff;font-size:11px;padding:0 4px}
+  .rail .foot{margin-top:auto;font-size:10px;color:var(--on-surface-var);opacity:.7;
+              text-align:center;padding:0 6px;line-height:1.4}
+  .deck{grid-column:2;grid-row:2}
+  .navbar{display:none}
+  .inner{padding-bottom:170px}
+}
+</style></head>
+<body>
+<div class="app">
+
+  <nav class="rail">
+    <div class="fabmini" title="Capture" onclick="go(0);focusInput()">✎</div>
+    <div class="ri on" data-p="capture"><span class="ind">✎</span>Capture</div>
+    <div class="ri" data-p="today"><span class="ind">◔</span>Today</div>
+    <div class="ri" data-p="inbox"><span class="ind">⌂<span class="badge" id="rInbox">4</span></span>Inbox</div>
+    <div class="foot">← → swaps panes</div>
+  </nav>
+
+  <header class="topbar">
+    <div class="ttl" id="barTitle">Lull</div>
+    <div class="act"><span>⌕</span><span>⋮</span></div>
+  </header>
+
+  <div class="deck" id="deck">
+
+    <!-- ============ CAPTURE ============ -->
+    <section class="pane on" id="p-capture">
+      <div class="inner">
+        <div class="eyebrow">Monday 10 August</div>
+        <h1 class="headline">Capture</h1>
+        <div class="sub">Everything lands here first. Sorting is a separate act, done on purpose.</div>
+
+        <div class="banner">
+          <h3>Today is a choice, not a queue</h3>
+          <p>A capture only appears in Today when you tap “Do today”. Nothing schedules itself
+             into your day behind your back.</p>
+          <div class="chips">
+            <button class="chip tone" onclick="go(1)">Open Today</button>
+            <button class="chip" onclick="go(2)">Inbox</button>
+          </div>
+        </div>
+
+        <div class="ghead">Just captured <span class="n" id="capCount"></span></div>
+        <div id="capList"></div>
+        <div class="hintbar">Swipe left for Today · the FAB always brings you back here</div>
+      </div>
+      <div class="capbar">
+        <div class="field"><input id="capInput" placeholder="Add a thought" autocomplete="off"></div>
+        <button class="go" id="capSend" disabled>↑</button>
+      </div>
+    </section>
+
+    <!-- ============ TODAY ============ -->
+    <section class="pane" id="p-today">
+      <div class="inner">
+        <div class="eyebrow">Monday 10 August</div>
+        <h1 class="headline">Today</h1>
+        <div class="sub">Six things you chose. Everything else is still waiting, quietly, elsewhere.</div>
+        <div class="strip"><div class="bar"><i id="bar"></i></div><span id="pct"></span></div>
+        <div id="todayList"></div>
+        <div class="hintbar">Swipe right to get back to Capture</div>
+      </div>
+      <button class="fab" onclick="go(0);focusInput()"><span class="i">✎</span>Capture</button>
+    </section>
+
+    <!-- ============ INBOX ============ -->
+    <section class="pane" id="p-inbox">
+      <div class="inner">
+        <div class="eyebrow">Unsorted</div>
+        <h1 class="headline">Inbox</h1>
+        <div class="sub">Captures parked for one decision each. The only screen allowed to nag.</div>
+        <div id="inboxList"></div>
+      </div>
+      <button class="fab small" onclick="go(0);focusInput()"><span class="i">✎</span></button>
+    </section>
+  </div>
+
+  <nav class="navbar">
+    <button class="on" data-p="capture"><span class="ind">✎</span>Capture</button>
+    <button data-p="today"><span class="ind">◔</span>Today</button>
+    <button data-p="inbox"><span class="ind">⌂<span class="badge" id="tInbox">4</span></span>Inbox</button>
+  </nav>
+</div>
+
+<div class="snack" id="snack"><span id="snackText"></span><button id="snackBtn">View</button></div>
+
+<script>
+/* ===================== state ===================== */
+const PANES=["capture","today","inbox"];
+const TITLES={capture:"Lull",today:"Today",inbox:"Inbox"};
+let cur=0;
+
+let TODAY=[
+  {id:1,t:"Draft the WhatsApp BI radar spec — one page, the radar → suggest → act loop.",
+   sec:"now",when:"now",proj:"SME BI",flag:"now",done:false,
+   why:"You picked this last night as the one thing that unblocks the pilot."},
+  {id:2,t:"Reply on the deployment thread. Confirm the rollout window, nothing more.",
+   sec:"now",when:"10h late",proj:"Ankit",flag:"late",done:false},
+  {id:3,t:"Review the TSM backtest output — check Sharpe held ~0.6 after costs.",
+   sec:"next",when:"tonight · 90m",proj:"Factor track",done:false,
+   why:"The only validated edge you have."},
+  {id:4,t:"Write one STAR story — the migration you led. Keep the result quantified.",
+   sec:"next",when:"anytime · 25m",proj:"Career",done:false},
+  {id:5,t:"Wind-down set — neck, shoulders, wrists.",
+   sec:"eve",when:"22:15 · 12d streak",proj:"Tai chi",flag:"eve",done:false},
+  {id:6,t:"Clear priority email",sec:"next",when:"9:15",proj:"Inbox",done:true},
+];
+let CAPTURED=[
+  {id:101,t:"look into the hotel thing before Sept",when:"9:04",src:"WhatsApp"},
+  {id:102,t:"ask Saloni where the row-level policy review landed",when:"9:41",src:"typed"},
+  {id:103,t:"idea — the briefing should read like a person, not a report",when:"11:12",src:"typed"},
+];
+let INBOX=[
+  {id:201,t:"Book the Pullman for the Delhi trip if a weekend night clears ₹8,000",when:"Fri"},
+  {id:202,t:"Read: “Manufacturing runs on shitty 90s software” — UMH is hiring",when:"Fri"},
+  {id:203,t:"Renew the domain before it lapses",when:"Thu"},
+  {id:204,t:"Pull the Q3 dispatch numbers for the pilot deck",when:"Wed"},
+];
+let nextId=300;
+
+/* ===================== navigation ===================== */
+function go(i){
+  i=Math.max(0,Math.min(PANES.length-1,i));
+  const prev=cur; cur=i;
+  document.querySelectorAll(".pane").forEach((p,n)=>{
+    p.classList.toggle("on",n===i); p.classList.toggle("left",n<i);
+  });
+  document.querySelectorAll("[data-p]").forEach(b=>b.classList.toggle("on",b.dataset.p===PANES[i]));
+  document.getElementById("barTitle").textContent=TITLES[PANES[i]];
+  if(prev!==i) document.getElementById("p-"+PANES[i]).scrollTop=0;
+}
+function focusInput(){setTimeout(()=>document.getElementById("capInput").focus(),260);}
+document.querySelectorAll("[data-p]").forEach(b=>
+  b.addEventListener("click",()=>go(PANES.indexOf(b.dataset.p))));
+addEventListener("keydown",e=>{
+  if(document.activeElement&&document.activeElement.tagName==="INPUT") return;
+  if(e.key==="ArrowRight") go(cur+1);
+  if(e.key==="ArrowLeft") go(cur-1);
+  if(e.key>="1"&&e.key<="3") go(+e.key-1);
+});
+let sx=0,sy=0,tracking=false;
+const deck=document.getElementById("deck");
+deck.addEventListener("touchstart",e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY;tracking=true},{passive:true});
+deck.addEventListener("touchend",e=>{
+  if(!tracking)return; tracking=false;
+  const dx=e.changedTouches[0].clientX-sx,dy=e.changedTouches[0].clientY-sy;
+  if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*1.6) go(cur+(dx<0?1:-1));
+},{passive:true});
+
+/* ===================== render ===================== */
+const SECS=[["now","Now"],["next","Next"],["eve","Evening"]];
+function esc(s){return s.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));}
+
+function taskRow(t){
+  return `<div class="row ${t.done?"done":""}">
+    <button class="cb ${t.done?"on":""}" onclick="check(${t.id})" aria-label="complete"></button>
+    <div class="body">
+      <div class="t">${esc(t.t)}</div>
+      <div class="meta">
+        ${t.flag==="now"?`<span class="tag now">Now</span>`:""}
+        ${t.flag==="late"?`<span class="tag late">${esc(t.when)}</span>`:""}
+        ${t.flag==="eve"?`<span class="tag eve">Evening</span>`:""}
+        ${t.flag!=="late"?`<span>${esc(t.when)}</span>`:""}
+        <span class="tag">${esc(t.proj)}</span>
+      </div>
+      ${t.why?`<div class="why">${esc(t.why)}</div>`:""}
+    </div>
+  </div>`;
+}
+function renderToday(){
+  const open=TODAY.filter(t=>!t.done),done=TODAY.filter(t=>t.done);
+  let html="";
+  for(const [key,label] of SECS){
+    const rows=open.filter(t=>t.sec===key);
+    if(!rows.length) continue;
+    html+=`<div class="ghead">${label}<span class="n">${rows.length}</span></div>
+           <div class="card">${rows.map(taskRow).join("")}</div>`;
+  }
+  if(done.length)
+    html+=`<div class="ghead">Done<span class="n">${done.length}</span></div>
+           <div class="card outlined">${done.map(taskRow).join("")}</div>`;
+  if(!TODAY.length)
+    html=`<div class="card"><div class="empty"><span class="b">◔</span>
+          Today is empty — and that's allowed.<br>Choose something from Capture.</div></div>`;
+  document.getElementById("todayList").innerHTML=html;
+  const pct=TODAY.length?Math.round(done.length/TODAY.length*100):0;
+  document.getElementById("bar").style.width=pct+"%";
+  document.getElementById("pct").textContent=`${done.length} / ${TODAY.length}`;
+}
+function renderCapture(){
+  document.getElementById("capCount").textContent=CAPTURED.length;
+  document.getElementById("capList").innerHTML=CAPTURED.length
+    ? `<div class="card">`+CAPTURED.map(c=>`
+        <div class="row"><div class="body">
+          <div class="t">${esc(c.t)}</div>
+          <div class="meta"><span>${esc(c.when)}</span><span class="tag">${esc(c.src)}</span></div>
+          <div class="chips">
+            <button class="chip tone" onclick="toToday(${c.id})">Do today</button>
+            <button class="chip" onclick="toInbox(${c.id})">Later</button>
+            <button class="chip" onclick="drop(${c.id})">Delete</button>
+          </div>
+        </div></div>`).join("")+`</div>`
+    : `<div class="card"><div class="empty"><span class="b">✎</span>Nothing captured yet today.</div></div>`;
+}
+function renderInbox(){
+  document.getElementById("inboxList").innerHTML=INBOX.length
+    ? `<div class="ghead">Waiting on you<span class="n">${INBOX.length}</span></div><div class="card">`
+      +INBOX.map(c=>`
+        <div class="row"><div class="body">
+          <div class="t">${esc(c.t)}</div>
+          <div class="meta"><span>captured ${esc(c.when)}</span></div>
+          <div class="chips">
+            <button class="chip tone" onclick="inboxToToday(${c.id})">Do today</button>
+            <button class="chip" onclick="dropInbox(${c.id})">Not now</button>
+          </div>
+        </div></div>`).join("")+`</div>`
+    : `<div class="card"><div class="empty"><span class="b">⌂</span>Inbox zero. Genuinely.</div></div>`;
+  for(const id of ["tInbox","rInbox"]){
+    const b=document.getElementById(id);
+    if(!b) continue;
+    b.textContent=INBOX.length; b.style.display=INBOX.length?"":"none";
+  }
+}
+function render(){renderToday();renderCapture();renderInbox();}
+
+/* ===================== actions ===================== */
+function check(id){const t=TODAY.find(x=>x.id===id);if(!t)return;t.done=!t.done;renderToday();}
+function toToday(id){
+  const i=CAPTURED.findIndex(c=>c.id===id);if(i<0)return;
+  const c=CAPTURED.splice(i,1)[0];
+  TODAY.unshift({id:nextId++,t:c.t,sec:"next",when:"today",proj:"Captured",done:false});
+  render();snack("Added to Today",1);
+}
+function inboxToToday(id){
+  const i=INBOX.findIndex(c=>c.id===id);if(i<0)return;
+  const c=INBOX.splice(i,1)[0];
+  TODAY.unshift({id:nextId++,t:c.t,sec:"next",when:"today",proj:"From inbox",done:false});
+  render();snack("Moved to Today",1);
+}
+function toInbox(id){
+  const i=CAPTURED.findIndex(c=>c.id===id);if(i<0)return;
+  const c=CAPTURED.splice(i,1)[0];
+  INBOX.unshift({id:c.id,t:c.t,when:"today"});render();snack("Parked in Inbox",2);
+}
+function drop(id){CAPTURED=CAPTURED.filter(c=>c.id!==id);render();snack("Deleted",0);}
+function dropInbox(id){INBOX=INBOX.filter(c=>c.id!==id);render();}
+
+let snackTimer,snackTarget=1;
+function snack(msg,target){
+  snackTarget=target===undefined?1:target;
+  document.getElementById("snackText").textContent=msg;
+  const btn=document.getElementById("snackBtn");
+  btn.textContent=snackTarget===1?"View":snackTarget===2?"Inbox":"Undo";
+  const el=document.getElementById("snack");el.classList.add("on");
+  clearTimeout(snackTimer);snackTimer=setTimeout(()=>el.classList.remove("on"),4000);
+}
+document.getElementById("snackBtn").onclick=()=>{
+  if(snackTarget) go(snackTarget);
+  document.getElementById("snack").classList.remove("on");
+};
+
+const input=document.getElementById("capInput"),send=document.getElementById("capSend");
+input.addEventListener("input",()=>send.disabled=!input.value.trim());
+function commit(){
+  const v=input.value.trim();if(!v)return;
+  const d=new Date();
+  CAPTURED.unshift({id:nextId++,t:v,src:"typed",
+    when:String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")});
+  input.value="";send.disabled=true;renderCapture();
+}
+input.addEventListener("keydown",e=>{if(e.key==="Enter")commit();});
+send.addEventListener("click",commit);
+
+render();
+</script>
+</body></html>

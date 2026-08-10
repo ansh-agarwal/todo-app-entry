@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#F3F3F3" media="(prefers-color-scheme:light)">
+<meta name="theme-color" content="#202020" media="(prefers-color-scheme:dark)">
+<title>Lull · Windows — Capture ↔ Today</title>
+<style>
+/* ============================================================
+   UXBO-2 · Windows idiom (Fluent 2 / WinUI 3)
+   NavigationView rail with selection indicator · Mica backdrop
+   Layered surfaces · square controls · Segoe type ramp
+   ============================================================ */
+:root{
+  --accent:#0067C0; --accent-hi:#0078D4; --accent-soft:#EFF6FC; --accent-ink:#003E92;
+  --mica-a:#EDF2F8; --mica-b:#F6F0F7; --mica-c:#F3F3F3;
+  --layer:#FFFFFFB3; --card:#FFFFFF; --card-2:#FBFBFB;
+  --ink:#1B1B1B; --ink-soft:#5D5D5D; --ink-faint:#8A8A8A;
+  --stroke:#E5E5E5; --stroke-2:#EDEDED; --stroke-ctl:#0000000F;
+  --good:#0F7B0F; --warn:#C42B1C; --evening:#8764B8;
+  --sans:"Segoe UI Variable Text","Segoe UI Variable","Segoe UI",-apple-system,Roboto,sans-serif;
+  --disp:"Segoe UI Variable Display","Segoe UI Variable","Segoe UI",sans-serif;
+  --shadow:0 1px 2px rgba(0,0,0,.06),0 4px 12px rgba(0,0,0,.06);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --accent:#4CC2FF; --accent-hi:#60CDFF; --accent-soft:#0F2A3A; --accent-ink:#9DE0FF;
+    --mica-a:#1E2733; --mica-b:#26202B; --mica-c:#202020;
+    --layer:#3A3A3A4D; --card:#2B2B2B; --card-2:#323232;
+    --ink:#FFFFFF; --ink-soft:#C5C5C5; --ink-faint:#8B8B8B;
+    --stroke:#3A3A3A; --stroke-2:#333333; --stroke-ctl:#FFFFFF14;
+    --good:#6CCB5F; --warn:#FF99A4; --evening:#B4A0E5;
+    --shadow:0 2px 8px rgba(0,0,0,.4);
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{font-family:var(--sans);font-size:14px;line-height:1.45;color:var(--ink);overflow:hidden;
+  /* Mica: a desaturated, blurred "desktop tint" behind the whole app */
+  background:
+    radial-gradient(120% 90% at 8% 0%, var(--mica-a) 0%, transparent 62%),
+    radial-gradient(110% 80% at 100% 30%, var(--mica-b) 0%, transparent 58%),
+    var(--mica-c);}
+
+.app{height:100dvh;display:grid;grid-template-columns:1fr;grid-template-rows:auto 1fr auto}
+
+/* ---------- title / command bar ---------- */
+.title{grid-row:1;display:flex;align-items:center;gap:10px;height:44px;padding:0 14px;
+       -webkit-app-region:drag;border-bottom:1px solid var(--stroke-2)}
+.title .m{width:18px;height:18px;border-radius:4px;background:var(--accent);color:#fff;
+          display:grid;place-items:center;font-size:11px;font-weight:700}
+.title b{font-size:12px;font-weight:600}
+.title .sp{margin-left:auto;display:flex;gap:2px}
+.title .sp span{width:36px;height:30px;display:grid;place-items:center;color:var(--ink-soft);
+                font-size:11px;border-radius:4px;cursor:default}
+.title .sp span:hover{background:var(--stroke-ctl)}
+.title .sp span:last-child:hover{background:#C42B1C;color:#fff}
+
+/* ---------- NavigationView rail ---------- */
+.rail{display:none}
+
+/* ---------- content ---------- */
+.deck{grid-row:2;position:relative;overflow:hidden}
+.pane{position:absolute;inset:0;overflow-y:auto;opacity:0;pointer-events:none;
+      transform:translateX(10px);transition:opacity .16s linear,transform .2s cubic-bezier(.1,.9,.2,1)}
+.pane.on{opacity:1;pointer-events:auto;transform:none}
+.pane.left{transform:translateX(-10px)}
+.inner{max-width:780px;padding:18px 22px 140px}
+
+.eyebrow{font-size:12px;font-weight:600;color:var(--ink-faint)}
+h1.big{font:600 28px/1.2 var(--disp);letter-spacing:-.005em;margin:2px 0 3px}
+.sub{font-size:13px;color:var(--ink-soft);margin-bottom:16px;max-width:64ch}
+
+/* ---------- Fluent card / list ---------- */
+.card{background:var(--card);border:1px solid var(--stroke);border-radius:7px;
+      box-shadow:var(--shadow);overflow:hidden;margin-bottom:20px}
+.ghead{font-size:12px;font-weight:600;color:var(--ink-soft);padding:0 2px 7px;
+       display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:.04em}
+.ghead .n{margin-left:auto;font-weight:600;text-transform:none;letter-spacing:0;
+          background:var(--stroke-2);border-radius:10px;padding:1px 8px;color:var(--ink-soft)}
+.row{display:flex;gap:12px;align-items:flex-start;padding:11px 14px;
+     border-top:1px solid var(--stroke-2);position:relative;transition:background .1s}
+.row:first-child{border-top:0}
+.row:hover{background:var(--card-2)}
+.row::before{content:"";position:absolute;left:0;top:50%;transform:translateY(-50%);
+             width:3px;height:0;background:var(--accent);border-radius:2px;transition:height .16s}
+.row:hover::before{height:56%}
+
+/* square checkbox — the Fluent tell */
+.cb{width:20px;height:20px;border-radius:4px;border:1.3px solid var(--ink-faint);flex:0 0 auto;
+    margin-top:2px;background:var(--card);cursor:pointer;display:grid;place-items:center;transition:.1s}
+.cb:hover{border-color:var(--accent);background:var(--stroke-ctl)}
+.cb.on{background:var(--accent);border-color:var(--accent)}
+.cb.on::after{content:"✓";color:#fff;font-size:12px;font-weight:700;line-height:1}
+@media (prefers-color-scheme:dark){.cb.on::after{color:#000}}
+
+.body{flex:1;min-width:0}
+.t{font-size:14px}
+.row.done .t{color:var(--ink-faint);text-decoration:line-through}
+.meta{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:4px;
+      font-size:12px;color:var(--ink-soft)}
+.pill{font-size:11px;font-weight:600;padding:1px 8px;border-radius:4px;
+      background:var(--stroke-2);color:var(--ink-soft);border:1px solid var(--stroke)}
+.pill.now{background:var(--accent-soft);color:var(--accent-ink);border-color:transparent}
+.pill.late{background:#FDF3F4;color:var(--warn);border-color:#F5C6CB}
+.pill.eve{background:#F3EFFB;color:var(--evening);border-color:#E2D8F5}
+@media (prefers-color-scheme:dark){
+  .pill.now{color:var(--accent-ink)}
+  .pill.late{background:#442726;border-color:#5D3230}
+  .pill.eve{background:#332A44;border-color:#463A5C}
+}
+.why{font-size:12.5px;color:var(--ink-soft);margin-top:5px;padding-left:9px;
+     border-left:2px solid var(--stroke)}
+
+/* ---------- progress ---------- */
+.strip{display:flex;align-items:center;gap:12px;margin-bottom:16px;max-width:520px}
+.strip .bar{flex:1;height:3px;background:var(--stroke);border-radius:2px;overflow:hidden}
+.strip .bar>i{display:block;height:100%;background:var(--accent);transition:width .35s}
+.strip span{font-size:12px;color:var(--ink-soft);font-variant-numeric:tabular-nums}
+
+/* ---------- buttons ---------- */
+.chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+.btn{font-family:inherit;font-size:13px;font-weight:600;padding:5px 12px;border-radius:4px;
+     border:1px solid var(--stroke);background:var(--card-2);color:var(--ink);cursor:pointer;
+     box-shadow:0 1px 0 var(--stroke-ctl);transition:.1s}
+.btn:hover{background:var(--stroke-2)}
+.btn.pri{background:var(--accent);border-color:transparent;color:#fff}
+@media (prefers-color-scheme:dark){.btn.pri{color:#000}}
+.btn.pri:hover{background:var(--accent-hi)}
+
+/* ---------- capture bar (acrylic command bar) ---------- */
+.capbar{position:absolute;left:0;right:0;bottom:0;z-index:20;display:flex;gap:8px;align-items:center;
+        padding:10px 14px calc(10px + env(safe-area-inset-bottom));
+        background:var(--layer);backdrop-filter:blur(28px) saturate(140%);
+        -webkit-backdrop-filter:blur(28px) saturate(140%);border-top:1px solid var(--stroke)}
+.capbar input{flex:1;font:inherit;font-size:14px;padding:7px 11px;border-radius:4px;
+              border:1px solid var(--stroke);border-bottom:2px solid var(--ink-faint);
+              background:var(--card);color:var(--ink);outline:none;max-width:640px}
+.capbar input:focus{border-bottom-color:var(--accent)}
+.capbar .k{font-size:11px;color:var(--ink-faint)}
+
+/* ---------- bottom nav (mobile) ---------- */
+.tabbar{grid-row:3;display:flex;background:var(--layer);backdrop-filter:blur(28px) saturate(140%);
+        border-top:1px solid var(--stroke);z-index:30}
+.tabbar button{flex:1;border:0;background:none;font-family:inherit;cursor:pointer;position:relative;
+               padding:8px 0 calc(8px + env(safe-area-inset-bottom));color:var(--ink-soft);
+               font-size:11px;font-weight:600}
+.tabbar button .i{display:block;font-size:19px;line-height:1.2;margin-bottom:2px}
+.tabbar button.on{color:var(--accent)}
+.tabbar button.on::before{content:"";position:absolute;top:0;left:50%;transform:translateX(-50%);
+                          width:26px;height:3px;border-radius:2px;background:var(--accent)}
+.tabbar .badge{position:absolute;top:5px;right:calc(50% - 22px);min-width:16px;height:16px;
+               border-radius:8px;background:var(--accent);color:#fff;font-size:10px;font-weight:700;
+               line-height:16px}
+@media (prefers-color-scheme:dark){.tabbar .badge{color:#000}}
+
+/* ---------- teaching / info bar ---------- */
+.info{display:flex;gap:11px;align-items:flex-start;background:var(--accent-soft);
+      border:1px solid var(--stroke);border-radius:6px;padding:11px 13px;margin-bottom:20px;
+      font-size:13px;color:var(--ink)}
+.info .i{color:var(--accent);font-size:15px;line-height:1.2}
+.hintbar{font-size:12px;color:var(--ink-faint);padding:2px 0 10px}
+.empty{color:var(--ink-soft);padding:36px 14px;font-size:13.5px;text-align:center}
+.empty .b{display:block;font-size:28px;opacity:.4;margin-bottom:8px}
+
+/* ---------- toast (Fluent InfoBar, bottom-right) ---------- */
+.toast{position:fixed;right:16px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:60;
+       display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--stroke);
+       border-left:4px solid var(--accent);border-radius:6px;padding:11px 12px 11px 14px;
+       box-shadow:0 8px 24px rgba(0,0,0,.16);font-size:13px;opacity:0;transform:translateY(10px);
+       pointer-events:none;transition:.18s}
+.toast.on{opacity:1;transform:none;pointer-events:auto}
+
+/* ---------- desktop: NavigationView left rail ---------- */
+@media(min-width:768px){
+  .app{grid-template-columns:264px 1fr;grid-template-rows:44px 1fr}
+  .title{grid-column:1/-1;grid-row:1}
+  .rail{display:flex;flex-direction:column;grid-column:1;grid-row:2;padding:6px 5px 10px;
+        border-right:1px solid var(--stroke-2)}
+  .rail .ham{width:40px;height:36px;display:grid;place-items:center;border-radius:5px;
+             color:var(--ink);font-size:15px;cursor:pointer;margin-bottom:4px}
+  .rail .ham:hover{background:var(--stroke-ctl)}
+  .rail .ri{display:flex;align-items:center;gap:12px;height:40px;padding:0 12px;border-radius:5px;
+            font-size:14px;color:var(--ink);cursor:pointer;position:relative;margin:1px 0}
+  .rail .ri:hover{background:var(--stroke-ctl)}
+  .rail .ri.on{background:var(--card);border:1px solid var(--stroke);box-shadow:var(--shadow)}
+  /* the WinUI selection indicator */
+  .rail .ri.on::before{content:"";position:absolute;left:-1px;top:50%;transform:translateY(-50%);
+                       width:3px;height:16px;border-radius:2px;background:var(--accent)}
+  .rail .ri .i{font-size:16px;width:20px;text-align:center;color:var(--ink-soft)}
+  .rail .ri.on .i{color:var(--accent)}
+  .rail .ri .c{margin-left:auto;font-size:11px;font-weight:700;background:var(--accent);color:#fff;
+               border-radius:9px;padding:0 7px;line-height:17px}
+  .rail .sep{height:1px;background:var(--stroke-2);margin:8px 8px}
+  .rail .foot{margin-top:auto;font-size:11.5px;color:var(--ink-faint);padding:10px 12px;line-height:1.5}
+  .deck{grid-column:2;grid-row:2}
+  .tabbar{display:none}
+  .capbar{padding-left:22px}
+}
+@media(prefers-color-scheme:dark) and (min-width:768px){.rail .ri .c{color:#000}}
+</style></head>
+<body>
+<div class="app">
+
+  <div class="title">
+    <div class="m">◍</div><b>Lull</b>
+    <div class="sp"><span>—</span><span>▢</span><span>✕</span></div>
+  </div>
+
+  <nav class="rail">
+    <div class="ham">☰</div>
+    <div class="ri on" data-p="capture"><span class="i">✎</span> Capture</div>
+    <div class="ri" data-p="today"><span class="i">◔</span> Today</div>
+    <div class="ri" data-p="inbox"><span class="i">⌂</span> Inbox <span class="c" id="rInbox">4</span></div>
+    <div class="sep"></div>
+    <div class="foot">Capture is home.<br>Today is one click — or ← → between panes.</div>
+  </nav>
+
+  <div class="deck" id="deck">
+
+    <!-- ============ CAPTURE ============ -->
+    <section class="pane on" id="p-capture">
+      <div class="inner">
+        <div class="eyebrow">Monday, 10 August</div>
+        <h1 class="big">Capture</h1>
+        <div class="sub">Everything lands here first. No project, no date, no decision —
+          those come later, deliberately.</div>
+
+        <div class="info"><span class="i">ⓘ</span>
+          <div><b>Today never fills itself.</b> A capture only reaches Today when you say
+          “Do today”. That's the whole contract.</div></div>
+
+        <div class="ghead">Just captured <span class="n" id="capCount"></span></div>
+        <div id="capList"></div>
+        <div class="hintbar">Tip: press → for Today, ← to come back. Ctrl-like shortcuts 1 / 2 / 3 jump directly.</div>
+      </div>
+      <div class="capbar">
+        <input id="capInput" placeholder="Type a thought and press Enter" autocomplete="off">
+        <button class="btn pri" id="capSend">Capture</button>
+        <span class="k">Enter</span>
+      </div>
+    </section>
+
+    <!-- ============ TODAY ============ -->
+    <section class="pane" id="p-today">
+      <div class="inner">
+        <div class="eyebrow">Monday, 10 August</div>
+        <h1 class="big">Today</h1>
+        <div class="sub">Six things you chose. Not an auto-dump of everything that happens to be due.</div>
+        <div class="strip"><div class="bar"><i id="bar"></i></div><span id="pct"></span></div>
+        <div id="todayList"></div>
+        <div class="hintbar">← back to Capture</div>
+      </div>
+    </section>
+
+    <!-- ============ INBOX ============ -->
+    <section class="pane" id="p-inbox">
+      <div class="inner">
+        <div class="eyebrow">Unsorted</div>
+        <h1 class="big">Inbox</h1>
+        <div class="sub">Captures parked for a decision. The only screen allowed to nag.</div>
+        <div id="inboxList"></div>
+      </div>
+    </section>
+  </div>
+
+  <nav class="tabbar">
+    <button class="on" data-p="capture"><span class="i">✎</span>Capture</button>
+    <button data-p="today"><span class="i">◔</span>Today</button>
+    <button data-p="inbox"><span class="i">⌂</span>Inbox<span class="badge" id="tInbox">4</span></button>
+  </nav>
+</div>
+
+<div class="toast" id="toast"><span id="toastText"></span>
+  <button class="btn" id="toastBtn">View</button></div>
+
+<script>
+/* ===================== state ===================== */
+const PANES=["capture","today","inbox"];
+let cur=0;
+
+let TODAY=[
+  {id:1,t:"Draft the WhatsApp BI radar spec — one page, the radar → suggest → act loop.",
+   sec:"now",when:"now",proj:"SME BI",flag:"now",done:false,
+   why:"You picked this last night as the one thing that unblocks the pilot."},
+  {id:2,t:"Reply on the deployment thread. Confirm the rollout window, nothing more.",
+   sec:"now",when:"10h late",proj:"Ankit",flag:"late",done:false},
+  {id:3,t:"Review the TSM backtest output — check Sharpe held ~0.6 after costs.",
+   sec:"next",when:"tonight · 90m",proj:"Factor track",done:false,
+   why:"The only validated edge you have."},
+  {id:4,t:"Write one STAR story — the migration you led. Keep the result quantified.",
+   sec:"next",when:"anytime · 25m",proj:"Career",done:false},
+  {id:5,t:"Wind-down set — neck, shoulders, wrists.",
+   sec:"eve",when:"22:15 · 12d streak",proj:"Tai chi",flag:"eve",done:false},
+  {id:6,t:"Clear priority email",sec:"next",when:"9:15",proj:"Inbox",done:true},
+];
+let CAPTURED=[
+  {id:101,t:"look into the hotel thing before Sept",when:"9:04",src:"WhatsApp"},
+  {id:102,t:"ask Saloni where the row-level policy review landed",when:"9:41",src:"typed"},
+  {id:103,t:"idea — the briefing should read like a person, not a report",when:"11:12",src:"typed"},
+];
+let INBOX=[
+  {id:201,t:"Book the Pullman for the Delhi trip if a weekend night clears ₹8,000",when:"Fri"},
+  {id:202,t:"Read: “Manufacturing runs on shitty 90s software” — UMH is hiring",when:"Fri"},
+  {id:203,t:"Renew the domain before it lapses",when:"Thu"},
+  {id:204,t:"Pull the Q3 dispatch numbers for the pilot deck",when:"Wed"},
+];
+let nextId=300;
+
+/* ===================== navigation ===================== */
+function go(i){
+  i=Math.max(0,Math.min(PANES.length-1,i));
+  const prev=cur; cur=i;
+  document.querySelectorAll(".pane").forEach((p,n)=>{
+    p.classList.toggle("on",n===i); p.classList.toggle("left",n<i);
+  });
+  document.querySelectorAll("[data-p]").forEach(b=>b.classList.toggle("on",b.dataset.p===PANES[i]));
+  if(prev!==i) document.getElementById("p-"+PANES[i]).scrollTop=0;
+}
+document.querySelectorAll("[data-p]").forEach(b=>
+  b.addEventListener("click",()=>go(PANES.indexOf(b.dataset.p))));
+addEventListener("keydown",e=>{
+  if(document.activeElement&&document.activeElement.tagName==="INPUT") return;
+  if(e.key==="ArrowRight") go(cur+1);
+  if(e.key==="ArrowLeft") go(cur-1);
+  if(e.key>="1"&&e.key<="3") go(+e.key-1);
+});
+let sx=0,sy=0,tracking=false;
+const deck=document.getElementById("deck");
+deck.addEventListener("touchstart",e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY;tracking=true},{passive:true});
+deck.addEventListener("touchend",e=>{
+  if(!tracking)return; tracking=false;
+  const dx=e.changedTouches[0].clientX-sx,dy=e.changedTouches[0].clientY-sy;
+  if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*1.6) go(cur+(dx<0?1:-1));
+},{passive:true});
+
+/* ===================== render ===================== */
+const SECS=[["now","Now"],["next","Next"],["eve","Evening"]];
+function esc(s){return s.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));}
+
+function taskRow(t){
+  return `<div class="row ${t.done?"done":""}">
+    <button class="cb ${t.done?"on":""}" onclick="check(${t.id})" aria-label="complete"></button>
+    <div class="body">
+      <div class="t">${esc(t.t)}</div>
+      <div class="meta">
+        ${t.flag==="now"?`<span class="pill now">Now</span>`:""}
+        ${t.flag==="late"?`<span class="pill late">${esc(t.when)}</span>`:""}
+        ${t.flag==="eve"?`<span class="pill eve">Evening</span>`:""}
+        ${t.flag!=="late"?`<span>${esc(t.when)}</span>`:""}
+        <span class="pill">${esc(t.proj)}</span>
+      </div>
+      ${t.why?`<div class="why">${esc(t.why)}</div>`:""}
+    </div>
+  </div>`;
+}
+function renderToday(){
+  const open=TODAY.filter(t=>!t.done),done=TODAY.filter(t=>t.done);
+  let html="";
+  for(const [key,label] of SECS){
+    const rows=open.filter(t=>t.sec===key);
+    if(!rows.length) continue;
+    html+=`<div class="ghead">${label}<span class="n">${rows.length}</span></div>
+           <div class="card">${rows.map(taskRow).join("")}</div>`;
+  }
+  if(done.length)
+    html+=`<div class="ghead">Completed<span class="n">${done.length}</span></div>
+           <div class="card">${done.map(taskRow).join("")}</div>`;
+  if(!TODAY.length)
+    html=`<div class="card"><div class="empty"><span class="b">◔</span>
+          Today is empty — and that's allowed.<br>Choose something from Capture.</div></div>`;
+  document.getElementById("todayList").innerHTML=html;
+  const pct=TODAY.length?Math.round(done.length/TODAY.length*100):0;
+  document.getElementById("bar").style.width=pct+"%";
+  document.getElementById("pct").textContent=`${done.length} of ${TODAY.length} complete`;
+}
+function renderCapture(){
+  document.getElementById("capCount").textContent=CAPTURED.length;
+  document.getElementById("capList").innerHTML=CAPTURED.length
+    ? `<div class="card">`+CAPTURED.map(c=>`
+        <div class="row"><div class="body">
+          <div class="t">${esc(c.t)}</div>
+          <div class="meta"><span>${esc(c.when)}</span><span class="pill">${esc(c.src)}</span></div>
+          <div class="chips">
+            <button class="btn pri" onclick="toToday(${c.id})">Do today</button>
+            <button class="btn" onclick="toInbox(${c.id})">Later</button>
+            <button class="btn" onclick="drop(${c.id})">Discard</button>
+          </div>
+        </div></div>`).join("")+`</div>`
+    : `<div class="card"><div class="empty"><span class="b">✎</span>Nothing captured yet today.</div></div>`;
+}
+function renderInbox(){
+  document.getElementById("inboxList").innerHTML=INBOX.length
+    ? `<div class="ghead">Waiting on you<span class="n">${INBOX.length}</span></div><div class="card">`
+      +INBOX.map(c=>`
+        <div class="row"><div class="body">
+          <div class="t">${esc(c.t)}</div>
+          <div class="meta"><span>captured ${esc(c.when)}</span></div>
+          <div class="chips">
+            <button class="btn pri" onclick="inboxToToday(${c.id})">Do today</button>
+            <button class="btn" onclick="dropInbox(${c.id})">Not now</button>
+          </div>
+        </div></div>`).join("")+`</div>`
+    : `<div class="card"><div class="empty"><span class="b">⌂</span>Inbox zero. Genuinely.</div></div>`;
+  const b=document.getElementById("tInbox");
+  b.textContent=INBOX.length; b.style.display=INBOX.length?"":"none";
+  document.getElementById("rInbox").textContent=INBOX.length;
+}
+function render(){renderToday();renderCapture();renderInbox();}
+
+/* ===================== actions ===================== */
+function check(id){const t=TODAY.find(x=>x.id===id);if(!t)return;t.done=!t.done;renderToday();}
+function toToday(id){
+  const i=CAPTURED.findIndex(c=>c.id===id);if(i<0)return;
+  const c=CAPTURED.splice(i,1)[0];
+  TODAY.unshift({id:nextId++,t:c.t,sec:"next",when:"today",proj:"Captured",done:false});
+  render();toast("Added to Today — because you chose it",1);
+}
+function inboxToToday(id){
+  const i=INBOX.findIndex(c=>c.id===id);if(i<0)return;
+  const c=INBOX.splice(i,1)[0];
+  TODAY.unshift({id:nextId++,t:c.t,sec:"next",when:"today",proj:"From inbox",done:false});
+  render();toast("Moved to Today",1);
+}
+function toInbox(id){
+  const i=CAPTURED.findIndex(c=>c.id===id);if(i<0)return;
+  const c=CAPTURED.splice(i,1)[0];
+  INBOX.unshift({id:c.id,t:c.t,when:"today"});render();toast("Parked in Inbox",2);
+}
+function drop(id){CAPTURED=CAPTURED.filter(c=>c.id!==id);render();}
+function dropInbox(id){INBOX=INBOX.filter(c=>c.id!==id);render();}
+
+let toastTimer,toastTarget=1;
+function toast(msg,target){
+  toastTarget=target===undefined?1:target;
+  document.getElementById("toastText").textContent=msg;
+  document.getElementById("toastBtn").textContent=toastTarget===1?"View Today":"View Inbox";
+  const el=document.getElementById("toast");el.classList.add("on");
+  clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove("on"),3600);
+}
+document.getElementById("toastBtn").onclick=()=>{go(toastTarget);
+  document.getElementById("toast").classList.remove("on");};
+
+const input=document.getElementById("capInput");
+function commit(){
+  const v=input.value.trim();if(!v)return;
+  const d=new Date();
+  CAPTURED.unshift({id:nextId++,t:v,src:"typed",
+    when:String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")});
+  input.value="";renderCapture();
+}
+input.addEventListener("keydown",e=>{if(e.key==="Enter")commit();});
+document.getElementById("capSend").addEventListener("click",commit);
+
+render();
+</script>
+</body></html>
