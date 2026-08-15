@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme:light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme:dark)">
+<title>Chuckle · v1 prototype</title>
+<!--
+  Chuckle — v1 interactive UX prototype. Built 2026-08-16.
+  Spec: PersonalVault Notes "Chuckle — v1 data model and screens", "phase 1 scope", "positioning and offer".
+  Visual language continued from this repo's uxbo2-apple.html (iOS 17 shell) and note.html/note.js
+  (the locked capture editor) — same tokens, same circle-checkbox/inset-grouped-list idiom.
+
+  Structure: List -> List (nests) -> Note -> Section (= one work item) -> blocks (text/bullet/task).
+  Today holds POINTERS at a note, a section, or a single bullet — never a copy of the text or a
+  copy of its status. Every promotable item (note/section/block) carries its own .status field;
+  Today just renders whatever that field currently says. Edit the source, Today reflects it on next
+  render (tab switch / navigation) because it re-reads the same object by id every time.
+
+  Not built (parked by Anshul): dopamine/points, Fibonacci complexity, AI suggestions, calendar,
+  questions queue.
+-->
+<style>
+:root{
+  --accent:#0A84FF; --accent-soft:#E9F2FF; --accent-ink:#0060DF;
+  --bg:#F2F2F7; --surface:#FFFFFF; --surface-2:#FFFFFF;
+  --ink:#1C1C1E; --ink-soft:#3C3C4399; --ink-faint:#3C3C434D; --ink-mid:#6E6E73;
+  --rule:#3C3C431F; --good:#34C759; --warn:#FF3B30; --evening:#AF52DE; --prog:#FF9F0A;
+  --chrome:rgba(249,249,249,.82);
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Helvetica Neue",sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,monospace;
+  --shadow:0 1px 2px rgba(0,0,0,.04),0 10px 30px rgba(0,0,0,.06);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --accent:#0A84FF; --accent-soft:#0A84FF26; --accent-ink:#64B0FF;
+    --bg:#000000; --surface:#1C1C1E; --surface-2:#2C2C2E;
+    --ink:#FFFFFF; --ink-soft:#EBEBF599; --ink-faint:#EBEBF54D; --ink-mid:#98989F;
+    --rule:#54545899; --chrome:rgba(28,28,30,.78);
+    --shadow:0 1px 2px rgba(0,0,0,.5);
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.45;
+     -webkit-font-smoothing:antialiased;overflow:hidden;font-size:17px}
+
+.app{height:100dvh;display:grid;grid-template-columns:1fr;grid-template-rows:1fr auto}
+.rail{display:none}
+
+/* ---------- pane deck ---------- */
+.deck{grid-row:1;position:relative;overflow:hidden;background:var(--bg)}
+.pane{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;
+      opacity:0;pointer-events:none;transform:translateX(14px);
+      transition:opacity .2s ease,transform .24s cubic-bezier(.32,.72,0,1)}
+.pane.on{opacity:1;pointer-events:auto;transform:none}
+.pane.left{transform:translateX(-14px)}
+.inner{max-width:640px;margin:0 auto;padding:0 16px 130px}
+
+.eyebrow{font-size:13px;font-weight:600;color:var(--ink-mid);letter-spacing:.01em;
+         padding-top:calc(18px + env(safe-area-inset-top))}
+h1.big{font-size:32px;font-weight:700;letter-spacing:-.022em;margin:1px 0 2px}
+.sub{font-size:14.5px;color:var(--ink-mid);margin-bottom:16px}
+
+/* ---------- lists tree ---------- */
+.lnode{margin-bottom:1px}
+.lrow{display:flex;align-items:center;gap:8px;padding:10px 8px;border-radius:10px;cursor:pointer;
+      padding-left:calc(8px + var(--depth,0) * 20px)}
+.lrow:hover{background:var(--surface)}
+.lrow .chev{width:13px;color:var(--ink-faint);font-size:12px;transition:transform .15s;flex:0 0 auto;
+            display:inline-block}
+.lrow .chev.open{transform:rotate(90deg)}
+.lrow .lic{color:var(--accent);font-size:15px;flex:0 0 auto}
+.lrow .lname{flex:1;font-size:15.5px;font-weight:650;letter-spacing:-.005em}
+.lrow .lcount{font-size:12px;color:var(--ink-faint);font-variant-numeric:tabular-nums}
+.lchildren{overflow:hidden}
+
+.nrow{display:flex;align-items:center;gap:9px;padding:9px 8px;border-radius:10px;cursor:pointer;
+      padding-left:calc(31px + var(--depth,0) * 20px)}
+.nrow:hover{background:var(--surface)}
+.nrow .nic{color:var(--ink-faint);font-size:14px;flex:0 0 auto}
+.nrow .ntxt{flex:1;font-size:15px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nrow .dot{width:7px;height:7px;border-radius:50%;flex:0 0 auto}
+.nrow .dot.todo{background:var(--ink-faint)}
+.nrow .dot.in-progress{background:var(--prog)}
+.nrow .dot.done{background:var(--good)}
+.gpin{opacity:.55;font-size:11px;font-weight:650;color:var(--accent);background:none;border:0;
+      cursor:pointer;padding:4px 9px;border-radius:12px;flex:0 0 auto;white-space:nowrap}
+.gpin:hover{opacity:1;background:var(--accent-soft)}
+.gpin.on{opacity:1;background:var(--accent);color:#fff}
+
+.addlist{width:100%;border:1.5px dashed var(--rule);border-radius:12px;padding:11px;background:none;
+         color:var(--ink-mid);font-size:13.5px;font-weight:600;cursor:pointer;margin-top:10px}
+.addlist:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ---------- note overlay (push screen) ---------- */
+.noteOverlay{position:fixed;inset:0;z-index:40;background:var(--bg);
+  transform:translateX(100%);transition:transform .28s cubic-bezier(.32,.72,0,1);
+  display:flex;flex-direction:column}
+.noteOverlay.on{transform:none}
+.noteHead{flex:0 0 auto;display:flex;align-items:center;gap:6px;
+  padding:calc(13px + env(safe-area-inset-top)) 14px 11px;background:var(--chrome);
+  backdrop-filter:saturate(180%) blur(22px);-webkit-backdrop-filter:saturate(180%) blur(22px);
+  border-bottom:.5px solid var(--rule)}
+.noteHead .back{border:0;background:none;color:var(--accent);font-size:16px;font-weight:600;
+  cursor:pointer;display:flex;align-items:center;gap:3px;padding:4px 4px 4px 0}
+.noteHead .crumb{font-size:13px;color:var(--ink-mid);margin-left:2px;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.noteBody{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;max-width:640px;width:100%;
+  margin:0 auto;padding:18px 20px 90px}
+
+.ntitle{font-size:27px;font-weight:700;letter-spacing:-.02em;outline:none;line-height:1.25}
+.ntitle:empty::before{content:"Untitled note";color:var(--ink-faint)}
+.npromoterow{display:flex;gap:8px;margin:8px 0 20px;flex-wrap:wrap}
+.promoteBtn{font-size:12.5px;font-weight:650;color:var(--accent);background:var(--accent-soft);
+  border:0;border-radius:20px;padding:6px 13px;cursor:pointer;display:inline-flex;align-items:center;
+  gap:5px}
+.promoteBtn:hover{background:#DCEAFE}
+.promoteBtn.on{background:var(--accent);color:#fff}
+.statusTag{font-size:11px;font-weight:650;letter-spacing:.03em;text-transform:uppercase;
+  padding:5px 10px;border-radius:20px;background:var(--surface-2);color:var(--ink-mid)}
+.statusTag.in-progress{background:var(--prog);color:#fff}
+.statusTag.done{background:var(--good);color:#fff}
+
+.section{background:var(--surface);border-radius:14px;box-shadow:var(--shadow);
+  padding:14px 15px 11px;margin-bottom:14px;transition:box-shadow .3s}
+.section.flash{animation:pulse 1.1s ease}
+@keyframes pulse{0%{box-shadow:0 0 0 3px var(--accent),var(--shadow)}100%{box-shadow:var(--shadow)}}
+.sechead{display:flex;align-items:flex-start;gap:8px;margin-bottom:9px;flex-wrap:wrap}
+.wi{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-mid);
+    background:var(--bg);border-radius:6px;padding:3px 7px;flex:0 0 auto;margin-top:3px}
+.secname{flex:1;min-width:120px;font-size:16px;font-weight:650;outline:none;letter-spacing:-.01em;
+  padding-top:1px}
+.secname:empty::before{content:"Untitled section";color:var(--ink-faint)}
+.secpromote{border:0;background:none;color:var(--accent);font-size:11.5px;font-weight:650;
+  cursor:pointer;padding:4px 9px;border-radius:14px;opacity:.7;flex:0 0 auto;white-space:nowrap}
+.secpromote:hover{opacity:1;background:var(--accent-soft)}
+.secpromote.on{opacity:1;background:var(--accent);color:#fff}
+
+.blk{display:flex;align-items:flex-start;gap:7px;padding:3px 0;border-radius:8px;transition:box-shadow .3s}
+.blk.flash{animation:pulse 1.1s ease}
+.blk .mk{flex:0 0 auto;margin-top:4px;width:17px;display:flex;justify-content:center}
+.blk .mk.bul{color:var(--ink-faint);font-size:16px;line-height:1}
+.blk .mk.cb{width:17px;height:17px;border-radius:50%;border:1.5px solid var(--ink-faint);cursor:pointer;
+  display:grid;place-items:center;transition:.13s}
+.blk.task.done .mk.cb{background:var(--accent);border-color:var(--accent)}
+.blk.task.done .mk.cb::after{content:"✓";color:#fff;font-size:10.5px;font-weight:700}
+.blk .btx{flex:1;min-width:0;outline:none;font-size:15.5px;line-height:1.52;min-height:22px;
+  word-break:break-word}
+.blk .btx:empty::before{content:attr(data-ph);color:var(--ink-faint)}
+.blk.task.done .btx{color:var(--ink-mid);text-decoration:line-through}
+.blk .pin{flex:0 0 auto;opacity:.5;font-size:11px;font-weight:650;color:var(--accent);background:none;
+  border:0;cursor:pointer;padding:3px 7px;border-radius:10px;white-space:nowrap}
+.blk .pin:hover{opacity:1;background:var(--accent-soft)}
+.blk .pin.on{opacity:1;background:var(--accent);color:#fff}
+
+.secadd{display:flex;gap:4px;margin-top:6px;padding-top:8px;border-top:.5px solid var(--rule)}
+.secadd button{border:0;background:none;color:var(--ink-mid);font-size:12px;font-weight:650;
+  cursor:pointer;padding:6px 9px;border-radius:8px}
+.secadd button:hover{background:var(--bg);color:var(--ink)}
+
+.addsection{width:100%;border:1.5px dashed var(--rule);border-radius:12px;padding:12px;background:none;
+  color:var(--ink-mid);font-size:14px;font-weight:600;cursor:pointer;margin-top:2px}
+.addsection:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ---------- today ---------- */
+.strip{display:flex;align-items:center;gap:11px;padding:0 4px 14px}
+.strip .pbar{flex:1;height:5px;border-radius:99px;background:var(--rule);overflow:hidden}
+.strip .pbar>i{display:block;height:100%;background:var(--good);border-radius:99px;transition:width .4s}
+.strip span{font-size:13px;color:var(--ink-mid);font-variant-numeric:tabular-nums;flex:0 0 auto}
+
+.ghead{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;
+       color:var(--ink-mid);padding:0 4px 7px;display:flex;align-items:center;gap:8px;margin-top:6px}
+.ghead .n{margin-left:auto;font-weight:600;letter-spacing:0;text-transform:none;font-size:13px}
+.group{background:var(--surface);border-radius:14px;overflow:hidden;margin:0 0 20px;box-shadow:var(--shadow)}
+
+.trow{display:flex;align-items:flex-start;gap:12px;padding:13px 14px}
+.trow+.trow{border-top:.5px solid var(--rule)}
+.cb.big{width:32px;height:32px;border-radius:50%;border:2.2px solid var(--ink-faint);flex:0 0 auto;
+  cursor:pointer;display:grid;place-items:center;background:none;transition:.15s;margin-top:1px}
+.cb.big:hover{border-color:var(--accent)}
+.cb.big.on{background:var(--accent);border-color:var(--accent);animation:pop .26s cubic-bezier(.3,1.5,.5,1)}
+.cb.big.on::after{content:"✓";color:#fff;font-size:17px;font-weight:700}
+@keyframes pop{0%{transform:scale(.55)}62%{transform:scale(1.14)}100%{transform:scale(1)}}
+.trow .tbody{flex:1;min-width:0;cursor:pointer}
+.trow .kind{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--ink-faint);margin-bottom:2px}
+.trow .ttext{font-size:16.5px;letter-spacing:-.005em}
+.trow.done .ttext{color:var(--ink-mid);text-decoration:line-through}
+.trow .crumb{font-size:12.5px;color:var(--ink-mid);margin-top:3px;overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap}
+.tright{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:0 0 auto}
+.statusPill{font-size:11.5px;font-weight:650;padding:6px 11px;border-radius:20px;border:0;cursor:pointer;
+  background:var(--bg);color:var(--ink-mid);white-space:nowrap}
+.statusPill.in-progress{background:var(--prog);color:#fff}
+.rm{border:0;background:none;color:var(--ink-faint);font-size:17px;cursor:pointer;padding:1px 4px}
+.rm:hover{color:var(--warn)}
+
+.empty{text-align:center;color:var(--ink-mid);padding:40px 20px;font-size:15px}
+.empty .b{display:block;font-size:32px;opacity:.4;margin-bottom:8px}
+
+/* ---------- what's open panel ---------- */
+.openPanel{background:var(--surface);border-radius:14px;padding:16px 17px 15px;margin:8px 0 24px;
+  box-shadow:var(--shadow)}
+.openPanel h3{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
+  color:var(--ink-mid);margin-bottom:10px}
+.openPanel li{list-style:none;font-size:13.5px;color:var(--ink-soft);margin-bottom:9px;padding-left:16px;
+  position:relative;line-height:1.5}
+.openPanel li::before{content:"—";position:absolute;left:0;color:var(--ink-faint)}
+.openPanel li:last-child{margin-bottom:0}
+.openPanel b{color:var(--ink)}
+
+/* ---------- capture (bottom sheet) ---------- */
+.overlay{position:fixed;inset:0;z-index:50;background:rgba(20,22,28,.5);backdrop-filter:blur(6px);
+  display:none;align-items:flex-end;justify-content:center}
+.overlay.on{display:flex}
+.sheet{background:var(--surface);width:100%;max-width:560px;border-radius:20px 20px 0 0;
+  max-height:82vh;display:flex;flex-direction:column;
+  animation:up .26s cubic-bezier(.3,.8,.3,1)}
+@keyframes up{from{transform:translateY(30px);opacity:.6}to{transform:none;opacity:1}}
+.grab{width:38px;height:5px;border-radius:5px;background:var(--rule);margin:9px auto 4px;flex:0 0 auto}
+.capHint{font-size:12.5px;color:var(--ink-mid);text-align:center;padding:4px 20px 8px;flex:0 0 auto}
+.capDoc{flex:1;overflow-y:auto;padding:6px 22px 20px}
+.capDoc .blk .btx{font-size:17px}
+.capDoc .tt .btx{font-size:22px;font-weight:700;letter-spacing:-.01em;min-height:30px}
+.capbar{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:10px 16px calc(10px + env(safe-area-inset-bottom));
+  border-top:1px solid var(--rule)}
+.fmt{width:36px;height:33px;border:1px solid var(--rule);border-radius:8px;background:var(--surface);
+  color:var(--ink-mid);font-size:15px;cursor:pointer;display:grid;place-items:center}
+.fmt:hover{border-color:var(--accent);color:var(--accent)}
+.capsave{margin-left:auto;background:var(--accent);color:#fff;border:0;border-radius:20px;font-size:14px;
+  font-weight:650;padding:9px 18px;cursor:pointer}
+.capsave:active{transform:scale(.98)}
+
+/* ---------- fab + nav ---------- */
+.fab{position:fixed;right:18px;bottom:calc(78px + env(safe-area-inset-bottom));width:54px;height:54px;
+  border-radius:50%;background:var(--accent);color:#fff;font-size:25px;border:0;cursor:pointer;
+  box-shadow:0 4px 16px rgba(0,0,0,.24);z-index:31;display:grid;place-items:center}
+.tabbar{grid-row:2;display:flex;background:var(--chrome);backdrop-filter:saturate(180%) blur(22px);
+  -webkit-backdrop-filter:saturate(180%) blur(22px);border-top:.5px solid var(--rule);z-index:30}
+.tabbar button{flex:1;border:0;background:none;font-family:inherit;cursor:pointer;
+  padding:7px 0 calc(6px + env(safe-area-inset-bottom));color:var(--ink-mid);font-size:10px;
+  font-weight:500;letter-spacing:.01em}
+.tabbar button .i{display:block;font-size:22px;line-height:1.15;margin-bottom:2px}
+.tabbar button.on{color:var(--accent)}
+
+.toast{position:fixed;left:50%;transform:translate(-50%,20px);bottom:calc(96px + env(safe-area-inset-bottom));
+  background:var(--surface);color:var(--ink);border-radius:22px;padding:10px 18px;box-shadow:0 6px 30px rgba(0,0,0,.22);
+  font-size:14.5px;font-weight:600;opacity:0;pointer-events:none;transition:.25s cubic-bezier(.32,.72,0,1);z-index:60}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+
+/* ---------- desktop: rail ---------- */
+@media(min-width:860px){
+  .app{grid-template-columns:236px 1fr;grid-template-rows:1fr}
+  .rail{display:flex;flex-direction:column;grid-column:1;grid-row:1;padding:14px 10px;
+    background:var(--chrome);backdrop-filter:saturate(180%) blur(22px);border-right:.5px solid var(--rule)}
+  .rail .brand{display:flex;align-items:center;gap:9px;padding:8px 10px 16px}
+  .rail .brand .m{width:24px;height:24px;border-radius:7px;background:var(--accent);color:#fff;
+    display:grid;place-items:center;font-size:13px;font-weight:700}
+  .rail .brand b{font-size:15px;font-weight:650;letter-spacing:-.01em}
+  .rail .ri{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:7px;font-size:14px;
+    font-weight:500;color:var(--ink);cursor:pointer}
+  .rail .ri .i{font-size:16px;width:20px;text-align:center;color:var(--accent)}
+  .rail .ri:hover{background:var(--rule)}
+  .rail .ri.on{background:var(--accent);color:#fff}
+  .rail .ri.on .i{color:#fff}
+  .rail .capbtn{margin-top:6px;display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:8px;
+    background:var(--accent-soft);color:var(--accent-ink);font-size:14px;font-weight:650;cursor:pointer;
+    border:0;font-family:inherit}
+  .rail .capbtn:hover{background:#DCEAFE}
+  .rail .foot{margin-top:auto;font-size:11.5px;color:var(--ink-faint);padding:10px}
+  .deck{grid-column:2;grid-row:1}
+  .tabbar{display:none}
+  .fab{display:none}
+  .inner{padding-bottom:100px}
+  .noteOverlay{left:236px}
+}
+</style></head>
+<body>
+<div class="app">
+
+  <nav class="rail">
+    <div class="brand"><div class="m">◍</div><b>Chuckle</b></div>
+    <div class="ri on" data-p="lists"><span class="i">▤</span> Lists</div>
+    <div class="ri" data-p="today"><span class="i">◔</span> Today</div>
+    <button class="capbtn" id="railCap">＋ New note</button>
+    <div class="foot">v1 prototype · structure is optional,<br>only capture and Today are load-bearing.</div>
+  </nav>
+
+  <div class="deck" id="deck">
+
+    <!-- ============ LISTS ============ -->
+    <section class="pane on" id="p-lists">
+      <div class="inner">
+        <div class="eyebrow">Structure</div>
+        <h1 class="big">Lists</h1>
+        <div class="sub">Lists can hold lists. Lists hold notes. That's the only filing system —
+          no tags, no separate "projects".</div>
+        <div id="listTree"></div>
+        <button class="addsection" id="addRootList">＋ New list</button>
+        <div class="openPanel" id="openPanelLists"></div>
+      </div>
+    </section>
+
+    <!-- ============ TODAY ============ -->
+    <section class="pane" id="p-today">
+      <div class="inner">
+        <div class="eyebrow" id="todayDate"></div>
+        <h1 class="big">Today</h1>
+        <div class="sub">A whole note, a section, or a single bullet — pointers only. Nothing here
+          is a copy; edit the source and this updates.</div>
+        <div class="strip"><div class="pbar"><i id="bar"></i></div><span id="pct"></span></div>
+        <div id="todayList"></div>
+        <div class="openPanel" id="openPanelToday"></div>
+      </div>
+    </section>
+
+  </div>
+
+  <button class="fab" id="fab">＋</button>
+
+  <nav class="tabbar">
+    <button class="on" data-p="lists"><span class="i">▤</span>Lists</button>
+    <button data-p="today"><span class="i">◔</span>Today</button>
+  </nav>
+</div>
+
+<!-- ============ NOTE OVERLAY (push screen) ============ -->
+<div class="noteOverlay" id="noteOverlay">
+  <div class="noteHead">
+    <button class="back" id="noteBack">← Lists</button>
+    <span class="crumb" id="noteCrumb"></span>
+  </div>
+  <div class="noteBody" id="noteBody"></div>
+</div>
+
+<!-- ============ CAPTURE SHEET ============ -->
+<div class="overlay" id="capOverlay">
+  <div class="sheet">
+    <div class="grab"></div>
+    <div class="capHint">Title, bullets, checklist. Nothing else. Type "- " for a bullet, "[] " for a to-do.</div>
+    <div class="capDoc" id="capDoc"></div>
+    <div class="capbar">
+      <button class="fmt" id="capBul" title="Bullet">•</button>
+      <button class="fmt" id="capTask" title="To-do">☐</button>
+      <button class="capsave" id="capSave">Save to Unsorted</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><span id="toastText"></span></div>
+
+<script>
+/* ===================== state — single source of truth ===================== */
+let SEQ = 1;
+const uid = p => p + (SEQ++);
+
+const DB = { lists:{}, notes:{}, sections:{} };
+let ROOT = [];            // top-level list ids
+let TODAY = [];           // [{id, kind:'note'|'section'|'bullet', noteId, sectionId, blockId}]
+const collapsed = new Set();
+
+function mkList(name, parentId){
+  const id = uid('l');
+  DB.lists[id] = { id, name, parentId: parentId||null, listIds:[], noteIds:[] };
+  if(parentId) DB.lists[parentId].listIds.push(id); else ROOT.push(id);
+  return id;
+}
+function mkNote(listId, title){
+  const id = uid('n');
+  DB.notes[id] = { id, title, listId, sectionIds:[], status:'todo' };
+  DB.lists[listId].noteIds.push(id);
+  return id;
+}
+function mkSection(noteId, name){
+  const id = uid('s');
+  DB.sections[id] = { id, noteId, name, status:'todo', blocks:[] };
+  DB.notes[noteId].sectionIds.push(id);
+  return id;
+}
+function mkBlock(sectionId, type, text, done){
+  const id = uid('b');
+  const blk = { id, type, text, done: !!done, status: done ? 'done' : 'todo' };
+  DB.sections[sectionId].blocks.push(blk);
+  return id;
+}
+function getBlock(sectionId, blockId){
+  const sec = DB.sections[sectionId];
+  return sec ? sec.blocks.find(b => b.id === blockId) : null;
+}
+
+/* ===================== sample data ===================== */
+(function seed(){
+  const unsorted = mkList('Unsorted');
+
+  const work = mkList('Work');
+  const smebi = mkList('SME BI Engine', work);
+  const n1 = mkNote(smebi, 'Pilot spec — radar → suggest → act');
+  const s1 = mkSection(n1, 'Radar rule for daily dispatch');
+  mkBlock(s1, 'text', 'One metric, one threshold, one WhatsApp message. Nothing else for the pilot.');
+  mkBlock(s1, 'task', 'Pick the pilot metric — daily dispatch count', true);
+  mkBlock(s1, 'task', 'Define the three alert triggers', false);
+  mkBlock(s1, 'task', 'Draft the alert message copy', false);
+  const s2 = mkSection(n1, 'Alert copy drafts');
+  mkBlock(s2, 'bullet', '"Dispatch is 40% below your Tuesday average — check line 2."');
+  mkBlock(s2, 'bullet', 'Keep it under 200 characters, no jargon, one number.');
+
+  const career = mkList('Career', work);
+  const n2 = mkNote(career, 'STAR story bank');
+  const s3 = mkSection(n2, 'Migration story');
+  mkBlock(s3, 'text', 'The database migration I led — quantify the downtime avoided.');
+  mkBlock(s3, 'bullet', 'Zero downtime cutover, 40M rows, rollback plan tested twice.');
+  mkBlock(s3, 'bullet', "Result: no incident, cut the next migration's timeline by half.");
+
+  const trading = mkList('Trading');
+  const factor = mkList('Factor track', trading);
+  const n3 = mkNote(factor, 'TSM backtest review');
+  const s4 = mkSection(n3, 'Validate Sharpe held ~0.6 after costs');
+  mkBlock(s4, 'task', 'Pull the equity curve', false);
+  mkBlock(s4, 'task', 'Compare against last run', false);
+  mkBlock(s4, 'bullet', "The one validated edge on the books — don't let this drift silently.");
+
+  const health = mkList('Health');
+  const n4 = mkNote(health, 'Tai chi practice notes');
+  const s5 = mkSection(n4, 'Wind-down routine — neck, shoulders, wrists');
+  mkBlock(s5, 'task', 'Neck rolls, 8 each side', true);
+  mkBlock(s5, 'task', 'Shoulder circles, 10 each direction', true);
+  mkBlock(s5, 'task', 'Wrist stretches, 30s each', false);
+
+  const personal = mkList('Personal');
+  const n5 = mkNote(personal, 'Delhi trip planning');
+  const s6 = mkSection(n5, 'Hotel search — weekend under ₹8,000');
+  mkBlock(s6, 'task', 'Check Pullman Aerocity rate for a Fri/Sat night', false);
+  mkBlock(s6, 'task', 'Compare against the usual Aerocity cluster', false);
+  mkBlock(s6, 'bullet', 'Best seen so far: ₹11,400 — ceiling is ₹8,000.');
+
+  // an unfiled capture, sitting in Unsorted — proves capture needs zero classification
+  const n6 = mkNote(unsorted, 'ask Saloni where the row-level policy review landed');
+  const s7 = mkSection(n6, '');
+  mkBlock(s7, 'text', 'Pinged Thursday. Nudge Tuesday if still quiet.');
+
+  // seed Today with one of each granularity, plus one already done
+  TODAY.push({ id: uid('t'), kind:'note', noteId:n3, sectionId:null, blockId:null });
+  DB.notes[n3].status = 'todo';
+
+  TODAY.push({ id: uid('t'), kind:'section', noteId:n1, sectionId:s1, blockId:null });
+  DB.sections[s1].status = 'in-progress';
+
+  TODAY.push({ id: uid('t'), kind:'bullet',  noteId:n5, sectionId:s6, blockId: DB.sections[s6].blocks[0].id });
+  DB.sections[s6].blocks[0].status = 'todo';
+
+  const doneBlock = DB.sections[s5].blocks[0]; // "Neck rolls" — already done
+  TODAY.push({ id: uid('t'), kind:'bullet', noteId:n4, sectionId:s5, blockId: doneBlock.id });
+  doneBlock.status = 'done'; doneBlock.done = true;
+})();
+
+/* ===================== helpers ===================== */
+function esc(s){ return String(s==null?'':s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+
+function resolveItem(e){
+  if(e.kind === 'note') return DB.notes[e.noteId];
+  if(e.kind === 'section') return DB.sections[e.sectionId];
+  if(e.kind === 'bullet') return getBlock(e.sectionId, e.blockId);
+  return null;
+}
+function isPromoted(kind, ids){
+  return TODAY.some(e => e.kind===kind && e.noteId===ids.noteId &&
+    (ids.sectionId||null)===(e.sectionId||null) && (ids.blockId||null)===(e.blockId||null));
+}
+function findEntry(kind, ids){
+  return TODAY.find(e => e.kind===kind && e.noteId===ids.noteId &&
+    (ids.sectionId||null)===(e.sectionId||null) && (ids.blockId||null)===(e.blockId||null));
+}
+function promote(kind, ids){
+  if(isPromoted(kind, ids)){
+    const e = findEntry(kind, ids);
+    TODAY = TODAY.filter(x => x.id !== e.id);
+    toast('Removed from Today');
+  } else {
+    TODAY.push({ id: uid('t'), kind, noteId: ids.noteId, sectionId: ids.sectionId||null, blockId: ids.blockId||null });
+    toast('Added to Today — same item, not a copy');
+  }
+  renderAll();
+}
+function unpromote(entryId){ TODAY = TODAY.filter(e => e.id !== entryId); renderAll(); }
+
+let toastTimer;
+function toast(msg){
+  const el = document.getElementById('toast');
+  document.getElementById('toastText').textContent = msg;
+  el.classList.add('on');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>el.classList.remove('on'), 2200);
+}
+
+/* ===================== render: Lists ===================== */
+function renderLists(){
+  document.getElementById('listTree').innerHTML = ROOT.map(id => renderListNode(id, 0)).join('');
+}
+function renderListNode(listId, depth){
+  const list = DB.lists[listId];
+  const isCollapsed = collapsed.has(listId);
+  return `<div class="lnode">
+    <div class="lrow" style="--depth:${depth}" onclick="toggleList('${listId}')">
+      <span class="chev ${isCollapsed?'':'open'}">›</span>
+      <span class="lic">▤</span><span class="lname">${esc(list.name)}</span>
+      <span class="lcount">${list.listIds.length + list.noteIds.length}</span>
+    </div>
+    <div class="lchildren" style="${isCollapsed?'display:none':''}">
+      ${list.listIds.map(id => renderListNode(id, depth+1)).join('')}
+      ${list.noteIds.map(id => renderNoteRow(id, depth+1)).join('')}
+    </div>
+  </div>`;
+}
+function renderNoteRow(noteId, depth){
+  const note = DB.notes[noteId];
+  const promoted = isPromoted('note', { noteId });
+  return `<div class="nrow" style="--depth:${depth}">
+    <span class="dot ${note.status}"></span>
+    <span class="nic">✎</span>
+    <span class="ntxt" onclick="openNote('${noteId}')">${esc(note.title || 'Untitled note')}</span>
+    <button class="gpin ${promoted?'on':''}" onclick="event.stopPropagation();promote('note',{noteId:'${noteId}'})">${promoted?'✓ Today':'→ Today'}</button>
+  </div>`;
+}
+function toggleList(id){
+  collapsed.has(id) ? collapsed.delete(id) : collapsed.add(id);
+  renderLists();
+}
+document.getElementById('addRootList').onclick = () => {
+  const name = prompt('New list name');
+  if(name && name.trim()){ mkList(name.trim()); renderLists(); }
+};
+
+/* ===================== render: Note overlay ===================== */
+let currentNoteId = null;
+function openNote(noteId){
+  currentNoteId = noteId;
+  renderNoteBody();
+  document.getElementById('noteOverlay').classList.add('on');
+}
+function closeNote(){
+  document.getElementById('noteOverlay').classList.remove('on');
+  currentNoteId = null;
+  renderAll(); // reflect any edits made while inside the note
+}
+document.getElementById('noteBack').onclick = closeNote;
+
+function renderNoteBody(){
+  const note = DB.notes[currentNoteId];
+  if(!note) return;
+  const list = DB.lists[note.listId];
+  document.getElementById('noteCrumb').textContent = list ? list.name : '';
+  const promoted = isPromoted('note', { noteId: note.id });
+  const html = `
+    <div class="ntitle" contenteditable="true" data-ph="Untitled note"
+       oninput="onTitleInput(this)">${esc(note.title)}</div>
+    <div class="npromoterow">
+      <button class="promoteBtn ${promoted?'on':''}" onclick="promote('note',{noteId:'${note.id}'})">
+        ${promoted?'✓ In Today (whole note)':'→ Promote whole note to Today'}</button>
+      <span class="statusTag ${note.status}">${statusLabel(note.status)}</span>
+    </div>
+    ${note.sectionIds.map(sid => renderSection(sid)).join('')}
+    <button class="addsection" onclick="addSection('${note.id}')">＋ Add section (one work item)</button>
+  `;
+  document.getElementById('noteBody').innerHTML = html;
+}
+function statusLabel(s){ return s==='in-progress' ? 'In progress' : s==='done' ? 'Done' : 'To-do'; }
+
+function renderSection(sectionId){
+  const sec = DB.sections[sectionId];
+  const promoted = isPromoted('section', { noteId: sec.noteId, sectionId: sec.id });
+  return `<div class="section" data-sec="${sec.id}">
+    <div class="sechead">
+      <span class="wi">Work item</span>
+      <div class="secname" contenteditable="true" data-sec="${sec.id}"
+        oninput="onSectionNameInput(this)">${esc(sec.name)}</div>
+      <button class="secpromote ${promoted?'on':''}"
+        onclick="promote('section',{noteId:'${sec.noteId}',sectionId:'${sec.id}'})">${promoted?'✓ Today':'→ Today'}</button>
+    </div>
+    ${sec.blocks.map(b => blockRowHTML(sec, b)).join('')}
+    <div class="secadd">
+      <button onclick="addBlockToSection('${sec.id}','text')">＋ text</button>
+      <button onclick="addBlockToSection('${sec.id}','bullet')">＋ bullet</button>
+      <button onclick="addBlockToSection('${sec.id}','task')">＋ to-do</button>
+    </div>
+  </div>`;
+}
+function blockRowHTML(sec, b){
+  const marker = b.type === 'bullet' ? `<span class="mk bul">•</span>`
+    : b.type === 'task' ? `<span class="mk cb ${b.done?'on':''}" onclick="toggleBlockDone('${sec.id}','${b.id}')"></span>`
+    : `<span class="mk"></span>`;
+  const promotable = b.type === 'bullet' || b.type === 'task';
+  const promoted = promotable && isPromoted('bullet', { noteId: sec.noteId, sectionId: sec.id, blockId: b.id });
+  return `<div class="blk ${b.type} ${b.done?'done':''}" data-b="${b.id}">
+    ${marker}
+    <div class="btx" contenteditable="true" data-sec="${sec.id}" data-blk="${b.id}"
+      data-ph="${b.type==='task'?'to-do':b.type==='bullet'?'bullet':'text'}"
+      oninput="onBlockInput(this)" onkeydown="onBlockKey(event,this)">${esc(b.text)}</div>
+    ${promotable ? `<button class="pin ${promoted?'on':''}"
+      onclick="promote('bullet',{noteId:'${sec.noteId}',sectionId:'${sec.id}',blockId:'${b.id}'})">${promoted?'✓ Today':'→ Today'}</button>` : ''}
+  </div>`;
+}
+
+function onTitleInput(el){ DB.notes[currentNoteId].title = el.textContent; }
+function onSectionNameInput(el){ DB.sections[el.dataset.sec].name = el.textContent; }
+function onBlockInput(el){
+  const blk = getBlock(el.dataset.sec, el.dataset.blk);
+  if(blk) blk.text = el.textContent;
+}
+function toggleBlockDone(secId, blkId){
+  const blk = getBlock(secId, blkId);
+  blk.done = !blk.done;
+  blk.status = blk.done ? 'done' : 'todo';
+  renderNoteBody();
+}
+function addSection(noteId){
+  const id = mkSection(noteId, '');
+  renderNoteBody();
+  const el = document.querySelector(`.secname[data-sec="${id}"]`);
+  if(el) el.focus();
+}
+function addBlockToSection(sectionId, type){
+  const id = mkBlock(sectionId, type, '');
+  renderNoteBody();
+  focusBlock(id);
+}
+function focusBlock(blockId, atEnd){
+  const el = document.querySelector(`.btx[data-blk="${blockId}"]`);
+  if(!el) return;
+  el.focus();
+  const r = document.createRange();
+  r.selectNodeContents(el); r.collapse(!atEnd);
+  const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+}
+function caretAtStart(el){
+  const s = getSelection();
+  return s.rangeCount && s.getRangeAt(0).collapsed && s.anchorOffset === 0;
+}
+function onBlockKey(e, el){
+  const sec = DB.sections[el.dataset.sec];
+  const blk = getBlock(sec.id, el.dataset.blk);
+  const idx = sec.blocks.indexOf(blk);
+
+  // "- " / "[] " shortcuts, like the locked capture editor
+  if(blk.type === 'text'){
+    const t = el.textContent;
+    if(/^[-*]\s/.test(t)){ blk.text = t.replace(/^[-*]\s/, ''); blk.type = 'bullet'; renderNoteBody(); focusBlock(blk.id, true); return; }
+    if(/^(\[\]|\[ \])\s/.test(t)){ blk.text = t.replace(/^(\[\]|\[ \])\s/, ''); blk.type = 'task'; renderNoteBody(); focusBlock(blk.id, true); return; }
+  }
+  if(e.key === 'Enter'){
+    e.preventDefault();
+    const nb = { id: uid('b'), type: blk.type === 'text' ? 'text' : blk.type, text:'', done:false, status:'todo' };
+    sec.blocks.splice(idx+1, 0, nb);
+    renderNoteBody();
+    focusBlock(nb.id);
+    return;
+  }
+  if(e.key === 'Backspace' && !el.textContent && caretAtStart(el) && sec.blocks.length > 1){
+    e.preventDefault();
+    sec.blocks.splice(idx, 1);
+    renderNoteBody();
+    const prev = sec.blocks[Math.max(0, idx-1)];
+    if(prev) focusBlock(prev.id, true);
+  }
+}
+
+/* ===================== render: Today ===================== */
+function renderToday(){
+  document.getElementById('todayDate').textContent =
+    new Date(2026,7,16).toLocaleDateString(undefined,{weekday:'long', month:'long', day:'numeric'});
+
+  const live = TODAY.filter(e => resolveItem(e));
+  const groups = { todo:[], 'in-progress':[], done:[] };
+  live.forEach(e => groups[resolveItem(e).status].push(e));
+
+  const total = live.length;
+  const doneCount = groups.done.length;
+  document.getElementById('bar').style.width = (total ? Math.round(doneCount/total*100) : 0) + '%';
+  document.getElementById('pct').textContent = total ? `${doneCount} of ${total} done` : 'Nothing promoted yet';
+
+  const section = (label, key) => groups[key].length
+    ? `<div class="ghead">${label}<span class="n">${groups[key].length}</span></div>
+       <div class="group">${groups[key].map(todayRow).join('')}</div>` : '';
+
+  const body = section('To-do','todo') + section('In progress','in-progress') + section('Done','done');
+  document.getElementById('todayList').innerHTML = total
+    ? body
+    : `<div class="empty"><span class="b">◔</span>Today is empty. Promote a note, a section, or a single bullet from Lists.</div>`;
+}
+function kindLabel(k){ return k==='note' ? 'Whole note' : k==='section' ? 'Section' : 'Bullet'; }
+function itemText(e, item){
+  if(e.kind === 'note') return item.title || '(untitled note)';
+  if(e.kind === 'section') return item.name || '(untitled section)';
+  return item.text || '(empty bullet)';
+}
+function itemCrumb(e){
+  if(e.kind === 'note'){
+    const list = DB.lists[DB.notes[e.noteId].listId];
+    return list ? list.name : '';
+  }
+  if(e.kind === 'section'){
+    return DB.notes[e.noteId].title;
+  }
+  return DB.notes[e.noteId].title + ' · ' + (DB.sections[e.sectionId].name || 'section');
+}
+function todayRow(e){
+  const item = resolveItem(e);
+  const isDone = item.status === 'done';
+  return `<div class="trow ${isDone?'done':''}">
+    <button class="cb big ${isDone?'on':''}" onclick="toggleDone('${e.id}')" aria-label="complete"></button>
+    <div class="tbody" onclick="jumpTo('${e.id}')">
+      <div class="kind">${kindLabel(e.kind)}</div>
+      <div class="ttext">${esc(itemText(e, item))}</div>
+      <div class="crumb">${esc(itemCrumb(e))}</div>
+    </div>
+    <div class="tright">
+      <button class="statusPill ${item.status==='in-progress'?'in-progress':''}" onclick="advanceStatus('${e.id}')">${item.status==='in-progress'?'In progress':'Start'}</button>
+      <button class="rm" onclick="unpromote('${e.id}')" title="Remove from Today (keeps the note)">×</button>
+    </div>
+  </div>`;
+}
+function toggleDone(entryId){
+  const e = TODAY.find(x => x.id === entryId); if(!e) return;
+  const item = resolveItem(e); if(!item) return;
+  item.status = item.status === 'done' ? 'todo' : 'done';
+  if('done' in item) item.done = item.status === 'done';
+  renderAll();
+}
+function advanceStatus(entryId){
+  const e = TODAY.find(x => x.id === entryId); if(!e) return;
+  const item = resolveItem(e); if(!item || item.status === 'done') return;
+  item.status = item.status === 'todo' ? 'in-progress' : 'todo';
+  renderAll();
+}
+function jumpTo(entryId){
+  const e = TODAY.find(x => x.id === entryId); if(!e) return;
+  openNote(e.noteId);
+  requestAnimationFrame(() => {
+    let target = null;
+    if(e.kind === 'section') target = document.querySelector(`.section[data-sec="${e.sectionId}"]`);
+    if(e.kind === 'bullet') target = document.querySelector(`.blk[data-b="${e.blockId}"]`);
+    if(target){
+      target.scrollIntoView({ block:'center', behavior:'smooth' });
+      target.classList.add('flash');
+      setTimeout(() => target.classList.remove('flash'), 1200);
+    }
+  });
+}
+
+/* ===================== what's open panel ===================== */
+const OPEN_HTML = `
+  <h3>What's open</h3>
+  <ul>
+    <li><b>The promote gesture.</b> This prototype uses a tap "→ Today" affordance on notes, sections
+      and bullets. Anshul hasn't picked between that, swipe, and drag — this is the safe placeholder.</li>
+    <li><b>Where status lives.</b> Built here on the item itself (note / section / bullet), not on the
+      Today assignment — that's the working recommendation, but it isn't signed off.</li>
+    <li><b>Today's name.</b> "Today" is provisional. No alternative has been chosen yet.</li>
+  </ul>`;
+document.getElementById('openPanelLists').innerHTML = OPEN_HTML;
+document.getElementById('openPanelToday').innerHTML = OPEN_HTML;
+
+/* ===================== render all ===================== */
+function renderAll(){
+  renderLists();
+  renderToday();
+  if(currentNoteId) renderNoteBody();
+}
+
+/* ===================== nav (deck) ===================== */
+const PANES = ['lists','today'];
+let cur = 0;
+function go(i){
+  i = Math.max(0, Math.min(PANES.length-1, i));
+  const prev = cur; cur = i;
+  document.querySelectorAll('.pane').forEach((p,n) => {
+    p.classList.toggle('on', n===i);
+    p.classList.toggle('left', n<i);
+  });
+  document.querySelectorAll('[data-p]').forEach(b => b.classList.toggle('on', b.dataset.p === PANES[i]));
+  if(prev !== i){ document.getElementById('p-'+PANES[i]).scrollTop = 0; renderAll(); }
+}
+document.querySelectorAll('[data-p]').forEach(b => b.addEventListener('click', () => go(PANES.indexOf(b.dataset.p))));
+
+/* ===================== capture sheet ===================== */
+const capOverlay = document.getElementById('capOverlay');
+const capDoc = document.getElementById('capDoc');
+let CAP = []; // [{id,type,text,title}]
+
+function capMakeBlock(type, text, isTitle){
+  const id = uid('c');
+  CAP.push({ id, type: type||'text', text: text||'', title: !!isTitle });
+  return id;
+}
+function renderCap(){
+  capDoc.innerHTML = CAP.map(b => {
+    const marker = b.type==='bullet' ? `<span class="mk bul">•</span>`
+      : b.type==='task' ? `<span class="mk cb ${b.done?'on':''}" onclick="capToggleDone('${b.id}')"></span>`
+      : `<span class="mk"></span>`;
+    return `<div class="blk ${b.type} ${b.title?'tt':''} ${b.done?'done':''}" data-c="${b.id}">
+      ${marker}
+      <div class="btx" contenteditable="true" data-c="${b.id}" spellcheck="false"
+        data-ph="${b.title ? (CAP.length===1?'Start a note…':'Title') : (b.type==='task'?'to-do':b.type==='bullet'?'bullet':'')}"
+        oninput="capInput(this)" onkeydown="capKey(event,this)">${esc(b.text)}</div>
+    </div>`;
+  }).join('');
+}
+function capBlock(id){ return CAP.find(b => b.id === id); }
+function capInput(el){
+  const b = capBlock(el.dataset.c); if(!b) return;
+  b.text = el.textContent;
+  if(!b.title){
+    if(/^[-*]\s/.test(b.text)){ b.text = b.text.replace(/^[-*]\s/,''); b.type='bullet'; renderCap(); capFocus(b.id, true); }
+    else if(/^(\[\]|\[ \])\s/.test(b.text)){ b.text = b.text.replace(/^(\[\]|\[ \])\s/,''); b.type='task'; renderCap(); capFocus(b.id, true); }
+  }
+}
+function capToggleDone(id){ const b = capBlock(id); b.done = !b.done; renderCap(); }
+function capFocus(id, atEnd){
+  const el = capDoc.querySelector(`.btx[data-c="${id}"]`); if(!el) return;
+  el.focus();
+  const r = document.createRange(); r.selectNodeContents(el); r.collapse(!atEnd);
+  const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+}
+function capKey(e, el){
+  const b = capBlock(el.dataset.c);
+  const idx = CAP.indexOf(b);
+  if(e.key === 'Tab') { e.preventDefault(); return; }
+  if(e.key === 'Enter'){
+    e.preventDefault();
+    const id = uid('c');
+    CAP.splice(idx+1, 0, { id, type: b.title ? 'text' : b.type, text:'', title:false, done:false });
+    renderCap(); capFocus(id);
+    return;
+  }
+  if(e.key === 'Backspace' && !el.textContent && caretAtStart(el) && idx > 0){
+    e.preventDefault();
+    CAP.splice(idx, 1);
+    renderCap();
+    capFocus(CAP[idx-1].id, true);
+  }
+}
+function capAddType(type){
+  const sel = getSelection();
+  let curId = sel.anchorNode ? (sel.anchorNode.nodeType===1?sel.anchorNode:sel.anchorNode.parentNode)?.closest?.('.blk')?.dataset.c : null;
+  let cur = curId ? capBlock(curId) : CAP[CAP.length-1];
+  if(!cur) return;
+  if(!cur.text.trim() && !cur.title){ cur.type = type; renderCap(); capFocus(cur.id); }
+  else { const id = uid('c'); CAP.splice(CAP.indexOf(cur)+1, 0, { id, type, text:'', title:false, done:false }); renderCap(); capFocus(id); }
+}
+document.getElementById('capBul').onclick = () => capAddType('bullet');
+document.getElementById('capTask').onclick = () => capAddType('task');
+
+function openCapture(){
+  CAP = [];
+  capMakeBlock('text', '', true);
+  renderCap();
+  capOverlay.classList.add('on');
+  requestAnimationFrame(() => { const el = capDoc.querySelector('.btx'); if(el) el.focus(); });
+}
+function closeCapture(){ capOverlay.classList.remove('on'); }
+capOverlay.addEventListener('mousedown', e => { if(e.target === capOverlay) closeCapture(); });
+
+document.getElementById('capSave').onclick = () => {
+  const nonEmpty = CAP.filter(b => b.text.trim().length);
+  if(!nonEmpty.length){ closeCapture(); return; }
+  const titleBlk = CAP.find(b => b.title);
+  const title = (titleBlk && titleBlk.text.trim()) || 'Untitled note';
+  const rest = CAP.filter(b => !b.title && b.text.trim().length);
+
+  let unsortedId = ROOT.find(id => DB.lists[id].name === 'Unsorted');
+  if(!unsortedId) unsortedId = mkList('Unsorted');
+
+  const noteId = mkNote(unsortedId, title);
+  if(rest.length){
+    const secId = mkSection(noteId, '');
+    rest.forEach(b => mkBlock(secId, b.type, b.text, b.done));
+  }
+  closeCapture();
+  renderAll();
+  toast('Captured — filed under Unsorted');
+};
+
+document.getElementById('fab').onclick = openCapture;
+document.getElementById('railCap').onclick = openCapture;
+
+/* ===================== boot ===================== */
+renderAll();
+</script>
+</body></html>
