@@ -11,6 +11,11 @@
   Visual language continued from this repo's uxbo2-apple.html (iOS 17 shell) and note.html/note.js
   (the locked capture editor) — same tokens, same circle-checkbox/inset-grouped-list idiom.
 
+  Capture (2026-08-16): the sheet no longer re-implements the editor — the behaviour of
+  note.html/note.js ("Notes · v9", the version we finalised) is ported in directly. Raw capture,
+  Apple-style: blank page, no hint line, no classification at entry. Tab nesting and the
+  "+ New" divider (several notes in one sheet) come with it.
+
   Structure: List -> List (nests) -> Note -> Section (= one work item) -> blocks (text/bullet/task).
   Today holds POINTERS at a note, a section, or a single bullet — never a copy of the text or a
   copy of its status. Every promotable item (note/section/block) carries its own .status field;
@@ -219,10 +224,10 @@ h1.big{font-size:32px;font-weight:700;letter-spacing:-.022em;margin:1px 0 2px}
   animation:up .26s cubic-bezier(.3,.8,.3,1)}
 @keyframes up{from{transform:translateY(30px);opacity:.6}to{transform:none;opacity:1}}
 .grab{width:38px;height:5px;border-radius:5px;background:var(--rule);margin:9px auto 4px;flex:0 0 auto}
-.capHint{font-size:12.5px;color:var(--ink-mid);text-align:center;padding:4px 20px 8px;flex:0 0 auto}
-.capDoc{flex:1;overflow-y:auto;padding:6px 22px 20px}
-.capDoc .blk .btx{font-size:17px}
+.capDoc{flex:1;overflow-y:auto;padding:12px 22px 24px;cursor:text}
+.capDoc .blk .btx{font-size:17px;line-height:1.55;min-height:27px}
 .capDoc .tt .btx{font-size:22px;font-weight:700;letter-spacing:-.01em;min-height:30px}
+.capDoc .divider{height:1px;background:var(--rule);margin:20px 0}
 .capbar{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:10px 16px calc(10px + env(safe-area-inset-bottom));
   border-top:1px solid var(--rule)}
 .fmt{width:36px;height:33px;border:1px solid var(--rule);border-radius:8px;background:var(--surface);
@@ -338,11 +343,11 @@ h1.big{font-size:32px;font-weight:700;letter-spacing:-.022em;margin:1px 0 2px}
 <div class="overlay" id="capOverlay">
   <div class="sheet">
     <div class="grab"></div>
-    <div class="capHint">Title, bullets, checklist. Nothing else. Type "- " for a bullet, "[] " for a to-do.</div>
     <div class="capDoc" id="capDoc"></div>
     <div class="capbar">
       <button class="fmt" id="capBul" title="Bullet">•</button>
       <button class="fmt" id="capTask" title="To-do">☐</button>
+      <button class="fmt" id="capNew" title="New (divider + fresh line)" style="width:auto;padding:0 12px">＋ New</button>
       <button class="capsave" id="capSave">Save to Unsorted</button>
     </div>
   </div>
@@ -378,9 +383,9 @@ function mkSection(noteId, name){
   DB.notes[noteId].sectionIds.push(id);
   return id;
 }
-function mkBlock(sectionId, type, text, done){
+function mkBlock(sectionId, type, text, done, indent){
   const id = uid('b');
-  const blk = { id, type, text, done: !!done, status: done ? 'done' : 'todo' };
+  const blk = { id, type, text, done: !!done, indent: indent || 0, status: done ? 'done' : 'todo' };
   DB.sections[sectionId].blocks.push(blk);
   return id;
 }
@@ -591,7 +596,7 @@ function blockRowHTML(sec, b){
     : `<span class="mk"></span>`;
   const promotable = b.type === 'bullet' || b.type === 'task';
   const promoted = promotable && isPromoted('bullet', { noteId: sec.noteId, sectionId: sec.id, blockId: b.id });
-  return `<div class="blk ${b.type} ${b.done?'done':''}" data-b="${b.id}">
+  return `<div class="blk ${b.type} ${b.done?'done':''}" data-b="${b.id}" style="margin-left:${(b.indent||0)*20}px">
     ${marker}
     <div class="btx" contenteditable="true" data-sec="${sec.id}" data-blk="${b.id}"
       data-ph="${b.type==='task'?'to-do':b.type==='bullet'?'bullet':'text'}"
@@ -782,78 +787,133 @@ function go(i){
 }
 document.querySelectorAll('[data-p]').forEach(b => b.addEventListener('click', () => go(PANES.indexOf(b.dataset.p))));
 
-/* ===================== capture sheet ===================== */
+/* ===================== capture sheet — the locked capture editor =====================
+   Behaviour copied from note.html / note.js ("Notes · v9"), which is the version we
+   finalised. Raw capture, Apple-style: a blank page and no instructions. Blocks live in
+   the DOM and are mutated in place (never re-rendered from an array) so the caret never
+   jumps. "- " -> bullet, "[] " -> to-do, Tab / Shift-Tab nests, "+ New" drops a divider
+   and starts another note in the same sheet. Only the save step is new: it walks the DOM
+   and files each divider-separated note under Unsorted. */
 const capOverlay = document.getElementById('capOverlay');
 const capDoc = document.getElementById('capDoc');
-let CAP = []; // [{id,type,text,title}]
 
-function capMakeBlock(type, text, isTitle){
-  const id = uid('c');
-  CAP.push({ id, type: type||'text', text: text||'', title: !!isTitle });
-  return id;
+function capBlocks(){ return [...capDoc.querySelectorAll('.blk')]; }
+function capMake(type, text, indent, isTitle){
+  const blk = document.createElement('div');
+  blk.className = 'blk ' + (type || 'text') + (isTitle ? ' tt' : '');
+  blk.dataset.type = type || 'text';
+  blk.dataset.indent = indent || 0;
+  blk.innerHTML = '<span class="mk"></span><div class="btx" contenteditable="true" spellcheck="false"></div>';
+  const btx = blk.querySelector('.btx');
+  if(text) btx.textContent = text;
+  capIndent(blk); capMarker(blk);
+  btx.addEventListener('keydown', e => capKey(e, blk, btx));
+  btx.addEventListener('input', () => { capShortcut(blk, btx); capPh(); });
+  return blk;
 }
-function renderCap(){
-  capDoc.innerHTML = CAP.map(b => {
-    const marker = b.type==='bullet' ? `<span class="mk bul">•</span>`
-      : b.type==='task' ? `<span class="mk cb ${b.done?'on':''}" onclick="capToggleDone('${b.id}')"></span>`
-      : `<span class="mk"></span>`;
-    return `<div class="blk ${b.type} ${b.title?'tt':''} ${b.done?'done':''}" data-c="${b.id}">
-      ${marker}
-      <div class="btx" contenteditable="true" data-c="${b.id}" spellcheck="false"
-        data-ph="${b.title ? (CAP.length===1?'Start a note…':'Title') : (b.type==='task'?'to-do':b.type==='bullet'?'bullet':'')}"
-        oninput="capInput(this)" onkeydown="capKey(event,this)">${esc(b.text)}</div>
-    </div>`;
-  }).join('');
+function capIndent(blk){ blk.style.marginLeft = (parseInt(blk.dataset.indent || 0) * 20) + 'px'; }
+function capSetIndent(blk, d){
+  blk.dataset.indent = Math.max(0, Math.min(6, parseInt(blk.dataset.indent || 0) + d));
+  capIndent(blk);
 }
-function capBlock(id){ return CAP.find(b => b.id === id); }
-function capInput(el){
-  const b = capBlock(el.dataset.c); if(!b) return;
-  b.text = el.textContent;
-  if(!b.title){
-    if(/^[-*]\s/.test(b.text)){ b.text = b.text.replace(/^[-*]\s/,''); b.type='bullet'; renderCap(); capFocus(b.id, true); }
-    else if(/^(\[\]|\[ \])\s/.test(b.text)){ b.text = b.text.replace(/^(\[\]|\[ \])\s/,''); b.type='task'; renderCap(); capFocus(b.id, true); }
-  }
+function capMarker(blk){
+  const mk = blk.querySelector('.mk');
+  mk.className = 'mk'; mk.innerHTML = ''; mk.onclick = null;
+  if(blk.dataset.type === 'bullet'){ mk.classList.add('bul'); mk.textContent = '•'; }
+  else if(blk.dataset.type === 'task'){ mk.classList.add('cb'); mk.onclick = () => blk.classList.toggle('done'); }
 }
-function capToggleDone(id){ const b = capBlock(id); b.done = !b.done; renderCap(); }
-function capFocus(id, atEnd){
-  const el = capDoc.querySelector(`.btx[data-c="${id}"]`); if(!el) return;
-  el.focus();
-  const r = document.createRange(); r.selectNodeContents(el); r.collapse(!atEnd);
-  const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+function capSetType(blk, type){
+  blk.dataset.type = type;
+  blk.classList.remove('text','bullet','task','done');
+  blk.classList.add(type);
+  if(type !== 'text') blk.classList.remove('tt');
+  capMarker(blk); capPh();
 }
-function capKey(e, el){
-  const b = capBlock(el.dataset.c);
-  const idx = CAP.indexOf(b);
-  if(e.key === 'Tab') { e.preventDefault(); return; }
+function capShortcut(blk, btx){
+  if(blk.dataset.type !== 'text') return;
+  const t = btx.textContent;
+  if(/^[-*]\s/.test(t)){ btx.textContent = t.replace(/^[-*]\s/,''); capSetType(blk,'bullet'); capCaretEnd(btx); }
+  else if(/^(\[\]|\[ \]|\(\))\s/.test(t)){ btx.textContent = t.replace(/^(\[\]|\[ \]|\(\))\s/,''); capSetType(blk,'task'); capCaretEnd(btx); }
+}
+function capKey(e, blk, btx){
+  if(e.key === 'Tab'){ e.preventDefault(); capSetIndent(blk, e.shiftKey ? -1 : 1); return; }
   if(e.key === 'Enter'){
     e.preventDefault();
-    const id = uid('c');
-    CAP.splice(idx+1, 0, { id, type: b.title ? 'text' : b.type, text:'', title:false, done:false });
-    renderCap(); capFocus(id);
+    // Enter on an empty bullet/to-do drops back to plain text instead of making another one
+    if(blk.dataset.type !== 'text' && !btx.textContent.trim()){ capSetType(blk,'text'); return; }
+    const nb = capMake(blk.dataset.type, '', parseInt(blk.dataset.indent || 0), false);
+    blk.after(nb); capCaret(nb.querySelector('.btx')); capPh();
     return;
   }
-  if(e.key === 'Backspace' && !el.textContent && caretAtStart(el) && idx > 0){
-    e.preventDefault();
-    CAP.splice(idx, 1);
-    renderCap();
-    capFocus(CAP[idx-1].id, true);
+  if(e.key === 'Backspace' && !btx.textContent && caretAtStart(btx)){
+    if(blk.dataset.type !== 'text'){ e.preventDefault(); capSetType(blk,'text'); return; }
+    const prev = blk.previousElementSibling;
+    if(prev && prev.classList.contains('divider')){
+      e.preventDefault();
+      const before = prev.previousElementSibling;
+      blk.remove(); prev.remove();
+      if(before && before.classList.contains('blk')) capCaretEnd(before.querySelector('.btx'));
+      capPh(); return;
+    }
+    if(prev && prev.classList.contains('blk')){
+      e.preventDefault();
+      const p = prev.querySelector('.btx');
+      blk.remove(); capCaretEnd(p); capPh(); return;
+    }
   }
+}
+function capCaret(el){ el.focus(); const r=document.createRange(); r.selectNodeContents(el); r.collapse(true); const s=getSelection(); s.removeAllRanges(); s.addRange(r); }
+function capCaretEnd(el){ el.focus(); const r=document.createRange(); r.selectNodeContents(el); r.collapse(false); const s=getSelection(); s.removeAllRanges(); s.addRange(r); }
+function capPh(){
+  const blks = capBlocks();
+  blks.forEach(b => {
+    const btx = b.querySelector('.btx');
+    let ph = '';
+    if(!btx.textContent){
+      if(b.classList.contains('tt')) ph = blks.length === 1 ? 'Start a note…' : 'Title';
+      else if(b.dataset.type === 'bullet') ph = 'list';
+      else if(b.dataset.type === 'task') ph = 'to-do';
+    }
+    btx.setAttribute('data-ph', ph);
+  });
+}
+function capClosest(node){
+  while(node && node !== capDoc){
+    if(node.classList && node.classList.contains('blk')) return node;
+    node = node.parentNode;
+  }
+  return null;
 }
 function capAddType(type){
   const sel = getSelection();
-  let curId = sel.anchorNode ? (sel.anchorNode.nodeType===1?sel.anchorNode:sel.anchorNode.parentNode)?.closest?.('.blk')?.dataset.c : null;
-  let cur = curId ? capBlock(curId) : CAP[CAP.length-1];
+  let cur = sel.anchorNode ? capClosest(sel.anchorNode) : null;
+  if(!cur) cur = capBlocks().pop();
   if(!cur) return;
-  if(!cur.text.trim() && !cur.title){ cur.type = type; renderCap(); capFocus(cur.id); }
-  else { const id = uid('c'); CAP.splice(CAP.indexOf(cur)+1, 0, { id, type, text:'', title:false, done:false }); renderCap(); capFocus(id); }
+  if(!cur.querySelector('.btx').textContent.trim()){ capSetType(cur, type); capCaret(cur.querySelector('.btx')); }
+  else {
+    const nb = capMake(type, '', parseInt(cur.dataset.indent || 0), false);
+    cur.after(nb); capCaret(nb.querySelector('.btx'));
+  }
+  capPh();
 }
 document.getElementById('capBul').onclick = () => capAddType('bullet');
 document.getElementById('capTask').onclick = () => capAddType('task');
+document.getElementById('capNew').onclick = () => {
+  const div = document.createElement('div'); div.className = 'divider'; capDoc.appendChild(div);
+  const b = capMake('text', '', 0, true); capDoc.appendChild(b);
+  capCaret(b.querySelector('.btx')); capPh();
+  capDoc.scrollTop = capDoc.scrollHeight;
+};
+capDoc.addEventListener('mousedown', e => {
+  if(e.target !== capDoc) return;
+  const last = capBlocks().pop();
+  if(last){ e.preventDefault(); capCaretEnd(last.querySelector('.btx')); }
+});
 
 function openCapture(){
-  CAP = [];
-  capMakeBlock('text', '', true);
-  renderCap();
+  capDoc.innerHTML = '';
+  capDoc.appendChild(capMake('text', '', 0, true));
+  capPh();
   capOverlay.classList.add('on');
   requestAnimationFrame(() => { const el = capDoc.querySelector('.btx'); if(el) el.focus(); });
 }
@@ -861,23 +921,43 @@ function closeCapture(){ capOverlay.classList.remove('on'); }
 capOverlay.addEventListener('mousedown', e => { if(e.target === capOverlay) closeCapture(); });
 
 document.getElementById('capSave').onclick = () => {
-  const nonEmpty = CAP.filter(b => b.text.trim().length);
-  if(!nonEmpty.length){ closeCapture(); return; }
-  const titleBlk = CAP.find(b => b.title);
-  const title = (titleBlk && titleBlk.text.trim()) || 'Untitled note';
-  const rest = CAP.filter(b => !b.title && b.text.trim().length);
+  // one note per divider-separated group
+  const groups = [[]];
+  [...capDoc.children].forEach(el => {
+    if(el.classList.contains('divider')) groups.push([]);
+    else if(el.classList.contains('blk')) groups[groups.length - 1].push(el);
+  });
 
   let unsortedId = ROOT.find(id => DB.lists[id].name === 'Unsorted');
   if(!unsortedId) unsortedId = mkList('Unsorted');
 
-  const noteId = mkNote(unsortedId, title);
-  if(rest.length){
-    const secId = mkSection(noteId, '');
-    rest.forEach(b => mkBlock(secId, b.type, b.text, b.done));
-  }
+  let made = 0;
+  groups.forEach(g => {
+    const rows = g.map(el => ({
+      type: el.dataset.type || 'text',
+      text: el.querySelector('.btx').textContent.trim(),
+      done: el.classList.contains('done'),
+      indent: parseInt(el.dataset.indent || 0),
+      title: el.classList.contains('tt')
+    })).filter(r => r.text.length);
+    if(!rows.length) return;
+
+    const titleRow = rows.find(r => r.title);
+    const title = titleRow ? titleRow.text : 'Untitled note';
+    const body = rows.filter(r => r !== titleRow);
+
+    const noteId = mkNote(unsortedId, title);
+    if(body.length){
+      const secId = mkSection(noteId, '');
+      body.forEach(r => mkBlock(secId, r.type, r.text, r.done, r.indent));
+    }
+    made++;
+  });
+
   closeCapture();
+  if(!made) return;
   renderAll();
-  toast('Captured — filed under Unsorted');
+  toast(made === 1 ? 'Captured — filed under Unsorted' : made + ' notes captured — filed under Unsorted');
 };
 
 document.getElementById('fab').onclick = openCapture;
