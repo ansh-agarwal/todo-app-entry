@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme:light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme:dark)">
+<title>Chuckle · the deck, pre-filled</title>
+<!--
+  Chuckle — sorting, one thought at a time, with the list already picked. 2026-08-16.
+
+  Anshul chose variant A from sort.html (one card at a time) with D's prefill on top:
+  "A with prefilled is fine for now, user gets option to change."
+
+  So the shape is settled and only one question is left: HOW the override is offered.
+  Four answers below. Everything else is held constant — same nine thoughts, same guess
+  for each, same lists, same undo, same brain. Only the override differs.
+
+  The four differ on one axis: how many taps a GOOD guess costs, versus how visible the
+  correction is when the guess is wrong.
+      1 · Chips        accept 1 tap, correct 1 tap, whole vocabulary always on screen
+      2 · Quiet        accept 1 tap, correct 2 taps, screen is nearly empty
+      3 · Swipe        accept 1 flick, correct 2 taps, fastest hand, worst discovery
+      4 · Auto         accept 0 taps, correct 1 tap to stop then 1 to pick
+-->
+<style>
+:root{
+  --accent:#0A84FF; --accent-soft:#E9F2FF; --accent-ink:#0060DF;
+  --bg:#F2F2F7; --surface:#FFFFFF;
+  --ink:#1C1C1E; --ink-soft:#3C3C4399; --ink-faint:#3C3C434D; --ink-mid:#6E6E73;
+  --rule:#3C3C431F; --good:#34C759; --warn:#FF3B30;
+  --chrome:rgba(249,249,249,.86); --page:#E9E9EE;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Helvetica Neue",sans-serif;
+  --shadow:0 1px 2px rgba(0,0,0,.04),0 10px 30px rgba(0,0,0,.06);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --accent-soft:#0A84FF26; --accent-ink:#64B0FF;
+    --bg:#000000; --surface:#1C1C1E;
+    --ink:#FFFFFF; --ink-soft:#EBEBF599; --ink-faint:#EBEBF54D; --ink-mid:#98989F;
+    --rule:#54545899; --chrome:rgba(28,28,30,.82); --page:#111114;
+    --shadow:0 1px 2px rgba(0,0,0,.5);
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--page);color:var(--ink);font-family:var(--sans);font-size:17px;line-height:1.45;
+     -webkit-font-smoothing:antialiased;padding-bottom:60px}
+
+.top{position:sticky;top:0;z-index:50;background:var(--chrome);backdrop-filter:saturate(180%) blur(20px);
+     -webkit-backdrop-filter:saturate(180%) blur(20px);border-bottom:.5px solid var(--rule);padding:14px 16px 12px}
+.top .wrap{max-width:1180px;margin:0 auto}
+.eyebrow{font-size:12.5px;font-weight:650;color:var(--ink-mid);letter-spacing:.02em;text-transform:uppercase}
+h1{font-size:25px;font-weight:700;letter-spacing:-.022em;margin:2px 0 3px}
+.lede{font-size:14.5px;color:var(--ink-mid);max-width:64ch}
+.lede a{color:var(--accent);text-decoration:none;font-weight:650}
+.segs{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}
+.seg{border:0;background:var(--surface);color:var(--ink);font:inherit;font-size:13.5px;font-weight:650;
+     padding:8px 13px;border-radius:11px;cursor:pointer;box-shadow:var(--shadow);letter-spacing:-.005em}
+.seg.on{background:var(--accent);color:#fff}
+
+.stage{max-width:1180px;margin:22px auto 0;padding:0 16px}
+.variant{display:none}
+.variant.on{display:grid;grid-template-columns:1fr;gap:22px;justify-items:center}
+@media (min-width:900px){ .variant.on{grid-template-columns:390px 1fr;align-items:start;justify-items:start} }
+
+/* ---------- phone ---------- */
+.phone{width:min(390px,100%);height:720px;background:var(--bg);border-radius:34px;position:relative;
+       overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,.10),0 26px 60px rgba(0,0,0,.18);
+       border:.5px solid var(--rule);display:flex;flex-direction:column}
+.sbar{height:34px;flex:0 0 auto;display:flex;align-items:flex-end;justify-content:space-between;
+      padding:0 20px 3px;font-size:12.5px;font-weight:650}
+.sbar .dots{letter-spacing:2px;opacity:.7}
+.cap{flex:1;overflow:hidden;padding:8px 20px 0;position:relative}
+.cap .cdate{font-size:12.5px;font-weight:650;color:var(--ink-mid);padding-top:4px}
+.cap h2{font-size:21px;font-weight:700;letter-spacing:-.02em;margin:6px 0 6px}
+.cap p{font-size:16px;margin-bottom:4px}
+.cap p.b{padding-left:16px;position:relative}
+.cap p.b::before{content:'•';position:absolute;left:2px;color:var(--ink-faint)}
+.cap .caret{display:inline-block;width:2px;height:18px;background:var(--accent);vertical-align:-3px;
+            animation:blink 1.1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.cap .fade{position:absolute;left:0;right:0;bottom:0;height:70px;background:linear-gradient(transparent,var(--bg))}
+.bar{flex:0 0 auto;height:56px;display:flex;align-items:center;gap:14px;padding:0 18px;
+     background:var(--chrome);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+     border-top:.5px solid var(--rule)}
+.bar .tool{color:var(--ink-soft);font-size:16px}
+.bar .tool.nw{font-size:13.5px;font-weight:650;color:var(--accent)}
+
+/* ---------- brain ---------- */
+.brain{margin-left:auto;display:flex;align-items:center;gap:6px;border:0;background:none;cursor:pointer;padding:4px 2px}
+.brain svg{overflow:visible}
+.brain .bfill{transition:y .55s cubic-bezier(.3,.8,.3,1),fill .5s}
+.brain .bmouth{transition:d .35s ease,stroke .5s}
+.brain .bcount{font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums}
+.brain.shake svg{animation:bshake .42s cubic-bezier(.36,.07,.19,.97)}
+@keyframes bshake{10%,90%{transform:translateX(-1px)}20%,80%{transform:translateX(2px)}
+                  30%,50%,70%{transform:translateX(-3px)}40%,60%{transform:translateX(3px)}}
+.brain.relief svg{animation:brelief .5s cubic-bezier(.3,1.4,.5,1)}
+@keyframes brelief{0%{transform:scale(1)}45%{transform:scale(1.16)}100%{transform:scale(1)}}
+
+/* ---------- sheet ---------- */
+.sheet{position:absolute;inset:0;background:var(--bg);z-index:20;display:flex;flex-direction:column;
+       transform:translateY(100%);transition:transform .32s cubic-bezier(.32,.72,0,1)}
+.sheet.on{transform:none}
+.shead{flex:0 0 auto;padding:16px 18px 10px;display:flex;align-items:flex-start;gap:10px;
+       border-bottom:.5px solid var(--rule)}
+.shead .stitle{flex:1}
+.shead h3{font-size:19px;font-weight:700;letter-spacing:-.02em}
+.shead .ssub{font-size:12.5px;color:var(--ink-mid);margin-top:1px}
+.shead .x{border:0;background:none;font:inherit;font-size:15px;font-weight:650;color:var(--accent);cursor:pointer}
+.sbody{flex:1;overflow-y:auto;padding:14px 16px 18px;position:relative}
+.sfoot{flex:0 0 auto;padding:10px 16px 12px;border-top:.5px solid var(--rule);background:var(--chrome);
+       backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+
+.btn{width:100%;border:0;border-radius:13px;padding:13px;font:inherit;font-size:15.5px;font-weight:650;
+     cursor:pointer;background:var(--accent);color:#fff;letter-spacing:-.005em;
+     display:flex;align-items:center;justify-content:center;gap:8px}
+.btn .d{width:9px;height:9px;border-radius:50%;background:#fff}
+.btn.ghost{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+.btn.sm{padding:10px;font-size:14px}
+.brow{display:flex;gap:8px}
+
+.counter{font-size:12.5px;font-weight:650;color:var(--ink-mid);text-align:center;margin-bottom:11px}
+.done{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;
+      text-align:center;gap:6px;padding:0 34px}
+.done .big{font-size:44px}
+.done h4{font-size:19px;font-weight:700;letter-spacing:-.02em}
+.done p{font-size:14px;color:var(--ink-mid)}
+
+/* ---------- the card ---------- */
+.deck{position:relative;height:214px;margin-bottom:14px}
+.card{position:absolute;inset:0;background:var(--surface);border-radius:18px;box-shadow:var(--shadow);
+      padding:18px;display:flex;flex-direction:column;
+      transition:transform .3s cubic-bezier(.32,.72,0,1),opacity .25s}
+.card.behind{transform:scale(.955) translateY(15px);opacity:.72;z-index:1}
+.card.behind2{transform:scale(.91) translateY(29px);opacity:.42;z-index:0}
+.card.gone{transform:translateX(125%) rotate(8deg);opacity:0}
+.card .cmeta{font-size:11.5px;font-weight:650;color:var(--ink-faint);text-transform:uppercase;
+             letter-spacing:.04em;margin-bottom:8px}
+.card .ctxt{font-size:19px;font-weight:600;letter-spacing:-.015em;line-height:1.32;flex:1}
+.card.live{cursor:grab;touch-action:pan-y;user-select:none}
+
+/* the suggestion, as it appears on the card */
+.sugg{display:flex;align-items:center;gap:8px;margin-top:12px;padding-top:11px;
+      border-top:.5px solid var(--rule);cursor:pointer}
+.sugg .lbl{font-size:11.5px;font-weight:650;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.04em}
+.sugg .nm{font-size:15px;font-weight:700;letter-spacing:-.01em;display:flex;align-items:center;gap:7px}
+.sugg .nm .d{width:9px;height:9px;border-radius:50%}
+.sugg .chg{margin-left:auto;font-size:13px;font-weight:650;color:var(--accent)}
+.why{font-size:11.5px;color:var(--ink-faint);margin-top:5px}
+
+/* chips */
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{display:inline-flex;align-items:center;gap:7px;border:.5px solid var(--rule);background:var(--surface);
+      color:var(--ink);font:inherit;font-size:14px;font-weight:600;padding:9px 13px;border-radius:12px;
+      cursor:pointer;letter-spacing:-.005em;position:relative}
+.chip:active{transform:scale(.96)}
+.chip .d{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
+.chip.sugg-on{border-color:var(--accent);border-width:1.5px;background:var(--accent-soft);color:var(--accent-ink)}
+.chip .star{font-size:10px;margin-left:1px;opacity:.8}
+.chip.sm{font-size:13px;padding:7px 11px;border-radius:10px}
+.chiplabel{font-size:11.5px;font-weight:650;color:var(--ink-faint);text-transform:uppercase;
+           letter-spacing:.04em;margin:0 0 7px 3px}
+
+/* swipe affordances (variant 3) */
+.swrap{position:relative}
+.stamp{position:absolute;top:16px;font-size:12.5px;font-weight:800;letter-spacing:.06em;
+       text-transform:uppercase;padding:6px 11px;border-radius:9px;border:2px solid;opacity:0;
+       transition:opacity .12s;z-index:5;pointer-events:none}
+.stamp.file{left:18px;color:var(--good);border-color:var(--good);transform:rotate(-9deg)}
+.stamp.skip{right:18px;color:var(--ink-mid);border-color:var(--ink-mid);transform:rotate(9deg)}
+.swipehint{font-size:12px;color:var(--ink-mid);text-align:center;margin-top:2px}
+
+/* auto (variant 4) */
+.ring{display:flex;align-items:center;gap:10px;margin-top:12px;padding-top:11px;border-top:.5px solid var(--rule)}
+.ring .track{flex:1;height:5px;border-radius:3px;background:var(--rule);overflow:hidden}
+.ring .fillb{height:100%;width:0;background:var(--accent);border-radius:3px}
+.ring .txt{font-size:13px;font-weight:650;color:var(--ink-soft);white-space:nowrap}
+.autopill{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:650;color:var(--ink-mid)}
+.sw{width:38px;height:22px;border-radius:12px;background:var(--rule);position:relative;transition:background .18s}
+.sw.on{background:var(--good)}
+.sw i{position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;
+      transition:transform .18s;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.sw.on i{transform:translateX(16px)}
+
+/* picker overlay (variants 2 and 3) */
+.picker{position:absolute;inset:0;background:var(--bg);z-index:12;padding:14px 16px;
+        transform:translateY(12px);opacity:0;pointer-events:none;transition:opacity .18s,transform .2s}
+.picker.on{transform:none;opacity:1;pointer-events:auto}
+.picker h5{font-size:13px;font-weight:700;margin-bottom:3px}
+.picker .pq{font-size:14.5px;color:var(--ink-mid);margin-bottom:13px}
+
+/* snack */
+.snack{position:absolute;left:14px;right:14px;bottom:74px;z-index:30;background:var(--ink);color:var(--bg);
+       border-radius:13px;padding:11px 14px;display:flex;align-items:center;gap:10px;font-size:13.5px;
+       font-weight:600;opacity:0;transform:translateY(10px);pointer-events:none;transition:opacity .18s,transform .22s}
+.snack.on{opacity:1;transform:none;pointer-events:auto}
+.snack .u{margin-left:auto;border:0;background:none;color:#4DA3FF;font:inherit;font-size:13.5px;font-weight:700;cursor:pointer}
+@media (prefers-color-scheme:dark){ .snack .u{color:#0A84FF} }
+
+/* notes column */
+.notes{max-width:560px}
+.notes h3{font-size:20px;font-weight:700;letter-spacing:-.02em;margin-bottom:3px}
+.notes .kicker{font-size:12.5px;font-weight:650;color:var(--accent);text-transform:uppercase;letter-spacing:.04em}
+.notes p{color:var(--ink-soft);margin:9px 0;font-size:15px}
+.notes ul{margin:9px 0;list-style:none}
+.notes li{position:relative;padding-left:19px;margin-bottom:7px;color:var(--ink-soft);font-size:14.5px}
+.notes li::before{content:'';position:absolute;left:3px;top:8px;width:6px;height:6px;border-radius:50%;background:var(--ink-faint)}
+.notes li.plus::before{background:var(--good)}
+.notes li.minus::before{background:var(--warn)}
+.cost{display:flex;gap:8px;margin:12px 0 0;flex-wrap:wrap}
+.cost div{background:var(--surface);box-shadow:var(--shadow);border-radius:11px;padding:9px 12px;font-size:13px;font-weight:650}
+.cost div span{display:block;font-size:11px;font-weight:650;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.04em}
+.notes .verdict{margin-top:14px;background:var(--surface);border-radius:14px;padding:14px;box-shadow:var(--shadow);
+                font-size:14.5px;color:var(--ink)}
+.reset{margin-top:14px;border:0;background:var(--surface);box-shadow:var(--shadow);color:var(--ink-mid);
+       font:inherit;font-size:13px;font-weight:650;padding:8px 13px;border-radius:11px;cursor:pointer}
+</style>
+</head>
+<body>
+
+<div class="top"><div class="wrap">
+  <div class="eyebrow">Chuckle · explorations</div>
+  <h1>The deck, with the list already picked</h1>
+  <div class="lede">One thought at a time, its list already chosen, always changeable.
+    That much is settled. What is not settled is <b>how the change is offered</b> — four answers below.
+    <a href="sort.html">← the four broad approaches</a></div>
+  <div class="segs" id="segs"></div>
+</div></div>
+
+<div class="stage" id="stage"></div>
+
+<script>
+/* ===================== shared model =====================
+   Identical in all four: same nine thoughts, same guessed list for each, same lists,
+   same undo. Only the override interaction changes. */
+
+const LISTS = [
+  { id:'today',    name:'Today',    c:'#0A84FF' },
+  { id:'work',     name:'Work',     c:'#5E5CE6' },
+  { id:'smebi',    name:'SME BI',   c:'#30B0C7' },
+  { id:'career',   name:'Career',   c:'#FF9F0A' },
+  { id:'trading',  name:'Trading',  c:'#34C759' },
+  { id:'health',   name:'Health',   c:'#FF375F' },
+  { id:'personal', name:'Personal', c:'#AF52DE' },
+  { id:'someday',  name:'Someday',  c:'#8E8E93' }
+];
+const L = id => LISTS.find(l => l.id === id);
+
+const PILE = [
+  { id:'p1', t:'ask Saloni where the row-level policy review landed',    when:'today · 9:12',  guess:'work',     why:'a colleague, and a review' },
+  { id:'p2', t:'TSM backtest — check the Sharpe held after costs',        when:'today · 9:14',  guess:'trading',  why:'"backtest", "Sharpe"' },
+  { id:'p3', t:'book Delhi hotel, ceiling ₹8,000 for Fri/Sat',           when:'today · 9:20',  guess:'personal', why:'travel, and a price ceiling' },
+  { id:'p4', t:'STAR story: the zero-downtime migration, 40M rows',      when:'today · 10:02', guess:'career',   why:'"STAR story"' },
+  { id:'p5', t:'wrist stretches keep getting skipped — move to morning',  when:'today · 10:40', guess:'health',   why:'an exercise you already track' },
+  { id:'p6', t:'alert copy: under 200 characters, one number, no jargon', when:'today · 11:15', guess:'smebi',    why:'"alert copy" — the pilot spec' },
+  { id:'p7', t:'idea: the brain icon should be where sorting happens',    when:'today · 11:48', guess:'work',     why:'no strong signal — a weak guess' },
+  { id:'p8', t:'renew the domain before it lapses',                      when:'today · 14:03', guess:'personal', why:'admin, with a deadline' },
+  { id:'p9', t:"Pooja's new glasses — order the second pair",            when:'today · 16:30', guess:'personal', why:'family, and a purchase' }
+];
+/* runners-up, for the variant that shows a short list instead of all eight */
+const ALT = { work:['today','career'], trading:['today','someday'], personal:['today','someday'],
+              career:['work','someday'], health:['today','someday'], smebi:['work','today'] };
+
+const VARIANTS = [
+  { key:'1', tab:'1 · Chips', title:'Suggested, all lists shown',
+    sub:'The guess is pre-selected. Every other list is one tap away.',
+    kicker:'Variant 1',
+    lead:'The suggested list is highlighted among all eight chips, and the big button files it there. Accepting is one tap on the button. Correcting is one tap on any other chip — it files immediately, no confirm step.',
+    cost:[['Good guess','1 tap'],['Wrong guess','1 tap'],['On screen','8 chips']],
+    pros:['Accepting and correcting cost exactly the same. Nothing punishes you for a wrong guess.',
+          'Your whole list vocabulary stays visible, so you notice when a thought belongs somewhere you had forgotten about.',
+          'No hidden state. What you can do is what you can see.'],
+    cons:['A wall of eight chips under every card. At twenty lists this stops working entirely.',
+          'The suggestion competes for attention with seven rejected options — you end up reading all of them.',
+          'Busiest of the four. It does not feel calm.'],
+    verdict:'<b>The safe pick.</b> Cheapest correction, no discovery problem, and it is the one that survives you not trusting the guess yet.' },
+
+  { key:'2', tab:'2 · Quiet', title:'Suggested, picker on demand',
+    sub:'One line on the card. One button. The lists appear only if you ask.',
+    kicker:'Variant 2',
+    lead:'The card carries a single line — the destination and why. The footer has one button. If the guess is right you never see a list at all. Tap the line, or Change, and the full picker slides over the card.',
+    cost:[['Good guess','1 tap'],['Wrong guess','2 taps'],['On screen','1 line']],
+    pros:['By far the calmest screen. Your eye goes to the thought, not to the options.',
+          'Scales. Twenty lists is a scrolling picker, not a wall — nothing about the main screen changes.',
+          'Shows the reason for the guess, which is what makes a guess trustworthy over time.'],
+    cons:['Correcting costs double. If the guess is wrong often, this becomes the slowest of the four.',
+          'Out of sight, out of mind — you stop noticing lists you rarely use.',
+          'It quietly encourages you to accept. That is fine when the guess is good and bad when it is not.'],
+    verdict:'<b>The right end state</b>, once the guesses are actually good. Shipping it before then makes every mistake cost double.' },
+
+  { key:'3', tab:'3 · Swipe', title:'Swipe to accept',
+    sub:'Flick right to file it. Flick left to skip. Tap to change.',
+    kicker:'Variant 3',
+    lead:'The card is physical. Drag it right past the halfway mark and it files into the suggested list; drag it left and it goes to the back of the pile. The destination is stamped on the card as you drag, so you always see where it is about to land. Tap the card to open the picker instead.',
+    cost:[['Good guess','1 flick'],['Wrong guess','2 taps'],['On screen','the card']],
+    pros:['The fastest hand movement of the four. No aiming at a target — any rightward flick works.',
+          'Nothing on screen but the thought. Cleanest of the four by some distance.',
+          'The stamp appears before you commit, so a swipe is never blind.'],
+    cons:['Undiscoverable. Nobody swipes a card unless something tells them to, so this needs a first-run hint and buttons underneath anyway.',
+          'A wrong flick is easy and the pile is moving, so undo has to be excellent.',
+          'Dead on desktop. You end up building variant 1 as well, for the mouse.'],
+    verdict:'<b>A layer, not a design.</b> Put swipe on top of 1 or 2 as an accelerator for people who find it. Do not make it the only way through.' },
+
+  { key:'4', tab:'4 · Auto', title:'Files itself unless you stop it',
+    sub:'A beat on each card. Say nothing and it goes where the brain said.',
+    kicker:'Variant 4',
+    lead:'Each card gets about two and a half seconds. The bar runs, then it files into the suggestion and the next card arrives. Touch anything and it stops, holds, and shows you the lists. The whole pile can drain while you just watch it.',
+    cost:[['Good guess','0 taps'],['Wrong guess','2 taps'],['On screen','a running bar']],
+    pros:['The only one that costs nothing at all when the guesses are right. Nine thoughts filed in twenty seconds, hands down.',
+          'It shows you the guesses in sequence, so you learn how good they are without having to audit anything.',
+          'Turning it off is one switch, and it stays off.'],
+    cons:['It demands your attention to NOT act, which is the wrong way round. Look away and it files for you.',
+          'Two and a half seconds is too long when the guesses are right and too short to read a long thought and think.',
+          'The one design here that can lose something quietly. That is a different class of bug from being slow.'],
+    verdict:'<b>Do not ship this as the default.</b> Worth keeping as an opt-in "run the pile" mode, and worth building last.' }
+];
+
+/* ===================== state ===================== */
+const S = {};
+VARIANTS.forEach(v => S[v.key] = fresh());
+function fresh(){ return { pile: PILE.map(p => ({...p})), filed:[], idx:0, last:null, open:false,
+                           picking:false, auto:true, timer:null, raf:null }; }
+
+/* ===================== markup ===================== */
+const BP = 'M14.2 5.6c-2.6 0-4.6 1.7-5 4-2.2.5-3.8 2.4-3.8 4.7 0 .9.2 1.7.7 2.4-1.2 1-2 2.5-2 4.2 0 2 1 3.7 2.6 4.7-.1.4-.2.9-.2 1.4 0 3 2.5 5.4 5.6 5.4 1 0 2-.3 2.8-.8.8 1.6 2.5 2.7 4.5 2.7s3.7-1.1 4.5-2.7c.8.5 1.8.8 2.8.8 3.1 0 5.6-2.4 5.6-5.4 0-.5-.1-1-.2-1.4 1.6-1 2.6-2.7 2.6-4.7 0-1.7-.8-3.2-2-4.2.5-.7.7-1.5.7-2.4 0-2.3-1.6-4.2-3.8-4.7-.4-2.3-2.4-4-5-4-1.7 0-3.2.8-4.1 2-.9-1.2-2.4-2-4.1-2z';
+const esc = s => String(s==null?'':s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function brainHTML(k){
+  return `<button class="brain" id="brain-${k}" title="Unsorted — tap to sort">
+    <svg width="27" height="27" viewBox="0 0 40 40" aria-hidden="true">
+      <defs><clipPath id="clip-${k}"><path d="${BP}"/></clipPath></defs>
+      <g clip-path="url(#clip-${k})"><rect class="bfill" id="bfill-${k}" x="0" y="40" width="40" height="40"/></g>
+      <path d="${BP}" id="bout-${k}" fill="none" stroke="currentColor" stroke-width="1.6" opacity=".55"/>
+      <path d="M20 8.4v22.4M20 14.5c-2.6 0-4.2 1.4-4.2 3M20 20.4c2.8 0 4.6 1.5 4.6 3.3" id="bdet-${k}"
+            fill="none" stroke="currentColor" stroke-width="1.3" opacity=".32" stroke-linecap="round"/>
+      <path class="bmouth" id="bmouth-${k}" fill="none" stroke-width="1.6" stroke-linecap="round"/>
+    </svg><span class="bcount" id="bcount-${k}">0</span></button>`;
+}
+function phoneHTML(v){
+  const k = v.key;
+  return `<div class="phone" id="phone-${k}">
+    <div class="sbar"><span>9:41</span><span class="dots">▮▮▮</span></div>
+    <div class="cap">
+      <div class="cdate">Capture · Sunday, August 16</div>
+      <h2>${esc("Pooja's new glasses")}</h2><p>order the second pair<span class="caret"></span></p>
+      <h2 style="margin-top:16px">renew the domain</h2><p class="b">before it lapses</p>
+      <h2 style="margin-top:16px">alert copy</h2><p class="b">under 200 characters</p>
+      <div class="fade"></div>
+    </div>
+    <div class="bar"><span class="tool">•</span><span class="tool">☐</span><span class="tool nw">＋ New</span>
+      ${brainHTML(k)}</div>
+    <div class="snack" id="snack-${k}"><span id="snacktext-${k}"></span><button class="u" id="undo-${k}">Undo</button></div>
+    <div class="sheet" id="sheet-${k}">
+      <div class="shead"><div class="stitle"><h3>${esc(v.title)}</h3><div class="ssub">${esc(v.sub)}</div></div>
+        <button class="x" id="close-${k}">Done</button></div>
+      <div class="sbody" id="body-${k}"></div>
+      <div class="sfoot" id="foot-${k}"></div>
+    </div>
+  </div>`;
+}
+function notesHTML(v){
+  return `<div class="notes">
+    <div class="kicker">${esc(v.kicker)}</div><h3>${esc(v.title)}</h3>
+    <p>${esc(v.lead)}</p>
+    <div class="cost">${v.cost.map(([a,b]) => `<div><span>${esc(a)}</span>${esc(b)}</div>`).join('')}</div>
+    <ul>${v.pros.map(p => `<li class="plus">${esc(p)}</li>`).join('')}
+        ${v.cons.map(c => `<li class="minus">${esc(c)}</li>`).join('')}</ul>
+    <div class="verdict">${v.verdict}</div>
+    <button class="reset" data-reset="${v.key}">↺ Reset this pile</button></div>`;
+}
+
+document.getElementById('segs').innerHTML =
+  VARIANTS.map((v,i) => `<button class="seg${i===0?' on':''}" data-v="${v.key}">${esc(v.tab)}</button>`).join('');
+document.getElementById('stage').innerHTML =
+  VARIANTS.map((v,i) => `<section class="variant${i===0?' on':''}" id="var-${v.key}">${phoneHTML(v)}${notesHTML(v)}</section>`).join('');
+
+document.getElementById('segs').onclick = e => {
+  const b = e.target.closest('[data-v]'); if(!b) return;
+  document.querySelectorAll('.seg').forEach(s => s.classList.toggle('on', s === b));
+  document.querySelectorAll('.variant').forEach(s => s.classList.toggle('on', s.id === 'var-' + b.dataset.v));
+  VARIANTS.forEach(v => { if(v.key !== b.dataset.v) stopAuto(v.key); });   // an unseen deck must not run
+  if(b.dataset.v === '4') render('4');
+};
+document.getElementById('stage').addEventListener('click', e => {
+  const b = e.target.closest('[data-reset]'); if(!b) return;
+  const k = b.dataset.reset, o = S[k].open, a = S[k].auto;
+  stopAuto(k); S[k] = fresh(); S[k].open = o; S[k].auto = a; render(k);
+});
+
+/* ===================== brain ===================== */
+const BRAIN_FULL = 12;
+const STATES = [
+  { at:.75, fill:'#FF453A', mouth:'M16.4 27.6q3.6 -3 7.2 0' },
+  { at:.45, fill:'#FF9F0A', mouth:'M16.4 27.2q3.6 -1.4 7.2 0' },
+  { at:.18, fill:'#FFD60A', mouth:'M16.4 26.8h7.2' },
+  { at:-1,  fill:'#34C759', mouth:'M16.4 26.4q3.6 3 7.2 0' }
+];
+const prevN = {};
+function renderBrain(k){
+  const n = S[k].pile.length, level = Math.min(1, n / BRAIN_FULL);
+  const st = STATES.find(s => level > s.at) || STATES[STATES.length-1];
+  const fillTop = 34 - level * 30, drowned = fillTop < 27;
+  const $ = id => document.getElementById(id + '-' + k);
+  $('bfill').setAttribute('y', String(fillTop)); $('bfill').setAttribute('fill', st.fill);
+  $('bmouth').setAttribute('d', st.mouth);
+  $('bmouth').setAttribute('stroke', drowned ? '#FFFFFF' : st.fill);
+  $('bout').setAttribute('stroke', drowned ? '#FFFFFF' : 'currentColor');
+  $('bdet').setAttribute('stroke', drowned ? '#FFFFFF' : 'currentColor');
+  $('bcount').textContent = n; $('brain').style.color = st.fill;
+  const el = $('brain');
+  if(prevN[k] !== undefined && prevN[k] !== n){
+    const kind = n > prevN[k] ? 'shake' : 'relief';
+    el.classList.remove('shake','relief'); void el.offsetWidth; el.classList.add(kind);
+    setTimeout(() => el.classList.remove(kind), 620);
+  }
+  prevN[k] = n;
+}
+
+/* ===================== actions ===================== */
+function topOf(k){ const st = S[k]; return st.pile[Math.min(st.idx, st.pile.length-1)]; }
+function file(k, id, listId){
+  const st = S[k];
+  stopAuto(k);
+  const item = st.pile.find(p => p.id === id); if(!item) return;
+  st.pile = st.pile.filter(p => p.id !== id);
+  item.list = listId; st.filed.push(item);
+  st.last = { item, at: st.idx };
+  if(st.idx >= st.pile.length) st.idx = Math.max(0, st.pile.length - 1);
+  st.picking = false;
+  snack(k, `Filed in ${L(listId).name}`);
+  render(k);
+}
+function skip(k){
+  const st = S[k]; stopAuto(k);
+  if(st.pile.length < 2) return;
+  st.idx = (st.idx + 1) % st.pile.length;
+  st.picking = false; render(k);
+}
+function undo(k){
+  const st = S[k]; if(!st.last) return;
+  stopAuto(k);
+  const { item, at } = st.last;
+  delete item.list;
+  st.filed = st.filed.filter(f => f.id !== item.id);
+  st.pile.splice(Math.min(at, st.pile.length), 0, item);
+  st.idx = Math.min(at, st.pile.length - 1);
+  st.last = null; hideSnack(k); render(k);
+}
+const snackT = {};
+function snack(k, msg){
+  const el = document.getElementById('snack-' + k);
+  document.getElementById('snacktext-' + k).textContent = msg;
+  el.classList.add('on');
+  clearTimeout(snackT[k]); snackT[k] = setTimeout(() => el.classList.remove('on'), 3200);
+}
+function hideSnack(k){ document.getElementById('snack-' + k).classList.remove('on'); }
+
+/* ===================== wiring ===================== */
+VARIANTS.forEach(v => {
+  const k = v.key;
+  document.getElementById('brain-' + k).onclick = () => {
+    S[k].open = true; document.getElementById('sheet-' + k).classList.add('on'); render(k);
+  };
+  document.getElementById('close-' + k).onclick = () => {
+    S[k].open = false; stopAuto(k); document.getElementById('sheet-' + k).classList.remove('on');
+  };
+  document.getElementById('undo-' + k).onclick = () => undo(k);
+  render(k);
+});
+
+function render(k){
+  renderBrain(k);
+  stopAuto(k);
+  const body = document.getElementById('body-' + k), foot = document.getElementById('foot-' + k), st = S[k];
+  if(!st.pile.length){
+    body.innerHTML = `<div class="done"><div class="big">🧠</div><h4>Clear head</h4>
+      <p>All ${st.filed.length} thoughts filed. Nothing sitting in Unsorted.</p></div>`;
+    foot.innerHTML = `<button class="btn ghost" id="again-${k}">↺ Run it again</button>`;
+    document.getElementById('again-' + k).onclick = () => {
+      const o = st.open, a = st.auto; S[k] = fresh(); S[k].open = o; S[k].auto = a; render(k);
+    };
+    return;
+  }
+  ({'1':r1, '2':r2, '3':r3, '4':r4})[k](k, body, foot, topOf(k));
+}
+
+function stackHTML(k, top, extra=''){
+  const st = S[k], nxt = st.pile.filter(p => p.id !== top.id).slice(0,2);
+  return `<div class="counter">${st.filed.length + 1} of ${st.filed.length + st.pile.length}</div>
+    <div class="deck">
+      ${nxt.map((p,i) => `<div class="card ${i===0?'behind':'behind2'}">
+          <div class="cmeta">${esc(p.when)}</div><div class="ctxt">${esc(p.t)}</div></div>`).reverse().join('')}
+      <div class="card" id="top-${k}" style="z-index:2">
+        <div class="cmeta">${esc(top.when)}</div><div class="ctxt">${esc(top.t)}</div>${extra}</div>
+    </div>`;
+}
+function flyThenFile(k, id, listId){
+  const card = document.getElementById('top-' + k);
+  if(card) card.classList.add('gone');
+  setTimeout(() => file(k, id, listId), 150);
+}
+
+/* ---------- 1 · chips, suggestion pre-selected ---------- */
+function r1(k, body, foot, top){
+  const g = L(top.guess);
+  body.innerHTML = stackHTML(k, top, `<div class="why" style="margin-top:10px">Suggested: ${esc(g.name)} — ${esc(top.why)}</div>`) +
+    `<div class="chiplabel">or send it to</div>
+     <div class="chips">${LISTS.map(l => `<button class="chip${l.id===top.guess?' sugg-on':''}" data-l="${l.id}">
+        <span class="d" style="background:${l.c}"></span>${esc(l.name)}${l.id===top.guess?'<span class="star">★</span>':''}</button>`).join('')}</div>`;
+  foot.innerHTML = `<button class="btn" id="ok-${k}"><span class="d" style="background:${g.c}"></span>File in ${esc(g.name)}</button>
+    <div class="brow" style="margin-top:8px"><button class="btn ghost sm" id="skip-${k}">Skip</button></div>`;
+  body.querySelectorAll('[data-l]').forEach(c => c.onclick = () => flyThenFile(k, top.id, c.dataset.l));
+  document.getElementById('ok-' + k).onclick = () => flyThenFile(k, top.id, top.guess);
+  document.getElementById('skip-' + k).onclick = () => skip(k);
+}
+
+/* ---------- 2 · quiet, picker on demand ---------- */
+function r2(k, body, foot, top){
+  const st = S[k], g = L(top.guess);
+  body.innerHTML = stackHTML(k, top,
+      `<div class="sugg" id="sg-${k}">
+         <div><div class="lbl">Goes to</div>
+           <div class="nm"><span class="d" style="background:${g.c}"></span>${esc(g.name)}</div></div>
+         <span class="chg">Change</span>
+       </div><div class="why">${esc(top.why)}</div>`) +
+    `<div class="picker${st.picking?' on':''}" id="pk-${k}">
+       <h5>Send it somewhere else</h5>
+       <div class="pq">${esc(top.t)}</div>
+       <div class="chips">${LISTS.map(l => `<button class="chip${l.id===top.guess?' sugg-on':''}" data-l="${l.id}">
+          <span class="d" style="background:${l.c}"></span>${esc(l.name)}</button>`).join('')}</div>
+       <button class="btn ghost sm" id="pcancel-${k}" style="margin-top:14px">Cancel</button>
+     </div>`;
+  foot.innerHTML = `<button class="btn" id="ok-${k}"><span class="d" style="background:${g.c}"></span>File in ${esc(g.name)}</button>
+    <div class="brow" style="margin-top:8px">
+      <button class="btn ghost sm" id="chg-${k}">Change list</button>
+      <button class="btn ghost sm" id="skip-${k}">Skip</button></div>`;
+  const openPicker = () => { st.picking = true; document.getElementById('pk-' + k).classList.add('on'); };
+  document.getElementById('sg-' + k).onclick = openPicker;
+  document.getElementById('chg-' + k).onclick = openPicker;
+  document.getElementById('pcancel-' + k).onclick = () => {
+    st.picking = false; document.getElementById('pk-' + k).classList.remove('on');
+  };
+  body.querySelectorAll('#pk-' + k + ' [data-l]').forEach(c => c.onclick = () => {
+    st.picking = false; file(k, top.id, c.dataset.l);
+  });
+  document.getElementById('ok-' + k).onclick = () => flyThenFile(k, top.id, top.guess);
+  document.getElementById('skip-' + k).onclick = () => skip(k);
+}
+
+/* ---------- 3 · swipe ---------- */
+function r3(k, body, foot, top){
+  const st = S[k], g = L(top.guess);
+  const alts = (ALT[top.guess] || ['today','someday']);
+  body.innerHTML = `<div class="swrap">` + stackHTML(k, top,
+      `<div class="sugg" id="sg-${k}">
+         <div><div class="lbl">Swipe right files it in</div>
+           <div class="nm"><span class="d" style="background:${g.c}"></span>${esc(g.name)}</div></div>
+         <span class="chg">Change</span></div>`) +
+    `<div class="stamp file" id="st-file-${k}">${esc(g.name)}</div>
+     <div class="stamp skip" id="st-skip-${k}">Later</div></div>
+     <div class="swipehint">Flick right to file · flick left for later · tap the card to change</div>
+     <div class="picker${st.picking?' on':''}" id="pk-${k}">
+       <h5>Send it somewhere else</h5><div class="pq">${esc(top.t)}</div>
+       <div class="chips">${LISTS.map(l => `<button class="chip${l.id===top.guess?' sugg-on':''}" data-l="${l.id}">
+          <span class="d" style="background:${l.c}"></span>${esc(l.name)}</button>`).join('')}</div>
+       <button class="btn ghost sm" id="pcancel-${k}" style="margin-top:14px">Cancel</button></div>`;
+  foot.innerHTML = `<div class="chiplabel" style="margin-bottom:6px">for the mouse, and for anyone who never finds the swipe</div>
+    <div class="brow"><button class="btn sm" id="ok-${k}">File · ${esc(g.name)}</button>
+      ${alts.map(a => `<button class="btn ghost sm" data-l="${a}">${esc(L(a).name)}</button>`).join('')}</div>`;
+  const card = document.getElementById('top-' + k);
+  card.classList.add('live');
+  const openPicker = () => { st.picking = true; document.getElementById('pk-' + k).classList.add('on'); };
+  document.getElementById('sg-' + k).onclick = e => { e.stopPropagation(); openPicker(); };
+  document.getElementById('pcancel-' + k).onclick = () => {
+    st.picking = false; document.getElementById('pk-' + k).classList.remove('on');
+  };
+  body.querySelectorAll('#pk-' + k + ' [data-l]').forEach(c => c.onclick = () => {
+    st.picking = false; file(k, top.id, c.dataset.l);
+  });
+  document.getElementById('ok-' + k).onclick = () => flyThenFile(k, top.id, top.guess);
+  foot.querySelectorAll('[data-l]').forEach(b => b.onclick = () => flyThenFile(k, top.id, b.dataset.l));
+  // a swipe ends in a click event too — without this, every swipe also opened the picker
+  card.onclick = () => {
+    if(card.dataset.swiped){ delete card.dataset.swiped; return; }
+    openPicker();
+  };
+  card.addEventListener('pointerdown', e => startSwipe(e, k, card, top));
+}
+
+let sw = null;
+function startSwipe(e, k, card, top){
+  if(e.target.closest('#sg-' + k)) return;
+  card.setPointerCapture(e.pointerId);
+  sw = { k, card, top, x0:e.clientX, dx:0, moved:false };
+  card.style.transition = 'none';
+  card.addEventListener('pointermove', onSwipe);
+  card.addEventListener('pointerup', endSwipe);
+  card.addEventListener('pointercancel', endSwipe);
+}
+function onSwipe(e){
+  if(!sw) return;
+  sw.dx = e.clientX - sw.x0;
+  if(Math.abs(sw.dx) > 4) sw.moved = true;
+  if(!sw.moved) return;
+  e.preventDefault();
+  sw.card.style.transform = `translateX(${sw.dx}px) rotate(${sw.dx * .045}deg)`;
+  const t = Math.min(1, Math.abs(sw.dx) / 90);
+  document.getElementById('st-file-' + sw.k).style.opacity = sw.dx > 0 ? t : 0;
+  document.getElementById('st-skip-' + sw.k).style.opacity = sw.dx < 0 ? t : 0;
+}
+function endSwipe(e){
+  if(!sw) return;
+  const s = sw; sw = null;
+  s.card.removeEventListener('pointermove', onSwipe);
+  s.card.removeEventListener('pointerup', endSwipe);
+  s.card.removeEventListener('pointercancel', endSwipe);
+  s.card.style.transition = '';
+  if(s.moved) s.card.dataset.swiped = '1';     // so the trailing click is not read as a tap
+  document.getElementById('st-file-' + s.k).style.opacity = 0;
+  document.getElementById('st-skip-' + s.k).style.opacity = 0;
+  if(s.dx > 90){
+    s.card.style.transform = 'translateX(125%) rotate(8deg)';
+    s.card.style.opacity = 0;
+    setTimeout(() => file(s.k, s.top.id, s.top.guess), 160);
+  } else if(s.dx < -90){
+    s.card.style.transform = 'translateX(-125%) rotate(-8deg)';
+    s.card.style.opacity = 0;
+    setTimeout(() => skip(s.k), 160);
+  } else {
+    s.card.style.transform = '';
+    if(s.moved) e.stopPropagation();
+  }
+}
+
+/* ---------- 4 · auto-file after a beat ---------- */
+const AUTO_MS = 2500;
+function stopAuto(k){
+  const st = S[k]; if(!st) return;
+  if(st.timer){ clearTimeout(st.timer); st.timer = null; }
+  if(st.raf){ cancelAnimationFrame(st.raf); st.raf = null; }
+}
+function r4(k, body, foot, top){
+  const st = S[k], g = L(top.guess);
+  body.innerHTML = stackHTML(k, top,
+      `<div class="ring"><div class="track"><div class="fillb" id="fb-${k}"></div></div>
+        <div class="txt" id="rt-${k}">→ ${esc(g.name)}</div></div>
+       <div class="why">${esc(top.why)}</div>`) +
+    `<div class="chiplabel" id="cl-${k}" style="margin-top:2px">${st.auto ? 'tap anything to stop it' : 'send it to'}</div>
+     <div class="chips">${LISTS.map(l => `<button class="chip${l.id===top.guess?' sugg-on':''}" data-l="${l.id}">
+        <span class="d" style="background:${l.c}"></span>${esc(l.name)}</button>`).join('')}</div>`;
+  foot.innerHTML = `<div class="brow" style="align-items:center">
+      <button class="btn sm" id="ok-${k}" style="flex:1"><span class="d" style="background:${g.c}"></span>File now</button>
+      <button class="btn ghost sm" id="skip-${k}" style="flex:0 0 92px">Skip</button></div>
+    <div style="display:flex;align-items:center;margin-top:10px">
+      <span class="autopill">Auto-file</span>
+      <button id="sw-${k}" class="sw${st.auto?' on':''}" style="margin-left:auto;border:0;cursor:pointer"><i></i></button>
+    </div>`;
+  body.querySelectorAll('[data-l]').forEach(c => c.onclick = () => flyThenFile(k, top.id, c.dataset.l));
+  document.getElementById('ok-' + k).onclick = () => flyThenFile(k, top.id, top.guess);
+  document.getElementById('skip-' + k).onclick = () => skip(k);
+  document.getElementById('sw-' + k).onclick = () => {
+    st.auto = !st.auto;
+    if(!st.auto){ stopAuto(k); }
+    render(k);
+  };
+  // any touch on the deck holds it — the point is that intervening is cheap
+  document.getElementById('top-' + k).addEventListener('pointerdown', () => {
+    if(!st.timer) return;
+    stopAuto(k);
+    document.getElementById('fb-' + k).style.width = '0%';
+    document.getElementById('rt-' + k).textContent = 'Held';
+    document.getElementById('cl-' + k).textContent = 'send it to';
+  });
+
+  if(st.auto && st.open && document.getElementById('var-' + k).classList.contains('on')){
+    const bar = document.getElementById('fb-' + k);
+    const start = performance.now();
+    const step = now => {
+      const p = Math.min(1, (now - start) / AUTO_MS);
+      bar.style.width = (p * 100) + '%';
+      if(p < 1) st.raf = requestAnimationFrame(step);
+    };
+    st.raf = requestAnimationFrame(step);
+    st.timer = setTimeout(() => { st.timer = null; flyThenFile(k, top.id, top.guess); }, AUTO_MS);
+  }
+}
+</script>
+</body></html>
