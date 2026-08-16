@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme:light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme:dark)">
+<title>Chuckle · sorting explorations</title>
+<!--
+  Chuckle — how you sort Unsorted into Lists. Four working explorations, 2026-08-16.
+
+  The premise (Anshul, 2026-08-16): sorting lives INSIDE the brain icon. The brain already
+  shows the pile; tapping it should be where you drain the pile, not a detour into a tree.
+  Today v1.html sends the brain to the Lists tree, which is browsing, not sorting.
+
+  Every variant below shares one model and one set of actions, so the only thing that differs
+  is the interaction. Each has its own copy of the pile — playing with A does not drain B.
+  Reset any variant with the ↺ button.
+
+  Shared rules, held constant across all four:
+    - the pile is the same nine captured thoughts
+    - filing removes from Unsorted and drains the brain by one
+    - every file is undoable for a few seconds
+    - "Today" is a destination like any list, and so is Bin
+    - nothing here reformats or rewrites the captured text — capture stays raw
+-->
+<style>
+:root{
+  --accent:#0A84FF; --accent-soft:#E9F2FF; --accent-ink:#0060DF;
+  --bg:#F2F2F7; --surface:#FFFFFF; --surface-2:#FFFFFF;
+  --ink:#1C1C1E; --ink-soft:#3C3C4399; --ink-faint:#3C3C434D; --ink-mid:#6E6E73;
+  --rule:#3C3C431F; --good:#34C759; --warn:#FF3B30; --prog:#FF9F0A;
+  --chrome:rgba(249,249,249,.86); --page:#E9E9EE;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Helvetica Neue",sans-serif;
+  --shadow:0 1px 2px rgba(0,0,0,.04),0 10px 30px rgba(0,0,0,.06);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --accent-soft:#0A84FF26; --accent-ink:#64B0FF;
+    --bg:#000000; --surface:#1C1C1E; --surface-2:#2C2C2E;
+    --ink:#FFFFFF; --ink-soft:#EBEBF599; --ink-faint:#EBEBF54D; --ink-mid:#98989F;
+    --rule:#54545899; --chrome:rgba(28,28,30,.82); --page:#111114;
+    --shadow:0 1px 2px rgba(0,0,0,.5);
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--page);color:var(--ink);font-family:var(--sans);font-size:17px;line-height:1.45;
+     -webkit-font-smoothing:antialiased;padding-bottom:60px}
+
+/* ---------- page chrome ---------- */
+.top{position:sticky;top:0;z-index:50;background:var(--chrome);backdrop-filter:saturate(180%) blur(20px);
+     -webkit-backdrop-filter:saturate(180%) blur(20px);border-bottom:.5px solid var(--rule);
+     padding:14px 16px 12px}
+.top .wrap{max-width:1180px;margin:0 auto}
+.eyebrow{font-size:12.5px;font-weight:650;color:var(--ink-mid);letter-spacing:.02em;text-transform:uppercase}
+h1{font-size:25px;font-weight:700;letter-spacing:-.022em;margin:2px 0 3px}
+.lede{font-size:14.5px;color:var(--ink-mid);max-width:62ch}
+.segs{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}
+.seg{border:0;background:var(--surface);color:var(--ink);font:inherit;font-size:13.5px;font-weight:650;
+     padding:8px 13px;border-radius:11px;cursor:pointer;box-shadow:var(--shadow);letter-spacing:-.005em}
+.seg.on{background:var(--accent);color:#fff}
+
+.stage{max-width:1180px;margin:22px auto 0;padding:0 16px}
+.variant{display:none}
+.variant.on{display:grid;grid-template-columns:1fr;gap:22px;justify-items:center}
+@media (min-width:900px){ .variant.on{grid-template-columns:390px 1fr;align-items:start;justify-items:start} }
+
+/* ---------- phone ---------- */
+.phone{width:min(390px,100%);height:720px;background:var(--bg);border-radius:34px;position:relative;
+       overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,.10),0 26px 60px rgba(0,0,0,.18);
+       border:.5px solid var(--rule);display:flex;flex-direction:column}
+.sbar{height:34px;flex:0 0 auto;display:flex;align-items:flex-end;justify-content:space-between;
+      padding:0 20px 3px;font-size:12.5px;font-weight:650;color:var(--ink)}
+.sbar .dots{letter-spacing:2px;opacity:.7}
+
+/* the faux capture page behind everything — context for where the brain lives */
+.cap{flex:1;overflow:hidden;padding:8px 20px 0;position:relative}
+.cap .cdate{font-size:12.5px;font-weight:650;color:var(--ink-mid);padding-top:4px}
+.cap h2{font-size:21px;font-weight:700;letter-spacing:-.02em;margin:6px 0 6px}
+.cap p{font-size:16px;color:var(--ink);margin-bottom:4px}
+.cap p.b{padding-left:16px;position:relative}
+.cap p.b::before{content:'•';position:absolute;left:2px;color:var(--ink-faint)}
+.cap .caret{display:inline-block;width:2px;height:18px;background:var(--accent);vertical-align:-3px;
+            animation:blink 1.1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.cap .fade{position:absolute;left:0;right:0;bottom:0;height:70px;
+           background:linear-gradient(transparent,var(--bg))}
+
+.bar{flex:0 0 auto;height:56px;display:flex;align-items:center;gap:14px;padding:0 18px;
+     background:var(--chrome);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+     border-top:.5px solid var(--rule)}
+.bar .tool{border:0;background:none;color:var(--ink-soft);font:inherit;font-size:16px;cursor:default}
+.bar .tool.nw{font-size:13.5px;font-weight:650;color:var(--accent)}
+
+/* ---------- the brain ---------- */
+.brain{margin-left:auto;display:flex;align-items:center;gap:6px;border:0;background:none;cursor:pointer;
+       padding:4px 2px}
+.brain svg{overflow:visible}
+.brain .bfill{transition:y .55s cubic-bezier(.3,.8,.3,1),fill .5s}
+.brain .bmouth{transition:d .35s ease,stroke .5s}
+.brain .bcount{font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums}
+.brain.shake svg{animation:bshake .42s cubic-bezier(.36,.07,.19,.97)}
+@keyframes bshake{10%,90%{transform:translateX(-1px)}20%,80%{transform:translateX(2px)}
+                  30%,50%,70%{transform:translateX(-3px)}40%,60%{transform:translateX(3px)}}
+.brain.relief svg{animation:brelief .5s cubic-bezier(.3,1.4,.5,1)}
+@keyframes brelief{0%{transform:scale(1)}45%{transform:scale(1.16)}100%{transform:scale(1)}}
+.brain .hint{position:absolute;bottom:60px;right:14px;background:var(--ink);color:var(--bg);
+             font-size:11.5px;font-weight:650;padding:5px 9px;border-radius:8px;pointer-events:none}
+
+/* ---------- the sort sheet (all variants live in one) ---------- */
+.sheet{position:absolute;inset:0;background:var(--bg);z-index:20;display:flex;flex-direction:column;
+       transform:translateY(100%);transition:transform .32s cubic-bezier(.32,.72,0,1)}
+.sheet.on{transform:none}
+.shead{flex:0 0 auto;padding:16px 18px 10px;display:flex;align-items:flex-start;gap:10px;
+       border-bottom:.5px solid var(--rule)}
+.shead .stitle{flex:1}
+.shead h3{font-size:19px;font-weight:700;letter-spacing:-.02em}
+.shead .ssub{font-size:12.5px;color:var(--ink-mid);margin-top:1px}
+.shead .x{border:0;background:none;font:inherit;font-size:15px;font-weight:650;color:var(--accent);
+          cursor:pointer;padding:2px 0}
+.sbody{flex:1;overflow-y:auto;padding:14px 16px 18px}
+.sfoot{flex:0 0 auto;padding:10px 16px calc(12px);border-top:.5px solid var(--rule);
+       background:var(--chrome);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+
+.btn{width:100%;border:0;border-radius:13px;padding:13px;font:inherit;font-size:15.5px;font-weight:650;
+     cursor:pointer;background:var(--accent);color:#fff;letter-spacing:-.005em}
+.btn[disabled]{opacity:.35;cursor:default}
+.btn.ghost{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+
+.done{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;
+      text-align:center;gap:6px;padding:0 34px}
+.done .big{font-size:44px}
+.done h4{font-size:19px;font-weight:700;letter-spacing:-.02em}
+.done p{font-size:14px;color:var(--ink-mid)}
+
+/* list chips, shared */
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{display:inline-flex;align-items:center;gap:7px;border:.5px solid var(--rule);background:var(--surface);
+      color:var(--ink);font:inherit;font-size:14px;font-weight:600;padding:9px 13px;border-radius:12px;
+      cursor:pointer;letter-spacing:-.005em}
+.chip:active{transform:scale(.96)}
+.chip .d{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
+.chip.sel{background:var(--accent);border-color:var(--accent);color:#fff}
+.chip.sel .d{background:#fff!important}
+.chip.sm{font-size:12.5px;padding:5px 9px;border-radius:9px}
+
+/* undo toast inside the phone */
+/* sits ABOVE the footer, not on it — at bottom:14px it covered the sheet's own buttons */
+.snack{position:absolute;left:14px;right:14px;bottom:74px;z-index:30;background:var(--ink);color:var(--bg);
+       border-radius:13px;padding:11px 14px;display:flex;align-items:center;gap:10px;font-size:13.5px;
+       font-weight:600;opacity:0;transform:translateY(10px);pointer-events:none;
+       transition:opacity .18s,transform .22s}
+.snack.on{opacity:1;transform:none;pointer-events:auto}
+.snack .u{margin-left:auto;border:0;background:none;color:#4DA3FF;font:inherit;font-size:13.5px;
+          font-weight:700;cursor:pointer}
+@media (prefers-color-scheme:dark){ .snack .u{color:#0A84FF} }
+
+/* ---------- A · the deck ---------- */
+.deck{position:relative;height:200px;margin-bottom:16px}
+.card{position:absolute;inset:0;background:var(--surface);border-radius:18px;box-shadow:var(--shadow);
+      padding:20px 18px;display:flex;flex-direction:column;transition:transform .3s cubic-bezier(.32,.72,0,1),opacity .25s}
+.card.behind{transform:scale(.955) translateY(15px);opacity:.72;z-index:1}
+.card.behind2{transform:scale(.91) translateY(29px);opacity:.42;z-index:0}
+.card.gone{transform:translateX(120%) rotate(7deg);opacity:0}
+.card .ctxt{font-size:19px;font-weight:600;letter-spacing:-.015em;line-height:1.32;flex:1}
+.card .cmeta{font-size:11.5px;font-weight:650;color:var(--ink-faint);text-transform:uppercase;
+             letter-spacing:.04em;margin-bottom:9px}
+.counter{font-size:12.5px;font-weight:650;color:var(--ink-mid);text-align:center;margin-bottom:12px}
+.deckrow{display:flex;gap:8px;margin-top:11px}
+.deckrow .btn{padding:11px;font-size:14px}
+
+/* ---------- B · the sweep ---------- */
+.rows{background:var(--surface);border-radius:14px;overflow:hidden;box-shadow:var(--shadow)}
+.row{display:flex;align-items:flex-start;gap:11px;padding:12px 13px;border-bottom:.5px solid var(--rule);
+     cursor:pointer}
+.row:last-child{border-bottom:0}
+.row .tick{width:21px;height:21px;border-radius:50%;border:1.6px solid var(--ink-faint);flex:0 0 auto;
+           margin-top:1px;display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff}
+.row.sel .tick{background:var(--accent);border-color:var(--accent)}
+.row .rtxt{flex:1;font-size:15px;letter-spacing:-.005em}
+.row .rfiled{font-size:12px;font-weight:650;color:var(--good)}
+.row.out{opacity:0;transform:translateX(30px);transition:opacity .22s,transform .24s}
+
+/* ---------- C · the buckets ---------- */
+.tray{display:flex;gap:9px;overflow-x:auto;padding:2px 2px 12px;scrollbar-width:none}
+.tray::-webkit-scrollbar{display:none}
+.tile{flex:0 0 auto;width:172px;min-height:88px;background:var(--surface);border-radius:14px;
+      box-shadow:var(--shadow);padding:12px;font-size:14px;font-weight:600;letter-spacing:-.005em;
+      cursor:grab;touch-action:none;user-select:none;transition:transform .18s,opacity .2s}
+.tile.sel{outline:2.5px solid var(--accent);outline-offset:2px}
+.tile.drag{opacity:.4}
+.tile.gone{opacity:0;transform:scale(.7)}
+.dragghost{position:fixed;z-index:99;width:172px;background:var(--surface);border-radius:14px;padding:12px;
+       font-size:14px;font-weight:600;box-shadow:0 12px 34px rgba(0,0,0,.28);pointer-events:none;
+       transform:rotate(-2.5deg)}
+.buckets{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:4px}
+.bucket{background:var(--surface);border:1.5px dashed var(--rule);border-radius:13px;padding:12px 11px;
+        display:flex;align-items:center;gap:9px;cursor:pointer;transition:border-color .15s,background .15s,transform .15s}
+.bucket.hot{border-color:var(--accent);background:var(--accent-soft);transform:scale(1.03);border-style:solid}
+.bucket .bn{flex:1;font-size:13.5px;font-weight:650;letter-spacing:-.005em}
+.bucket .bc{font-size:12px;font-weight:700;color:var(--ink-faint);font-variant-numeric:tabular-nums}
+.bucket .d{width:9px;height:9px;border-radius:50%;flex:0 0 auto}
+
+/* ---------- D · pre-sorted ---------- */
+.grp{margin-bottom:16px}
+.grp .ghead{display:flex;align-items:center;gap:8px;margin-bottom:7px;padding:0 3px}
+.grp .ghead .gn{font-size:13px;font-weight:700;letter-spacing:-.005em}
+.grp .ghead .gc{font-size:11.5px;color:var(--ink-faint);font-weight:650}
+.grp .ghead .d{width:9px;height:9px;border-radius:50%}
+.pcard{background:var(--surface);border-radius:12px;box-shadow:var(--shadow);padding:11px 12px;
+       margin-bottom:6px;font-size:14.5px;letter-spacing:-.005em}
+.pcard .move{margin-top:7px;display:flex;gap:6px;flex-wrap:wrap}
+.pcard .why{font-size:11.5px;color:var(--ink-faint);margin-top:4px}
+
+/* ---------- the notes column ---------- */
+.notes{max-width:560px;font-size:15px}
+.notes h3{font-size:20px;font-weight:700;letter-spacing:-.02em;margin-bottom:3px}
+.notes .kicker{font-size:12.5px;font-weight:650;color:var(--accent);text-transform:uppercase;
+               letter-spacing:.04em}
+.notes p{color:var(--ink-soft);margin:9px 0}
+.notes ul{margin:9px 0 0 0;list-style:none}
+.notes li{position:relative;padding-left:19px;margin-bottom:7px;color:var(--ink-soft);font-size:14.5px}
+.notes li::before{content:'';position:absolute;left:3px;top:8px;width:6px;height:6px;border-radius:50%;
+                  background:var(--ink-faint)}
+.notes li.plus::before{background:var(--good)}
+.notes li.minus::before{background:var(--warn)}
+.notes .verdict{margin-top:16px;background:var(--surface);border-radius:14px;padding:14px;
+                box-shadow:var(--shadow);font-size:14.5px;color:var(--ink)}
+.notes .verdict b{font-weight:700}
+.reset{margin-top:14px;border:0;background:var(--surface);box-shadow:var(--shadow);color:var(--ink-mid);
+        font:inherit;font-size:13px;font-weight:650;padding:8px 13px;border-radius:11px;cursor:pointer}
+</style>
+</head>
+<body>
+
+<div class="top"><div class="wrap">
+  <div class="eyebrow">Chuckle · explorations</div>
+  <h1>Sorting, from inside the brain</h1>
+  <div class="lede">Four ways to drain Unsorted. Same nine captured thoughts, same lists, same undo —
+    only the interaction changes. Tap the brain in each phone to start.</div>
+  <div class="segs" id="segs"></div>
+</div></div>
+
+<div class="stage" id="stage"></div>
+
+<script>
+/* ===================== shared model =====================
+   One pile, one set of destinations. Each variant gets its own copy so they don't drain
+   each other. Nothing here rewrites the captured text — capture stays raw, sorting only moves. */
+
+const LISTS = [
+  { id:'today',    name:'Today',      c:'#0A84FF' },
+  { id:'work',     name:'Work',       c:'#5E5CE6' },
+  { id:'smebi',    name:'SME BI',     c:'#30B0C7' },
+  { id:'career',   name:'Career',     c:'#FF9F0A' },
+  { id:'trading',  name:'Trading',    c:'#34C759' },
+  { id:'health',   name:'Health',     c:'#FF375F' },
+  { id:'personal', name:'Personal',   c:'#AF52DE' },
+  { id:'someday',  name:'Someday',    c:'#8E8E93' }
+];
+const listById = id => LISTS.find(l => l.id === id);
+
+const PILE = [
+  { id:'p1', t:'ask Saloni where the row-level policy review landed',      when:'today · 9:12',  guess:'work',     why:'mentions a colleague and a review' },
+  { id:'p2', t:'TSM backtest — check the Sharpe held after costs',          when:'today · 9:14',  guess:'trading',  why:'"backtest", "Sharpe"' },
+  { id:'p3', t:'book Delhi hotel, ceiling ₹8,000 for Fri/Sat',             when:'today · 9:20',  guess:'personal', why:'travel, a price ceiling' },
+  { id:'p4', t:'STAR story: the zero-downtime migration, 40M rows',        when:'today · 10:02', guess:'career',   why:'"STAR story"' },
+  { id:'p5', t:'wrist stretches keep getting skipped — move to morning',    when:'today · 10:40', guess:'health',   why:'an exercise you already track' },
+  { id:'p6', t:'alert copy: under 200 characters, one number, no jargon',   when:'today · 11:15', guess:'smebi',    why:'"alert copy" — the pilot spec' },
+  { id:'p7', t:'idea: the brain icon should be where sorting happens',      when:'today · 11:48', guess:'work',     why:'no strong signal — a guess' },
+  { id:'p8', t:'renew the domain before it lapses',                        when:'today · 14:03', guess:'personal', why:'admin, has a deadline' },
+  { id:'p9', t:"Pooja's new glasses — order the second pair",              when:'today · 16:30', guess:'personal', why:'family, a purchase' }
+];
+
+const VARIANTS = [
+  { key:'A', tab:'A · One at a time', title:'One at a time',
+    sub:'The deck. One thought, one decision.',
+    kicker:'Variant A',
+    lead:'The brain deals you one captured thought at a time. Pick a list. The card leaves, the next one arrives, the brain drops by one. You are never looking at the pile, only at the top of it.',
+    pros:['Zero scanning. The decision is always the same size.',
+          'Fastest per item once you get a rhythm going — one tap files it.',
+          'The count and the drain are right there, so finishing feels finite.'],
+    cons:['You cannot see patterns. Three thoughts that belong in one new list look unrelated when they arrive one at a time.',
+          'No skimming to the one item you actually came here for.',
+          'Nine cards feels like a chore queue. Forty feels like a punishment.'],
+    verdict:'<b>Best when the pile is small and you are sorting on purpose</b> — waiting for coffee, five items, done.' },
+
+  { key:'B', tab:'B · Sweep', title:'The sweep',
+    sub:'See it all. Tick several. File them together.',
+    kicker:'Variant B',
+    lead:'The brain opens the whole pile as a list. Tap any row to file it alone, or tick several and send them somewhere in one move. Familiar — it is an inbox, and everybody already knows inboxes.',
+    pros:['You see everything, so you can group as you go — the three Trading thoughts get filed together.',
+          'Batching is where the real speed is at 20+ items.',
+          'You can come here just to find one thing and leave.'],
+    cons:['Reading nine rows before acting is real cognitive load. It is a to-do list about your to-do list.',
+          'Two-step for a single item: tick, then pick.',
+          'Feels like admin. Nothing about it is satisfying.'],
+    verdict:'<b>Best when the pile is big or repetitive</b> — the Sunday clear-out, not the daily one.' },
+
+  { key:'C', tab:'C · Buckets', title:'Drag to buckets',
+    sub:'Physical. Cards on top, lists below.',
+    kicker:'Variant C',
+    lead:'The pile is a strip of cards. The lists are open buckets underneath. Drag a card into a bucket, or tap a card then tap a bucket if dragging is fiddly. The bucket counts up as it catches things.',
+    pros:['The most satisfying of the four. Sorting actually feels like sorting.',
+          'You keep both the item and all the destinations in view at once.',
+          'Reads instantly. Nobody needs it explained.'],
+    cons:['Dragging on a phone is slow and error-prone next to a tap.',
+          'Eight buckets plus a card strip is a crowded screen. It will not survive twenty lists.',
+          'Novelty wears off. On day 40 you will want the tap.'],
+    verdict:'<b>Best on desktop, or as the playful path</b> — the thing you show someone, not the thing you do every day.' },
+
+  { key:'D', tab:'D · Pre-sorted', title:'Already sorted',
+    sub:'The brain guessed. You confirm or correct.',
+    kicker:'Variant D',
+    lead:'The pile arrives pre-grouped — every thought already sitting under the list it probably belongs in. Confirm the whole thing with one button, or move the ones that are wrong first. Sorting becomes proofreading.',
+    pros:['One tap for the whole pile on a good day. Nothing else here is close.',
+          'It shows you a shape — grouped, you can see that four of these are really one project.',
+          'Cost of a wrong guess is one correction, not a lost thought.'],
+    cons:['A wrong guess that you do not catch is worse than no guess. Things end up filed where you will not look.',
+          'It only works once the app knows your lists. On day one every guess is noise.',
+          'You stop reading. That is fine until the day it matters.'],
+    verdict:'<b>Best as the endgame, not the start.</b> Ship one of A/B/C first, then let this grow on top of it once there is history to learn from.' }
+];
+
+/* ===================== state ===================== */
+const S = {};
+VARIANTS.forEach(v => { S[v.key] = fresh(); });
+function fresh(){
+  return { pile: PILE.map(p => ({...p, list:null})), filed:[], sel:new Set(), pick:null,
+           idx:0, last:null, open:false, target:{} };
+}
+
+/* ===================== markup ===================== */
+const BRAIN_PATH = 'M14.2 5.6c-2.6 0-4.6 1.7-5 4-2.2.5-3.8 2.4-3.8 4.7 0 .9.2 1.7.7 2.4-1.2 1-2 2.5-2 4.2 0 2 1 3.7 2.6 4.7-.1.4-.2.9-.2 1.4 0 3 2.5 5.4 5.6 5.4 1 0 2-.3 2.8-.8.8 1.6 2.5 2.7 4.5 2.7s3.7-1.1 4.5-2.7c.8.5 1.8.8 2.8.8 3.1 0 5.6-2.4 5.6-5.4 0-.5-.1-1-.2-1.4 1.6-1 2.6-2.7 2.6-4.7 0-1.7-.8-3.2-2-4.2.5-.7.7-1.5.7-2.4 0-2.3-1.6-4.2-3.8-4.7-.4-2.3-2.4-4-5-4-1.7 0-3.2.8-4.1 2-.9-1.2-2.4-2-4.1-2z';
+
+function brainHTML(k){
+  return `<button class="brain" id="brain-${k}" title="Unsorted — tap to sort">
+    <svg width="27" height="27" viewBox="0 0 40 40" aria-hidden="true">
+      <defs><clipPath id="clip-${k}"><path d="${BRAIN_PATH}"/></clipPath></defs>
+      <g clip-path="url(#clip-${k})"><rect class="bfill" id="bfill-${k}" x="0" y="40" width="40" height="40"/></g>
+      <path d="${BRAIN_PATH}" class="bout" id="bout-${k}" fill="none" stroke="currentColor" stroke-width="1.6" opacity=".55"/>
+      <path d="M20 8.4v22.4M20 14.5c-2.6 0-4.2 1.4-4.2 3M20 20.4c2.8 0 4.6 1.5 4.6 3.3" class="bdet" id="bdet-${k}"
+            fill="none" stroke="currentColor" stroke-width="1.3" opacity=".32" stroke-linecap="round"/>
+      <path class="bmouth" id="bmouth-${k}" fill="none" stroke-width="1.6" stroke-linecap="round"/>
+    </svg><span class="bcount" id="bcount-${k}">0</span></button>`;
+}
+
+function phoneHTML(v){
+  const k = v.key;
+  return `<div class="phone" id="phone-${k}">
+    <div class="sbar"><span>9:41</span><span class="dots">▮▮▮</span></div>
+    <div class="cap">
+      <div class="cdate">Capture · Sunday, August 16</div>
+      <h2>${esc("Pooja's new glasses")}</h2>
+      <p>order the second pair<span class="caret"></span></p>
+      <h2 style="margin-top:16px">renew the domain</h2>
+      <p class="b">before it lapses</p>
+      <h2 style="margin-top:16px">alert copy</h2>
+      <p class="b">under 200 characters</p>
+      <p class="b">one number, no jargon</p>
+      <div class="fade"></div>
+    </div>
+    <div class="bar">
+      <span class="tool">•</span><span class="tool">☐</span><span class="tool nw">＋ New</span>
+      ${brainHTML(k)}
+    </div>
+    <div class="snack" id="snack-${k}"><span id="snacktext-${k}"></span><button class="u" id="undo-${k}">Undo</button></div>
+    <div class="sheet" id="sheet-${k}">
+      <div class="shead">
+        <div class="stitle"><h3 id="sh-${k}">${esc(v.title)}</h3><div class="ssub" id="ss-${k}">${esc(v.sub)}</div></div>
+        <button class="x" id="close-${k}">Done</button>
+      </div>
+      <div class="sbody" id="body-${k}"></div>
+      <div class="sfoot" id="foot-${k}"></div>
+    </div>
+  </div>`;
+}
+
+function notesHTML(v){
+  return `<div class="notes">
+    <div class="kicker">${esc(v.kicker)}</div>
+    <h3>${esc(v.title)}</h3>
+    <p>${esc(v.lead)}</p>
+    <ul>${v.pros.map(p => `<li class="plus">${esc(p)}</li>`).join('')}
+        ${v.cons.map(c => `<li class="minus">${esc(c)}</li>`).join('')}</ul>
+    <div class="verdict">${v.verdict}</div>
+    <button class="reset" data-reset="${v.key}">↺ Reset this pile</button>
+  </div>`;
+}
+
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+/* ===================== boot the page ===================== */
+document.getElementById('segs').innerHTML =
+  VARIANTS.map((v,i) => `<button class="seg${i===0?' on':''}" data-v="${v.key}">${esc(v.tab)}</button>`).join('');
+document.getElementById('stage').innerHTML =
+  VARIANTS.map((v,i) => `<section class="variant${i===0?' on':''}" id="var-${v.key}">
+      ${phoneHTML(v)}${notesHTML(v)}</section>`).join('');
+
+document.getElementById('segs').onclick = e => {
+  const b = e.target.closest('[data-v]'); if(!b) return;
+  document.querySelectorAll('.seg').forEach(s => s.classList.toggle('on', s === b));
+  document.querySelectorAll('.variant').forEach(s => s.classList.toggle('on', s.id === 'var-' + b.dataset.v));
+};
+document.getElementById('stage').addEventListener('click', e => {
+  const b = e.target.closest('[data-reset]'); if(!b) return;
+  const k = b.dataset.reset;
+  const wasOpen = S[k].open;
+  S[k] = fresh(); S[k].open = wasOpen;
+  render(k);
+});
+
+/* ===================== the brain ===================== */
+const BRAIN_FULL = 12;
+const BRAIN_STATES = [
+  { at:.75, fill:'#FF453A', mouth:'M16.4 27.6q3.6 -3 7.2 0' },
+  { at:.45, fill:'#FF9F0A', mouth:'M16.4 27.2q3.6 -1.4 7.2 0' },
+  { at:.18, fill:'#FFD60A', mouth:'M16.4 26.8h7.2' },
+  { at:-1,  fill:'#34C759', mouth:'M16.4 26.4q3.6 3 7.2 0' }
+];
+const prevN = {};
+function renderBrain(k){
+  const n = S[k].pile.length;
+  const level = Math.min(1, n / BRAIN_FULL);
+  const st = BRAIN_STATES.find(s => level > s.at) || BRAIN_STATES[BRAIN_STATES.length-1];
+  const fillTop = 34 - level * 30, drowned = fillTop < 27;
+  const $ = id => document.getElementById(id + '-' + k);
+  $('bfill').setAttribute('y', String(fillTop));
+  $('bfill').setAttribute('fill', st.fill);
+  $('bmouth').setAttribute('d', st.mouth);
+  $('bmouth').setAttribute('stroke', drowned ? '#FFFFFF' : st.fill);
+  $('bout').setAttribute('stroke', drowned ? '#FFFFFF' : 'currentColor');
+  $('bdet').setAttribute('stroke', drowned ? '#FFFFFF' : 'currentColor');
+  $('bcount').textContent = n;
+  $('brain').style.color = st.fill;
+  const el = $('brain');
+  if(prevN[k] !== undefined && prevN[k] !== n){
+    const kind = n > prevN[k] ? 'shake' : 'relief';
+    el.classList.remove('shake','relief'); void el.offsetWidth; el.classList.add(kind);
+    setTimeout(() => el.classList.remove(kind), 620);
+  }
+  prevN[k] = n;
+}
+
+/* ===================== shared actions ===================== */
+function file(k, itemIds, listId){
+  const st = S[k];
+  const moved = st.pile.filter(p => itemIds.includes(p.id));
+  if(!moved.length) return;
+  st.pile = st.pile.filter(p => !itemIds.includes(p.id));
+  moved.forEach(m => { m.list = listId; st.filed.push(m); });
+  st.last = { items: moved, listId };
+  if(st.idx >= st.pile.length) st.idx = Math.max(0, st.pile.length - 1);
+  st.sel.clear(); st.pick = null;
+  const l = listById(listId);
+  snack(k, moved.length === 1 ? `Filed in ${l.name}` : `${moved.length} filed in ${l.name}`);
+  render(k);
+}
+function undo(k){
+  const st = S[k]; if(!st.last) return;
+  st.last.items.forEach(m => { m.list = null; st.pile.push(m); st.filed = st.filed.filter(f => f.id !== m.id); });
+  st.pile.sort((a,b) => PILE.findIndex(p=>p.id===a.id) - PILE.findIndex(p=>p.id===b.id));
+  st.last = null;
+  hideSnack(k); render(k);
+}
+const snackTimers = {};
+function snack(k, msg){
+  const el = document.getElementById('snack-' + k);
+  document.getElementById('snacktext-' + k).textContent = msg;
+  el.classList.add('on');
+  clearTimeout(snackTimers[k]);
+  snackTimers[k] = setTimeout(() => el.classList.remove('on'), 3200);
+}
+function hideSnack(k){ document.getElementById('snack-' + k).classList.remove('on'); }
+
+/* ===================== wiring per variant ===================== */
+VARIANTS.forEach(v => {
+  const k = v.key;
+  document.getElementById('brain-' + k).onclick = () => { S[k].open = true;
+    document.getElementById('sheet-' + k).classList.add('on'); render(k); };
+  document.getElementById('close-' + k).onclick = () => { S[k].open = false;
+    document.getElementById('sheet-' + k).classList.remove('on'); };
+  document.getElementById('undo-' + k).onclick = () => undo(k);
+  render(k);
+});
+
+function render(k){
+  renderBrain(k);
+  const body = document.getElementById('body-' + k), foot = document.getElementById('foot-' + k);
+  const st = S[k];
+  if(!st.pile.length){
+    body.innerHTML = `<div class="done"><div class="big">🧠</div><h4>Clear head</h4>
+      <p>All ${st.filed.length} thoughts filed. Nothing sitting in Unsorted.</p></div>`;
+    foot.innerHTML = `<button class="btn ghost" data-reset="${k}">↺ Run it again</button>`;
+    foot.querySelector('[data-reset]').onclick = () => { const o = st.open; S[k] = fresh(); S[k].open = o; render(k); };
+    return;
+  }
+  ({A:renderDeck, B:renderSweep, C:renderBuckets, D:renderPre})[k](k, body, foot);
+}
+
+/* ---------- A · the deck ---------- */
+function renderDeck(k, body, foot){
+  const st = S[k], top = st.pile[st.idx] || st.pile[0];
+  const nxt = st.pile.filter(p => p.id !== top.id).slice(0,2);
+  body.innerHTML = `
+    <div class="counter">${st.filed.length + 1} of ${st.filed.length + st.pile.length}</div>
+    <div class="deck">
+      ${nxt.map((p,i) => `<div class="card ${i===0?'behind':'behind2'}"><div class="cmeta">${esc(p.when)}</div>
+          <div class="ctxt">${esc(p.t)}</div></div>`).reverse().join('')}
+      <div class="card" id="top-${k}" style="z-index:2"><div class="cmeta">${esc(top.when)}</div>
+        <div class="ctxt">${esc(top.t)}</div></div>
+    </div>
+    <div class="chips">${LISTS.map(l => `<button class="chip" data-l="${l.id}">
+        <span class="d" style="background:${l.c}"></span>${esc(l.name)}</button>`).join('')}</div>`;
+  foot.innerHTML = `<div class="deckrow">
+      <button class="btn ghost" id="skip-${k}">Skip for now</button>
+      <button class="btn ghost" id="bin-${k}" style="color:var(--warn)">Bin it</button></div>`;
+  body.querySelectorAll('[data-l]').forEach(c => c.onclick = () => {
+    const card = document.getElementById('top-' + k);
+    card.classList.add('gone');
+    setTimeout(() => file(k, [top.id], c.dataset.l), 150);
+  });
+  document.getElementById('skip-' + k).onclick = () => { st.idx = (st.idx + 1) % st.pile.length; render(k); };
+  document.getElementById('bin-' + k).onclick = () => {
+    st.pile = st.pile.filter(p => p.id !== top.id);
+    if(st.idx >= st.pile.length) st.idx = Math.max(0, st.pile.length - 1);
+    snack(k, 'Binned'); st.last = null; render(k);
+  };
+}
+
+/* ---------- B · the sweep ---------- */
+function renderSweep(k, body, foot){
+  const st = S[k], n = st.sel.size;
+  body.innerHTML = `<div class="rows">${st.pile.map(p => `
+      <div class="row${st.sel.has(p.id)?' sel':''}" data-p="${p.id}">
+        <div class="tick">${st.sel.has(p.id)?'✓':''}</div>
+        <div class="rtxt">${esc(p.t)}</div>
+      </div>`).join('')}</div>`;
+  foot.innerHTML = n
+    ? `<div style="font-size:12.5px;font-weight:650;color:var(--ink-mid);margin-bottom:8px">
+         Send ${n} ${n===1?'thought':'thoughts'} to…</div>
+       <div class="chips">${LISTS.map(l => `<button class="chip sm" data-l="${l.id}">
+         <span class="d" style="background:${l.c}"></span>${esc(l.name)}</button>`).join('')}</div>`
+    : `<div style="font-size:13px;color:var(--ink-mid);text-align:center;padding:6px 0 4px">
+         Tap to select. Pick as many as belong together.</div>`;
+  body.querySelectorAll('[data-p]').forEach(r => r.onclick = () => {
+    const id = r.dataset.p;
+    st.sel.has(id) ? st.sel.delete(id) : st.sel.add(id);
+    render(k);
+  });
+  foot.querySelectorAll('[data-l]').forEach(c => c.onclick = () => {
+    const ids = [...st.sel];
+    body.querySelectorAll('.row.sel').forEach(r => r.classList.add('out'));
+    setTimeout(() => file(k, ids, c.dataset.l), 160);
+  });
+}
+
+/* ---------- C · the buckets ---------- */
+function renderBuckets(k, body, foot){
+  const st = S[k];
+  const count = id => st.filed.filter(f => f.list === id).length;
+  body.innerHTML = `
+    <div class="tray" id="tray-${k}">${st.pile.map(p => `
+      <div class="tile${st.pick===p.id?' sel':''}" data-p="${p.id}">${esc(p.t)}</div>`).join('')}</div>
+    <div style="font-size:12px;font-weight:650;color:var(--ink-mid);margin:2px 3px 7px">
+      Drag a card down, or tap it then tap a list.</div>
+    <div class="buckets" id="bk-${k}">${LISTS.map(l => `
+      <div class="bucket" data-l="${l.id}"><span class="d" style="background:${l.c}"></span>
+        <span class="bn">${esc(l.name)}</span><span class="bc">${count(l.id) || ''}</span></div>`).join('')}</div>`;
+  foot.innerHTML = `<div style="font-size:13px;color:var(--ink-mid);text-align:center;padding:6px 0 4px">
+      ${st.pile.length} left in the tray</div>`;
+
+  body.querySelectorAll('[data-l]').forEach(b => b.onclick = () => {
+    if(!st.pick) { snack(k, 'Pick a card first'); return; }
+    file(k, [st.pick], b.dataset.l);
+  });
+  body.querySelectorAll('.tile').forEach(t => {
+    t.onclick = () => { st.pick = st.pick === t.dataset.p ? null : t.dataset.p; render(k); };
+    t.addEventListener('pointerdown', e => startDrag(e, k, t));
+  });
+}
+
+let drag = null;
+function startDrag(e, k, tile){
+  if(e.button === 1 || e.button === 2) return;
+  const r = tile.getBoundingClientRect();
+  drag = { k, id: tile.dataset.p, tile, dx: e.clientX - r.left, dy: e.clientY - r.top,
+           moved:false, ghost:null, hot:null };
+  tile.setPointerCapture(e.pointerId);
+  tile.addEventListener('pointermove', onDrag);
+  tile.addEventListener('pointerup', endDrag);
+  tile.addEventListener('pointercancel', endDrag);
+}
+function onDrag(e){
+  if(!drag) return;
+  if(!drag.moved){
+    if(Math.abs(e.movementX) + Math.abs(e.movementY) < 2) return;
+    drag.moved = true;
+    drag.tile.classList.add('drag');
+    const g = document.createElement('div');
+    g.className = 'dragghost'; g.textContent = drag.tile.textContent;
+    document.body.appendChild(g); drag.ghost = g;
+  }
+  e.preventDefault();
+  drag.ghost.style.left = (e.clientX - drag.dx) + 'px';
+  drag.ghost.style.top  = (e.clientY - drag.dy) + 'px';
+  const under = document.elementFromPoint(e.clientX, e.clientY);
+  const b = under && under.closest('#bk-' + drag.k + ' .bucket');
+  if(b !== drag.hot){
+    if(drag.hot) drag.hot.classList.remove('hot');
+    drag.hot = b; if(b) b.classList.add('hot');
+  }
+}
+function endDrag(e){
+  if(!drag) return;
+  const d = drag; drag = null;
+  d.tile.removeEventListener('pointermove', onDrag);
+  d.tile.removeEventListener('pointerup', endDrag);
+  d.tile.removeEventListener('pointercancel', endDrag);
+  if(d.ghost) d.ghost.remove();
+  d.tile.classList.remove('drag');
+  if(d.hot){
+    const listId = d.hot.dataset.l;
+    d.hot.classList.remove('hot');
+    S[d.k].pick = null;
+    file(d.k, [d.id], listId);
+  } else if(d.moved){
+    render(d.k);              // snapped back
+  }
+  if(d.moved) e.stopPropagation();   // a drag is not a tap
+}
+
+/* ---------- D · pre-sorted ---------- */
+function renderPre(k, body, foot){
+  const st = S[k];
+  const groups = {};
+  st.pile.forEach(p => { const g = p.list || p.guess; (groups[g] = groups[g] || []).push(p); });
+  const order = LISTS.filter(l => groups[l.id]);
+  body.innerHTML = order.map(l => `
+    <div class="grp">
+      <div class="ghead"><span class="d" style="background:${l.c}"></span>
+        <span class="gn">${esc(l.name)}</span><span class="gc">${groups[l.id].length}</span></div>
+      ${groups[l.id].map(p => `<div class="pcard" data-p="${p.id}">${esc(p.t)}
+          <div class="why">${esc(p.why)}</div>
+          ${st.pick === p.id ? `<div class="move">${LISTS.filter(x=>x.id!==l.id).map(x =>
+            `<button class="chip sm" data-mv="${p.id}" data-l="${x.id}">
+              <span class="d" style="background:${x.c}"></span>${esc(x.name)}</button>`).join('')}</div>` : ''}
+        </div>`).join('')}
+    </div>`).join('');
+  foot.innerHTML = `<button class="btn" id="all-${k}">File all ${st.pile.length} as shown</button>
+    <div style="font-size:12px;color:var(--ink-mid);text-align:center;margin-top:7px">
+      Tap any thought to send it somewhere else first.</div>`;
+  body.querySelectorAll('.pcard').forEach(c => c.onclick = e => {
+    if(e.target.closest('[data-mv]')) return;
+    st.pick = st.pick === c.dataset.p ? null : c.dataset.p; render(k);
+  });
+  body.querySelectorAll('[data-mv]').forEach(b => b.onclick = e => {
+    e.stopPropagation();
+    const p = st.pile.find(x => x.id === b.dataset.mv);
+    p.guess = b.dataset.l; st.pick = null; render(k);
+  });
+  document.getElementById('all-' + k).onclick = () => {
+    const byList = {};
+    st.pile.forEach(p => { (byList[p.guess] = byList[p.guess] || []).push(p.id); });
+    const keys = Object.keys(byList);
+    const total = st.pile.length;
+    st.filed.push(...st.pile.map(p => ({...p, list:p.guess})));
+    st.last = { items: st.pile.slice(), listId: keys[0] };
+    st.pile = []; st.pick = null;
+    snack(k, `${total} filed across ${keys.length} lists`);
+    render(k);
+  };
+}
+</script>
+</body></html>
