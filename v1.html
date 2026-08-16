@@ -196,8 +196,40 @@ h1.big{font-size:32px;font-weight:700;letter-spacing:-.022em;margin:1px 0 2px}
 .ghead .n{margin-left:auto;font-weight:600;letter-spacing:0;text-transform:none;font-size:13px}
 .group{background:var(--surface);border-radius:14px;overflow:hidden;margin:0 0 20px;box-shadow:var(--shadow)}
 
-.trow{display:flex;align-items:flex-start;gap:12px;padding:13px 14px}
+.trow{padding:13px 14px;background:var(--surface)}
 .trow+.trow{border-top:.5px solid var(--rule)}
+.trow .tmain{display:flex;align-items:flex-start;gap:12px}
+.trow.dragging{opacity:.9;box-shadow:0 8px 24px rgba(0,0,0,.18);border-radius:12px;
+  position:relative;z-index:2}
+.grip{border:0;background:none;color:var(--ink-faint);font-size:15px;cursor:grab;padding:6px 2px 0 0;
+  flex:0 0 auto;touch-action:none;line-height:1;letter-spacing:-2px}
+.grip:active{cursor:grabbing}
+.grip:hover{color:var(--ink-mid)}
+.trbtns{display:flex;align-items:center;gap:2px}
+.chev{border:0;background:none;color:var(--ink-faint);font-size:17px;cursor:pointer;padding:1px 4px;
+  transition:transform .18s}
+.chev.on{transform:rotate(90deg);color:var(--accent)}
+.chev:hover{color:var(--accent)}
+
+/* ---------- Today: expanded section ---------- */
+.expanded{margin:11px 0 2px 44px;padding:11px 13px;background:var(--bg);border-radius:11px;
+  animation:exIn .2s ease}
+@keyframes exIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.exsec{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--ink-mid);margin:6px 0 5px}
+.exsec:first-child{margin-top:0}
+.exblk{display:flex;align-items:flex-start;gap:8px;padding:3px 0}
+.exblk .mk{flex:0 0 auto;margin-top:3px;width:16px;display:flex;justify-content:center}
+.exblk .mk.bul{color:var(--ink-faint);font-size:15px;line-height:1}
+.exblk .mk.cb{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--ink-faint);
+  cursor:pointer;display:grid;place-items:center}
+.exblk .mk.cb.on{background:var(--accent);border-color:var(--accent)}
+.exblk .mk.cb.on::after{content:"✓";color:#fff;font-size:10px;font-weight:700}
+.exblk .extx{flex:1;font-size:14.5px;line-height:1.45;color:var(--ink)}
+.exblk.done .extx{color:var(--ink-mid);text-decoration:line-through}
+.exempty{font-size:13px;color:var(--ink-faint);padding:2px 0}
+.exopen{margin-top:9px;border:0;background:none;color:var(--accent);font-size:12.5px;font-weight:650;
+  cursor:pointer;padding:2px 0;font-family:inherit}
 .cb.big{width:32px;height:32px;border-radius:50%;border:2.2px solid var(--ink-faint);flex:0 0 auto;
   cursor:pointer;display:grid;place-items:center;background:none;transition:.15s;margin-top:1px}
 .cb.big:hover{border-color:var(--accent)}
@@ -250,6 +282,28 @@ h1.big{font-size:32px;font-weight:700;letter-spacing:-.022em;margin:1px 0 2px}
   color:var(--ink-mid);font-size:15px;cursor:pointer;display:grid;place-items:center;font-family:inherit}
 .fmt.wide{width:auto;padding:0 12px;font-size:13.5px;font-weight:600}
 .fmt:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ---------- the brain ----------
+   Not decoration: it is the only place the cost of capturing is visible. Every note fills
+   it a little and gives it a shake; sorting drains it, and the colour walks back red ->
+   orange -> yellow -> green as it empties. The mouth follows. */
+.brain{margin-left:auto;display:flex;align-items:center;gap:6px;border:0;background:none;
+  cursor:pointer;padding:2px 2px 0;color:var(--ink-faint);transition:color .5s}
+.brain svg{overflow:visible}
+#brainFill{transition:y .55s cubic-bezier(.3,.8,.3,1),fill .5s}
+#brainMouth{transition:d .35s ease,stroke .5s}
+.brain .bcount{font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums;
+  color:var(--ink-mid);min-width:11px;text-align:left;transition:color .5s}
+.brain.shake svg{animation:brainShake .42s cubic-bezier(.36,.07,.19,.97)}
+@keyframes brainShake{
+  0%,100%{transform:translateX(0) rotate(0)}
+  15%{transform:translateX(-1.6px) rotate(-3.5deg)}
+  35%{transform:translateX(1.6px) rotate(3.5deg)}
+  55%{transform:translateX(-1.2px) rotate(-2.2deg)}
+  75%{transform:translateX(1px) rotate(1.4deg)}
+}
+.brain.relief svg{animation:brainRelief .5s cubic-bezier(.3,1.4,.5,1)}
+@keyframes brainRelief{0%{transform:scale(1)}45%{transform:scale(1.16)}100%{transform:scale(1)}}
 
 /* ---------- menu button + nav ---------- */
 .menubtn{position:fixed;top:calc(12px + env(safe-area-inset-top));right:14px;width:36px;height:36px;
@@ -318,6 +372,24 @@ h1.big{font-size:32px;font-weight:700;letter-spacing:-.022em;margin:1px 0 2px}
           <button class="fmt" id="capBul" title="Bullet">•</button>
           <button class="fmt" id="capTask" title="To-do">☐</button>
           <button class="fmt wide" id="capNew" title="Start a new note">＋ New</button>
+          <!-- the brain: fills up as Unsorted grows, calms down as you sort -->
+          <button class="brain" id="brain" title="Unsorted load — tap to go sort">
+            <svg viewBox="0 0 40 40" width="30" height="30" aria-hidden="true">
+              <defs>
+                <clipPath id="brainClip"><path id="brainPath" d="M14.2 5.6c-2.6 0-4.6 1.7-5 4-2.2.5-3.8 2.4-3.8 4.7 0 .9.2 1.7.7 2.4-1.2 1-2 2.5-2 4.2 0 2 1 3.7 2.6 4.7-.1.4-.2.9-.2 1.4 0 3 2.5 5.4 5.6 5.4 1 0 2-.3 2.8-.8.8 1.6 2.5 2.7 4.5 2.7s3.7-1.1 4.5-2.7c.8.5 1.8.8 2.8.8 3.1 0 5.6-2.4 5.6-5.4 0-.5-.1-1-.2-1.4 1.6-1 2.6-2.7 2.6-4.7 0-1.7-.8-3.2-2-4.2.5-.7.7-1.5.7-2.4 0-2.3-1.6-4.2-3.8-4.7-.4-2.3-2.4-4-5-4-1.7 0-3.2.8-4.1 2-.9-1.2-2.4-2-4.1-2z"/></clipPath>
+              </defs>
+              <g clip-path="url(#brainClip)">
+                <rect id="brainFill" x="0" y="40" width="40" height="40"/>
+              </g>
+              <!-- outline and detail sit ON TOP of the fill, or a full brain is a blob -->
+              <path d="M14.2 5.6c-2.6 0-4.6 1.7-5 4-2.2.5-3.8 2.4-3.8 4.7 0 .9.2 1.7.7 2.4-1.2 1-2 2.5-2 4.2 0 2 1 3.7 2.6 4.7-.1.4-.2.9-.2 1.4 0 3 2.5 5.4 5.6 5.4 1 0 2-.3 2.8-.8.8 1.6 2.5 2.7 4.5 2.7s3.7-1.1 4.5-2.7c.8.5 1.8.8 2.8.8 3.1 0 5.6-2.4 5.6-5.4 0-.5-.1-1-.2-1.4 1.6-1 2.6-2.7 2.6-4.7 0-1.7-.8-3.2-2-4.2.5-.7.7-1.5.7-2.4 0-2.3-1.6-4.2-3.8-4.7-.4-2.3-2.4-4-5-4-1.7 0-3.2.8-4.1 2-.9-1.2-2.4-2-4.1-2z"
+                id="brainOutline" fill="none" stroke="currentColor" stroke-width="1.6" opacity=".55"/>
+              <path id="brainDetail" d="M20 8.4v22.4M20 14.5c-2.6 0-4.2 1.4-4.2 3M20 20.4c2.8 0 4.6 1.5 4.6 3.3"
+                fill="none" stroke="currentColor" stroke-width="1.2" opacity=".32" stroke-linecap="round"/>
+              <path id="brainMouth" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+            </svg>
+            <span class="bcount" id="brainCount">0</span>
+          </button>
         </div>
       </div>
     </section>
@@ -728,21 +800,116 @@ function itemCrumb(e){
   }
   return DB.notes[e.noteId].title + ' · ' + (DB.sections[e.sectionId].name || 'section');
 }
+/* A section (or a whole note) promoted to Today can be opened in place, so you can work
+   the item without leaving Today. Bullets have nothing to expand. */
+const EXPANDED = new Set();
+function toggleExpand(entryId){
+  EXPANDED.has(entryId) ? EXPANDED.delete(entryId) : EXPANDED.add(entryId);
+  renderToday();
+}
+function expandableRows(e){
+  if(e.kind === 'section') return [{ sec: DB.sections[e.sectionId] }];
+  if(e.kind === 'note') return DB.notes[e.noteId].sectionIds.map(sid => ({ sec: DB.sections[sid] }));
+  return [];
+}
+function expandedHTML(e){
+  const parts = expandableRows(e).map(({sec}) => {
+    if(!sec) return '';
+    const head = e.kind === 'note'
+      ? `<div class="exsec">${esc(sec.name || 'Untitled section')}</div>` : '';
+    const rows = sec.blocks.length
+      ? sec.blocks.map(b => {
+          const mk = b.type === 'task'
+            ? `<span class="mk cb ${b.done?'on':''}" onclick="event.stopPropagation();toggleBlockDoneFromToday('${sec.id}','${b.id}')"></span>`
+            : b.type === 'bullet' ? `<span class="mk bul">•</span>` : `<span class="mk"></span>`;
+          return `<div class="exblk ${b.type} ${b.done?'done':''}" style="margin-left:${(b.indent||0)*18}px">
+            ${mk}<span class="extx">${esc(b.text)}</span></div>`;
+        }).join('')
+      : `<div class="exempty">Nothing in this section yet.</div>`;
+    return head + rows;
+  }).join('');
+  return `<div class="expanded">${parts}
+    <button class="exopen" onclick="event.stopPropagation();jumpTo('${e.id}')">Open the note ↗</button>
+  </div>`;
+}
+function toggleBlockDoneFromToday(secId, blkId){
+  const blk = getBlock(secId, blkId);
+  if(!blk) return;
+  blk.done = !blk.done;
+  blk.status = blk.done ? 'done' : 'todo';
+  renderAll();
+}
+
 function todayRow(e){
   const item = resolveItem(e);
   const isDone = item.status === 'done';
-  return `<div class="trow ${isDone?'done':''}">
-    <button class="cb big ${isDone?'on':''}" onclick="toggleDone('${e.id}')" aria-label="complete"></button>
-    <div class="tbody" onclick="jumpTo('${e.id}')">
-      <div class="kind">${kindLabel(e.kind)}</div>
-      <div class="ttext">${esc(itemText(e, item))}</div>
-      <div class="crumb">${esc(itemCrumb(e))}</div>
+  const canExpand = e.kind !== 'bullet';
+  const open = EXPANDED.has(e.id);
+  return `<div class="trow ${isDone?'done':''} ${open?'open':''}" data-tid="${e.id}">
+    <div class="tmain">
+      <button class="grip" title="Drag to reorder" aria-label="Reorder">⠿</button>
+      <button class="cb big ${isDone?'on':''}" onclick="toggleDone('${e.id}')" aria-label="complete"></button>
+      <div class="tbody" onclick="${canExpand ? `toggleExpand('${e.id}')` : `jumpTo('${e.id}')`}">
+        <div class="kind">${kindLabel(e.kind)}</div>
+        <div class="ttext">${esc(itemText(e, item))}</div>
+        <div class="crumb">${esc(itemCrumb(e))}</div>
+      </div>
+      <div class="tright">
+        <button class="statusPill ${item.status==='in-progress'?'in-progress':''}" onclick="advanceStatus('${e.id}')">${item.status==='in-progress'?'In progress':'Start'}</button>
+        <div class="trbtns">
+          ${canExpand ? `<button class="chev ${open?'on':''}" onclick="toggleExpand('${e.id}')" title="${open?'Collapse':'Expand'}">›</button>` : ''}
+          <button class="rm" onclick="unpromote('${e.id}')" title="Remove from Today (keeps the note)">×</button>
+        </div>
+      </div>
     </div>
-    <div class="tright">
-      <button class="statusPill ${item.status==='in-progress'?'in-progress':''}" onclick="advanceStatus('${e.id}')">${item.status==='in-progress'?'In progress':'Start'}</button>
-      <button class="rm" onclick="unpromote('${e.id}')" title="Remove from Today (keeps the note)">×</button>
-    </div>
+    ${open ? expandedHTML(e) : ''}
   </div>`;
+}
+
+/* ---------- reordering Today ----------
+   Pointer events rather than HTML5 drag-and-drop, because drag-and-drop does not fire on
+   touch. Rows move within their status group; on drop the TODAY array is rewritten to
+   match the DOM, which is what the renderer reads back. */
+let dragRow = null, dragGroup = null;
+function commitTodayOrder(){
+  const ids = [...document.querySelectorAll('#todayList .trow')].map(r => r.dataset.tid);
+  const seen = ids.map(id => TODAY.find(t => t.id === id)).filter(Boolean);
+  TODAY = seen.concat(TODAY.filter(t => !ids.includes(t.id)));
+}
+// Listeners go on the document, not on the grip: re-inserting the row mid-drag implicitly
+// releases pointer capture, so a grip-bound pointerup never arrives and the drop is lost.
+document.getElementById('todayList').addEventListener('pointerdown', e => {
+  const grip = e.target.closest('.grip');
+  if(!grip) return;
+  e.preventDefault();
+  dragRow = grip.closest('.trow');
+  dragGroup = dragRow.parentElement;
+  dragRow.classList.add('dragging');
+  document.addEventListener('pointermove', onDragMove);
+  document.addEventListener('pointerup', onDragEnd, { once: true });
+  document.addEventListener('pointercancel', onDragEnd, { once: true });
+});
+function onDragMove(e){
+  if(!dragRow) return;
+  const rows = [...dragGroup.querySelectorAll(':scope > .trow')].filter(r => r !== dragRow);
+  for(const r of rows){
+    const box = r.getBoundingClientRect();
+    const mid = box.top + box.height / 2;
+    if(e.clientY < mid && r.compareDocumentPosition(dragRow) & Node.DOCUMENT_POSITION_FOLLOWING){
+      dragGroup.insertBefore(dragRow, r); break;
+    }
+    if(e.clientY > mid && r.compareDocumentPosition(dragRow) & Node.DOCUMENT_POSITION_PRECEDING){
+      dragGroup.insertBefore(dragRow, r.nextSibling); break;
+    }
+  }
+}
+function onDragEnd(){
+  document.removeEventListener('pointermove', onDragMove);
+  if(!dragRow) return;
+  dragRow.classList.remove('dragging');
+  dragRow = null; dragGroup = null;
+  commitTodayOrder();
+  renderToday();
 }
 function toggleDone(entryId){
   const e = TODAY.find(x => x.id === entryId); if(!e) return;
@@ -789,6 +956,7 @@ document.getElementById('openPanelToday').innerHTML = OPEN_HTML;
 function renderAll(){
   renderLists();
   renderToday();
+  renderBrain();
   if(currentNoteId) renderNoteBody();
 }
 
@@ -1026,7 +1194,7 @@ function capSync(){
   note.sectionIds = keepSections;
 
   TODAY = TODAY.filter(t => !t.sectionId || DB.sections[t.sectionId]);
-  renderLists(); renderToday();
+  renderLists(); renderToday(); renderBrain();
 }
 
 function capReset(){
@@ -1035,6 +1203,63 @@ function capReset(){
   capPh();
   requestAnimationFrame(() => { const el = capDoc.querySelector('.btx'); if(el) el.focus(); });
 }
+/* ===================== the brain =====================
+   One number drives it: how much is sitting in Unsorted. Capturing raises it — the brain
+   fills and shakes. Sorting lowers it — the brain drains, springs, and walks back down the
+   colour ramp to green. This is the honest cost of a frictionless capture box: it has to
+   show you the pile it is building, or the pile is invisible until it is unmanageable. */
+const BRAIN_FULL = 12;                    // where the brain reads as completely full
+const BRAIN_STATES = [                    // worst first
+  { at: .75, fill: '#FF453A', mouth: 'M16.4 27.6q3.6 -3 7.2 0' },   // red, frowning
+  { at: .45, fill: '#FF9F0A', mouth: 'M16.4 27.2q3.6 -1.4 7.2 0' }, // orange
+  { at: .18, fill: '#FFD60A', mouth: 'M16.4 26.8h7.2' },            // yellow, flat
+  { at: -1,  fill: '#34C759', mouth: 'M16.4 26.4q3.6 3 7.2 0' }     // green, smiling
+];
+function unsortedCount(){
+  const u = ROOT.map(id => DB.lists[id]).find(l => l.name === 'Unsorted');
+  if(!u) return 0;
+  // an "unsorted item" is one thought: a section inside a capture note, or a bare note
+  return u.noteIds.reduce((n, id) => {
+    const note = DB.notes[id];
+    return n + (note.sectionIds.length || 1);
+  }, 0);
+}
+let brainPrev = null;
+function renderBrain(){
+  const n = unsortedCount();
+  const level = Math.min(1, n / BRAIN_FULL);
+  const state = BRAIN_STATES.find(s => level > s.at) || BRAIN_STATES[BRAIN_STATES.length - 1];
+  const brain = document.getElementById('brain');
+
+  const fillTop = 34 - level * 30;
+  // once the fill rises past the face, the face has to switch to knockout or it vanishes
+  const drowned = fillTop < 27;
+  document.getElementById('brainFill').setAttribute('y', String(fillTop));
+  document.getElementById('brainFill').setAttribute('fill', state.fill);
+  document.getElementById('brainMouth').setAttribute('d', state.mouth);
+  document.getElementById('brainMouth').setAttribute('stroke', drowned ? '#FFFFFF' : state.fill);
+  document.getElementById('brainOutline').setAttribute('stroke', drowned ? '#FFFFFF' : 'currentColor');
+  document.getElementById('brainOutline').setAttribute('opacity', drowned ? '.7' : '.55');
+  document.getElementById('brainDetail').setAttribute('stroke', drowned ? '#FFFFFF' : 'currentColor');
+  document.getElementById('brainDetail').setAttribute('opacity', drowned ? '.45' : '.32');
+  document.getElementById('brainCount').textContent = n;
+  brain.style.color = state.fill;
+  brain.title = n === 0
+    ? 'Nothing unsorted. Clear head.'
+    : `${n} unsorted — tap to go sort`;
+
+  if(brainPrev !== null && n !== brainPrev) brainPulse(n > brainPrev ? 'shake' : 'relief');
+  brainPrev = n;
+}
+function brainPulse(kind){
+  const brain = document.getElementById('brain');
+  brain.classList.remove('shake','relief');
+  void brain.offsetWidth;               // restart the animation
+  brain.classList.add(kind);
+  setTimeout(() => brain.classList.remove(kind), 600);
+}
+document.getElementById('brain').onclick = () => openLists();
+
 /* ===================== menu (Lists) ===================== */
 const listsOverlay = document.getElementById('listsOverlay');
 function openLists(){ listsOverlay.classList.add('on'); renderLists(); }
