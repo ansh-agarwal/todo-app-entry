@@ -20,6 +20,14 @@
      destination and opens on an empty field with a live caret; Today is one tap away; Lists
      sits behind the menu (the ☰ button, or the rail on desktop) because filing is opt-in.
      The capture modal sheet and its FAB are gone — capture is a page, not a detour.
+  3. Capture is a RUNNING page (Anshul, 2026-08-16). No save button — everything autosaves
+     to Unsorted as you type. "+ New" scrolls the fresh note to the top of the screen and
+     pushes the previous one above the fold; scroll back up and it is still there. Each
+     note's title is a SECTION HEADING, not its own row in the list: a day's captures are
+     one note in Unsorted with one section per title.
+     ASSUMPTION, flagged to Anshul: the grouping boundary is the DAY ("Capture · Sunday,
+     August 16"). One capture note per day. If it should instead be a single never-ending
+     note, change capNote() — nothing else depends on it.
 
   Structure: List -> List (nests) -> Note -> Section (= one work item) -> blocks (text/bullet/task).
   Today holds POINTERS at a note, a section, or a single bullet — never a copy of the text or a
@@ -228,20 +236,20 @@ h1.big{font-size:32px;font-weight:700;letter-spacing:-.022em;margin:1px 0 2px}
 #p-capture{overflow:hidden}
 .capPane{height:100%;max-width:640px;margin:0 auto;display:flex;flex-direction:column}
 .capDoc{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;cursor:text;
-  padding:calc(26px + env(safe-area-inset-top)) 20px 28px}
+  overscroll-behavior-y:contain;scroll-padding-top:0;padding:0 20px}
+/* Each "+ New" is a group. The last one is tall enough to sit at the top of the screen
+   on its own, which is what pushes everything before it up out of view. */
+.capGroup{padding:calc(26px + env(safe-area-inset-top)) 0 26px}
+.capGroup + .capGroup{border-top:.5px solid var(--rule);padding-top:26px}
+.capGroup:last-child{min-height:100%;padding-bottom:24px}
 .capDoc .blk .btx{font-size:17px;line-height:1.55;min-height:27px}
 .capDoc .tt .btx{font-size:27px;font-weight:700;letter-spacing:-.02em;line-height:1.25;min-height:34px}
-.capDoc .divider{height:1px;background:var(--rule);margin:22px 0}
 .capbar{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:10px 16px;
   border-top:.5px solid var(--rule);background:var(--bg)}
 .fmt{width:36px;height:33px;border:1px solid var(--rule);border-radius:8px;background:var(--surface);
   color:var(--ink-mid);font-size:15px;cursor:pointer;display:grid;place-items:center;font-family:inherit}
 .fmt.wide{width:auto;padding:0 12px;font-size:13.5px;font-weight:600}
 .fmt:hover{border-color:var(--accent);color:var(--accent)}
-.capsave{margin-left:auto;background:var(--accent);color:#fff;border:0;border-radius:20px;font-size:14px;
-  font-weight:650;padding:9px 18px;cursor:pointer;font-family:inherit}
-.capsave:active{transform:scale(.98)}
-.capsave:disabled{background:var(--surface-2);color:var(--ink-faint);cursor:default}
 
 /* ---------- menu button + nav ---------- */
 .menubtn{position:fixed;top:calc(12px + env(safe-area-inset-top));right:14px;width:36px;height:36px;
@@ -309,8 +317,7 @@ h1.big{font-size:32px;font-weight:700;letter-spacing:-.022em;margin:1px 0 2px}
         <div class="capbar">
           <button class="fmt" id="capBul" title="Bullet">•</button>
           <button class="fmt" id="capTask" title="To-do">☐</button>
-          <button class="fmt wide" id="capNew" title="New (divider + fresh line)">＋ New</button>
-          <button class="capsave" id="capSave">Save to Unsorted</button>
+          <button class="fmt wide" id="capNew" title="Start a new note">＋ New</button>
         </div>
       </div>
     </section>
@@ -809,24 +816,44 @@ document.querySelectorAll('[data-p]').forEach(b => b.addEventListener('click', (
    Behaviour copied from note.html / note.js ("Notes · v9"), which is the version we
    finalised. Raw capture, Apple-style: a blank page and no instructions. Blocks live in
    the DOM and are mutated in place (never re-rendered from an array) so the caret never
-   jumps. "- " -> bullet, "[] " -> to-do, Tab / Shift-Tab nests, "+ New" drops a divider
-   and starts another note on the same page. Only the save step is new: it walks the DOM
-   and files each divider-separated note under Unsorted. */
+   jumps. "- " -> bullet, "[] " -> to-do, Tab / Shift-Tab nests.
+
+   The capture page is a RUNNING page, not a form:
+   - There is no save button. Everything lands in Unsorted as you type.
+   - "+ New" starts a fresh group and scrolls it to the top of the screen, pushing what
+     came before up out of view. Rubber-band / scroll up and your earlier captures are
+     still sitting there.
+   - Everything captured in a day is ONE note in Unsorted, and each group's title is a
+     SECTION HEADING inside that note — not its own entry in the list.
+
+   Ids are stable across autosaves (data-bid on blocks, data-sid on groups) so a bullet
+   promoted to Today keeps pointing at the same object while you keep typing around it. */
 const capDoc = document.getElementById('capDoc');
 
 function capBlocks(){ return [...capDoc.querySelectorAll('.blk')]; }
+function capGroups(){ return [...capDoc.querySelectorAll('.capGroup')]; }
+function capGroupOf(el){ return el ? el.closest('.capGroup') : null; }
+
 function capMake(type, text, indent, isTitle){
   const blk = document.createElement('div');
   blk.className = 'blk ' + (type || 'text') + (isTitle ? ' tt' : '');
   blk.dataset.type = type || 'text';
   blk.dataset.indent = indent || 0;
+  blk.dataset.bid = uid('b');
   blk.innerHTML = '<span class="mk"></span><div class="btx" contenteditable="true" spellcheck="false"></div>';
   const btx = blk.querySelector('.btx');
   if(text) btx.textContent = text;
   capIndent(blk); capMarker(blk);
   btx.addEventListener('keydown', e => capKey(e, blk, btx));
-  btx.addEventListener('input', () => { capShortcut(blk, btx); capPh(); capSaveState(); });
+  btx.addEventListener('input', () => { capShortcut(blk, btx); capPh(); capTouch(); });
   return blk;
+}
+function capMakeGroup(){
+  const g = document.createElement('div');
+  g.className = 'capGroup';
+  g.dataset.sid = uid('s');
+  g.appendChild(capMake('text', '', 0, true));
+  return g;
 }
 function capIndent(blk){ blk.style.marginLeft = (parseInt(blk.dataset.indent || 0) * 20) + 'px'; }
 function capSetIndent(blk, d){
@@ -837,14 +864,14 @@ function capMarker(blk){
   const mk = blk.querySelector('.mk');
   mk.className = 'mk'; mk.innerHTML = ''; mk.onclick = null;
   if(blk.dataset.type === 'bullet'){ mk.classList.add('bul'); mk.textContent = '•'; }
-  else if(blk.dataset.type === 'task'){ mk.classList.add('cb'); mk.onclick = () => blk.classList.toggle('done'); }
+  else if(blk.dataset.type === 'task'){ mk.classList.add('cb'); mk.onclick = () => { blk.classList.toggle('done'); capTouch(); }; }
 }
 function capSetType(blk, type){
   blk.dataset.type = type;
   blk.classList.remove('text','bullet','task','done');
   blk.classList.add(type);
   if(type !== 'text') blk.classList.remove('tt');
-  capMarker(blk); capPh();
+  capMarker(blk); capPh(); capTouch();
 }
 function capShortcut(blk, btx){
   if(blk.dataset.type !== 'text') return;
@@ -853,45 +880,51 @@ function capShortcut(blk, btx){
   else if(/^(\[\]|\[ \]|\(\))\s/.test(t)){ btx.textContent = t.replace(/^(\[\]|\[ \]|\(\))\s/,''); capSetType(blk,'task'); capCaretEnd(btx); }
 }
 function capKey(e, blk, btx){
-  if(e.key === 'Tab'){ e.preventDefault(); capSetIndent(blk, e.shiftKey ? -1 : 1); return; }
+  if(e.key === 'Tab'){ e.preventDefault(); capSetIndent(blk, e.shiftKey ? -1 : 1); capTouch(); return; }
   if(e.key === 'Enter'){
     e.preventDefault();
     // Enter on an empty bullet/to-do drops back to plain text instead of making another one
     if(blk.dataset.type !== 'text' && !btx.textContent.trim()){ capSetType(blk,'text'); return; }
     const nb = capMake(blk.dataset.type, '', parseInt(blk.dataset.indent || 0), false);
-    blk.after(nb); capCaret(nb.querySelector('.btx')); capPh();
+    blk.after(nb); capCaret(nb.querySelector('.btx')); capPh(); capTouch();
     return;
   }
   if(e.key === 'Backspace' && !btx.textContent && caretAtStart(btx)){
     if(blk.dataset.type !== 'text'){ e.preventDefault(); capSetType(blk,'text'); return; }
     const prev = blk.previousElementSibling;
-    if(prev && prev.classList.contains('divider')){
-      e.preventDefault();
-      const before = prev.previousElementSibling;
-      blk.remove(); prev.remove();
-      if(before && before.classList.contains('blk')) capCaretEnd(before.querySelector('.btx'));
-      capPh(); return;
-    }
     if(prev && prev.classList.contains('blk')){
       e.preventDefault();
       const p = prev.querySelector('.btx');
-      blk.remove(); capCaretEnd(p); capPh(); return;
+      blk.remove(); capCaretEnd(p); capPh(); capTouch(); return;
+    }
+    // first block of a group: merging backwards folds this group into the one above
+    const grp = capGroupOf(blk), pg = grp && grp.previousElementSibling;
+    if(pg && pg.classList.contains('capGroup')){
+      e.preventDefault();
+      const rest = [...grp.querySelectorAll('.blk')].slice(1);
+      const landing = [...pg.querySelectorAll('.blk')].pop();
+      rest.forEach(r => { r.classList.remove('tt'); pg.appendChild(r); });
+      grp.remove();
+      if(landing) capCaretEnd(landing.querySelector('.btx'));
+      capPh(); capTouch(); return;
     }
   }
 }
 function capCaret(el){ el.focus(); const r=document.createRange(); r.selectNodeContents(el); r.collapse(true); const s=getSelection(); s.removeAllRanges(); s.addRange(r); }
 function capCaretEnd(el){ el.focus(); const r=document.createRange(); r.selectNodeContents(el); r.collapse(false); const s=getSelection(); s.removeAllRanges(); s.addRange(r); }
 function capPh(){
-  const blks = capBlocks();
-  blks.forEach(b => {
-    const btx = b.querySelector('.btx');
-    let ph = '';
-    if(!btx.textContent){
-      if(b.classList.contains('tt')) ph = blks.length === 1 ? 'Start a note…' : 'Title';
-      else if(b.dataset.type === 'bullet') ph = 'list';
-      else if(b.dataset.type === 'task') ph = 'to-do';
-    }
-    btx.setAttribute('data-ph', ph);
+  capGroups().forEach((g, gi) => {
+    const blks = [...g.querySelectorAll('.blk')];
+    blks.forEach(b => {
+      const btx = b.querySelector('.btx');
+      let ph = '';
+      if(!btx.textContent){
+        if(b.classList.contains('tt')) ph = (gi === 0 && blks.length === 1) ? 'Start a note…' : 'Title';
+        else if(b.dataset.type === 'bullet') ph = 'list';
+        else if(b.dataset.type === 'task') ph = 'to-do';
+      }
+      btx.setAttribute('data-ph', ph);
+    });
   });
 }
 function capClosest(node){
@@ -911,75 +944,97 @@ function capAddType(type){
     const nb = capMake(type, '', parseInt(cur.dataset.indent || 0), false);
     cur.after(nb); capCaret(nb.querySelector('.btx'));
   }
-  capPh();
+  capPh(); capTouch();
 }
 document.getElementById('capBul').onclick = () => capAddType('bullet');
 document.getElementById('capTask').onclick = () => capAddType('task');
+
+// "+ New": a fresh group, scrolled so it sits at the TOP of the screen. Everything you
+// captured before is pushed up above the fold — still there if you scroll back for it.
 document.getElementById('capNew').onclick = () => {
-  const div = document.createElement('div'); div.className = 'divider'; capDoc.appendChild(div);
-  const b = capMake('text', '', 0, true); capDoc.appendChild(b);
-  capCaret(b.querySelector('.btx')); capPh();
-  capDoc.scrollTop = capDoc.scrollHeight;
+  const g = capMakeGroup();
+  capDoc.appendChild(g);
+  capPh();
+  capCaret(g.querySelector('.btx'));
+  capScrollGroupToTop(g);
+  capTouch();
 };
+function capScrollGroupToTop(g){
+  const top = capDoc.scrollTop + g.getBoundingClientRect().top - capDoc.getBoundingClientRect().top;
+  capDoc.scrollTo({ top, behavior: 'smooth' });
+}
 capDoc.addEventListener('mousedown', e => {
-  if(e.target !== capDoc) return;
+  if(e.target !== capDoc && !e.target.classList.contains('capGroup')) return;
   const last = capBlocks().pop();
   if(last){ e.preventDefault(); capCaretEnd(last.querySelector('.btx')); }
 });
 
-// The capture page is never "opened" or "closed" — it is the home screen. This just
-// clears it back to one empty title block, which is its resting state.
-function capSaveState(){
-  const any = capBlocks().some(b => b.querySelector('.btx').textContent.trim().length);
-  document.getElementById('capSave').disabled = !any;
-}
-function capReset(){
-  capDoc.innerHTML = '';
-  capDoc.appendChild(capMake('text', '', 0, true));
-  capPh(); capSaveState();
-  requestAnimationFrame(() => { const el = capDoc.querySelector('.btx'); if(el) el.focus(); });
-}
+/* ---------- autosave: no button, it is already in Unsorted ---------- */
+let capNoteId = null;     // the one note today's captures live in
+let capTimer = null;
+function capTouch(){ clearTimeout(capTimer); capTimer = setTimeout(capSync, 350); }
 
-document.getElementById('capSave').onclick = () => {
-  // one note per divider-separated group
-  const groups = [[]];
-  [...capDoc.children].forEach(el => {
-    if(el.classList.contains('divider')) groups.push([]);
-    else if(el.classList.contains('blk')) groups[groups.length - 1].push(el);
-  });
-
+function capNote(){
+  if(capNoteId && DB.notes[capNoteId]) return DB.notes[capNoteId];
   let unsortedId = ROOT.find(id => DB.lists[id].name === 'Unsorted');
   if(!unsortedId) unsortedId = mkList('Unsorted');
+  const title = 'Capture · ' + new Date().toLocaleDateString(undefined,
+    { weekday:'long', month:'long', day:'numeric' });
+  capNoteId = mkNote(unsortedId, title);
+  return DB.notes[capNoteId];
+}
 
-  let made = 0;
+// Rebuilds today's capture note from the page. Section and block ids are carried over
+// from the DOM, so anything already promoted to Today keeps pointing at the same object.
+function capSync(){
+  const groups = capGroups().filter(g =>
+    [...g.querySelectorAll('.btx')].some(t => t.textContent.trim().length));
+  if(!groups.length && !capNoteId) return;      // nothing typed yet — do not create a note
+
+  const note = capNote();
+  const keepSections = [];
+
   groups.forEach(g => {
-    const rows = g.map(el => ({
-      type: el.dataset.type || 'text',
-      text: el.querySelector('.btx').textContent.trim(),
-      done: el.classList.contains('done'),
-      indent: parseInt(el.dataset.indent || 0),
-      title: el.classList.contains('tt')
-    })).filter(r => r.text.length);
-    if(!rows.length) return;
-
-    const titleRow = rows.find(r => r.title);
-    const title = titleRow ? titleRow.text : 'Untitled note';
-    const body = rows.filter(r => r !== titleRow);
-
-    const noteId = mkNote(unsortedId, title);
-    if(body.length){
-      const secId = mkSection(noteId, '');
-      body.forEach(r => mkBlock(secId, r.type, r.text, r.done, r.indent));
+    const sid = g.dataset.sid;
+    let sec = DB.sections[sid];
+    if(!sec){
+      sec = { id: sid, noteId: note.id, name: '', status: 'todo', blocks: [] };
+      DB.sections[sid] = sec;
     }
-    made++;
+    const blks = [...g.querySelectorAll('.blk')];
+    const titleEl = blks.find(b => b.classList.contains('tt'));
+    sec.name = titleEl ? titleEl.querySelector('.btx').textContent.trim() : '';
+    sec.blocks = blks
+      .filter(b => b !== titleEl && b.querySelector('.btx').textContent.trim().length)
+      .map(b => {
+        const done = b.classList.contains('done');
+        const prev = DB.sections[sid].blocks.find(x => x.id === b.dataset.bid) || {};
+        return {
+          id: b.dataset.bid,
+          type: b.dataset.type || 'text',
+          text: b.querySelector('.btx').textContent.trim(),
+          done,
+          indent: parseInt(b.dataset.indent || 0),
+          status: done ? 'done' : (prev.status === 'in-progress' ? 'in-progress' : 'todo')
+        };
+      });
+    keepSections.push(sid);
   });
 
-  if(!made) return;
-  capReset();              // stay on the page, ready for the next one
-  renderAll();
-  toast(made === 1 ? 'Captured — filed under Unsorted' : made + ' notes captured — filed under Unsorted');
-};
+  // sections whose group was deleted go away with it
+  note.sectionIds.filter(sid => !keepSections.includes(sid)).forEach(sid => delete DB.sections[sid]);
+  note.sectionIds = keepSections;
 
+  TODAY = TODAY.filter(t => !t.sectionId || DB.sections[t.sectionId]);
+  renderLists(); renderToday();
+}
+
+function capReset(){
+  capDoc.innerHTML = '';
+  capDoc.appendChild(capMakeGroup());
+  capPh();
+  requestAnimationFrame(() => { const el = capDoc.querySelector('.btx'); if(el) el.focus(); });
+}
 /* ===================== menu (Lists) ===================== */
 const listsOverlay = document.getElementById('listsOverlay');
 function openLists(){ listsOverlay.classList.add('on'); renderLists(); }
