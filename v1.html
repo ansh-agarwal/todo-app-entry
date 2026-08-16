@@ -11,10 +11,15 @@
   Visual language continued from this repo's uxbo2-apple.html (iOS 17 shell) and note.html/note.js
   (the locked capture editor) — same tokens, same circle-checkbox/inset-grouped-list idiom.
 
-  Capture (2026-08-16): the sheet no longer re-implements the editor — the behaviour of
-  note.html/note.js ("Notes · v9", the version we finalised) is ported in directly. Raw capture,
-  Apple-style: blank page, no hint line, no classification at entry. Tab nesting and the
-  "+ New" divider (several notes in one sheet) come with it.
+  Capture (2026-08-16): two changes, both restoring decisions we had already made.
+  1. The editor is no longer re-implemented here — the behaviour of note.html/note.js
+     ("Notes · v9", the version we finalised) is ported in directly. Raw capture, Apple-style:
+     blank page, no hint line, no classification at entry. Tab nesting and the "+ New" divider
+     (several notes on one page) come with it.
+  2. Navigation now matches the model signed off in uxbo2-hub.html: capture is the HOME
+     destination and opens on an empty field with a live caret; Today is one tap away; Lists
+     sits behind the menu (the ☰ button, or the rail on desktop) because filing is opt-in.
+     The capture modal sheet and its FAB are gone — capture is a page, not a detour.
 
   Structure: List -> List (nests) -> Note -> Section (= one work item) -> blocks (text/bullet/task).
   Today holds POINTERS at a note, a section, or a single bullet — never a copy of the text or a
@@ -98,19 +103,23 @@ h1.big{font-size:32px;font-weight:700;letter-spacing:-.022em;margin:1px 0 2px}
          color:var(--ink-mid);font-size:13.5px;font-weight:600;cursor:pointer;margin-top:10px}
 .addlist:hover{border-color:var(--accent);color:var(--accent)}
 
-/* ---------- note overlay (push screen) ---------- */
-.noteOverlay{position:fixed;inset:0;z-index:40;background:var(--bg);
+/* ---------- push screens (menu → Lists, then a note) ---------- */
+.pushScreen{position:fixed;inset:0;background:var(--bg);
   transform:translateX(100%);transition:transform .28s cubic-bezier(.32,.72,0,1);
   display:flex;flex-direction:column}
-.noteOverlay.on{transform:none}
-.noteHead{flex:0 0 auto;display:flex;align-items:center;gap:6px;
+.pushScreen.on{transform:none}
+#listsOverlay{z-index:38}
+#noteOverlay{z-index:40}
+.pushHead{flex:0 0 auto;display:flex;align-items:center;gap:6px;
   padding:calc(13px + env(safe-area-inset-top)) 14px 11px;background:var(--chrome);
   backdrop-filter:saturate(180%) blur(22px);-webkit-backdrop-filter:saturate(180%) blur(22px);
   border-bottom:.5px solid var(--rule)}
-.noteHead .back{border:0;background:none;color:var(--accent);font-size:16px;font-weight:600;
+.pushHead .back{border:0;background:none;color:var(--accent);font-size:16px;font-weight:600;
   cursor:pointer;display:flex;align-items:center;gap:3px;padding:4px 4px 4px 0}
-.noteHead .crumb{font-size:13px;color:var(--ink-mid);margin-left:2px;overflow:hidden;
+.pushHead .crumb{font-size:13px;color:var(--ink-mid);margin-left:2px;overflow:hidden;
   text-overflow:ellipsis;white-space:nowrap}
+.pushBody{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.pushBody .inner{padding-top:4px}
 .noteBody{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;max-width:640px;width:100%;
   margin:0 auto;padding:18px 20px 90px}
 
@@ -215,32 +224,31 @@ h1.big{font-size:32px;font-weight:700;letter-spacing:-.022em;margin:1px 0 2px}
 .openPanel li:last-child{margin-bottom:0}
 .openPanel b{color:var(--ink)}
 
-/* ---------- capture (bottom sheet) ---------- */
-.overlay{position:fixed;inset:0;z-index:50;background:rgba(20,22,28,.5);backdrop-filter:blur(6px);
-  display:none;align-items:flex-end;justify-content:center}
-.overlay.on{display:flex}
-.sheet{background:var(--surface);width:100%;max-width:560px;border-radius:20px 20px 0 0;
-  max-height:82vh;display:flex;flex-direction:column;
-  animation:up .26s cubic-bezier(.3,.8,.3,1)}
-@keyframes up{from{transform:translateY(30px);opacity:.6}to{transform:none;opacity:1}}
-.grab{width:38px;height:5px;border-radius:5px;background:var(--rule);margin:9px auto 4px;flex:0 0 auto}
-.capDoc{flex:1;overflow-y:auto;padding:12px 22px 24px;cursor:text}
+/* ---------- capture (the home pane — a page, not a sheet) ---------- */
+#p-capture{overflow:hidden}
+.capPane{height:100%;max-width:640px;margin:0 auto;display:flex;flex-direction:column}
+.capDoc{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;cursor:text;
+  padding:calc(26px + env(safe-area-inset-top)) 20px 28px}
 .capDoc .blk .btx{font-size:17px;line-height:1.55;min-height:27px}
-.capDoc .tt .btx{font-size:22px;font-weight:700;letter-spacing:-.01em;min-height:30px}
-.capDoc .divider{height:1px;background:var(--rule);margin:20px 0}
-.capbar{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:10px 16px calc(10px + env(safe-area-inset-bottom));
-  border-top:1px solid var(--rule)}
+.capDoc .tt .btx{font-size:27px;font-weight:700;letter-spacing:-.02em;line-height:1.25;min-height:34px}
+.capDoc .divider{height:1px;background:var(--rule);margin:22px 0}
+.capbar{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:10px 16px;
+  border-top:.5px solid var(--rule);background:var(--bg)}
 .fmt{width:36px;height:33px;border:1px solid var(--rule);border-radius:8px;background:var(--surface);
-  color:var(--ink-mid);font-size:15px;cursor:pointer;display:grid;place-items:center}
+  color:var(--ink-mid);font-size:15px;cursor:pointer;display:grid;place-items:center;font-family:inherit}
+.fmt.wide{width:auto;padding:0 12px;font-size:13.5px;font-weight:600}
 .fmt:hover{border-color:var(--accent);color:var(--accent)}
 .capsave{margin-left:auto;background:var(--accent);color:#fff;border:0;border-radius:20px;font-size:14px;
-  font-weight:650;padding:9px 18px;cursor:pointer}
+  font-weight:650;padding:9px 18px;cursor:pointer;font-family:inherit}
 .capsave:active{transform:scale(.98)}
+.capsave:disabled{background:var(--surface-2);color:var(--ink-faint);cursor:default}
 
-/* ---------- fab + nav ---------- */
-.fab{position:fixed;right:18px;bottom:calc(78px + env(safe-area-inset-bottom));width:54px;height:54px;
-  border-radius:50%;background:var(--accent);color:#fff;font-size:25px;border:0;cursor:pointer;
-  box-shadow:0 4px 16px rgba(0,0,0,.24);z-index:31;display:grid;place-items:center}
+/* ---------- menu button + nav ---------- */
+.menubtn{position:fixed;top:calc(12px + env(safe-area-inset-top));right:14px;width:36px;height:36px;
+  border-radius:50%;background:var(--chrome);backdrop-filter:saturate(180%) blur(22px);
+  -webkit-backdrop-filter:saturate(180%) blur(22px);border:.5px solid var(--rule);
+  color:var(--ink-mid);font-size:16px;cursor:pointer;z-index:31;display:grid;place-items:center}
+.menubtn:hover{color:var(--accent)}
 .tabbar{grid-row:2;display:flex;background:var(--chrome);backdrop-filter:saturate(180%) blur(22px);
   -webkit-backdrop-filter:saturate(180%) blur(22px);border-top:.5px solid var(--rule);z-index:30}
 .tabbar button{flex:1;border:0;background:none;font-family:inherit;cursor:pointer;
@@ -269,16 +277,15 @@ h1.big{font-size:32px;font-weight:700;letter-spacing:-.022em;margin:1px 0 2px}
   .rail .ri:hover{background:var(--rule)}
   .rail .ri.on{background:var(--accent);color:#fff}
   .rail .ri.on .i{color:#fff}
-  .rail .capbtn{margin-top:6px;display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:8px;
-    background:var(--accent-soft);color:var(--accent-ink);font-size:14px;font-weight:650;cursor:pointer;
-    border:0;font-family:inherit}
-  .rail .capbtn:hover{background:#DCEAFE}
+  .rail .ri.quiet{color:var(--ink-mid);font-weight:500}
+  .rail .ri.quiet .i{color:var(--ink-faint)}
+  .rail .railsep{height:.5px;background:var(--rule);margin:10px 10px 8px}
   .rail .foot{margin-top:auto;font-size:11.5px;color:var(--ink-faint);padding:10px}
   .deck{grid-column:2;grid-row:1}
   .tabbar{display:none}
-  .fab{display:none}
+  .menubtn{display:none}
   .inner{padding-bottom:100px}
-  .noteOverlay{left:236px}
+  .pushScreen{left:236px}
 }
 </style></head>
 <body>
@@ -286,24 +293,25 @@ h1.big{font-size:32px;font-weight:700;letter-spacing:-.022em;margin:1px 0 2px}
 
   <nav class="rail">
     <div class="brand"><div class="m">◍</div><b>Chuckle</b></div>
-    <div class="ri on" data-p="lists"><span class="i">▤</span> Lists</div>
+    <div class="ri on" data-p="capture"><span class="i">✎</span> Capture</div>
     <div class="ri" data-p="today"><span class="i">◔</span> Today</div>
-    <button class="capbtn" id="railCap">＋ New note</button>
-    <div class="foot">v1 prototype · structure is optional,<br>only capture and Today are load-bearing.</div>
+    <div class="railsep"></div>
+    <div class="ri quiet" id="railLists"><span class="i">▤</span> Lists</div>
+    <div class="foot">v1 prototype · capture is the front door,<br>structure is something you opt into.</div>
   </nav>
 
   <div class="deck" id="deck">
 
-    <!-- ============ LISTS ============ -->
-    <section class="pane on" id="p-lists">
-      <div class="inner">
-        <div class="eyebrow">Structure</div>
-        <h1 class="big">Lists</h1>
-        <div class="sub">Lists can hold lists. Lists hold notes. That's the only filing system —
-          no tags, no separate "projects".</div>
-        <div id="listTree"></div>
-        <button class="addsection" id="addRootList">＋ New list</button>
-        <div class="openPanel" id="openPanelLists"></div>
+    <!-- ============ CAPTURE (home) ============ -->
+    <section class="pane on" id="p-capture">
+      <div class="capPane">
+        <div class="capDoc" id="capDoc"></div>
+        <div class="capbar">
+          <button class="fmt" id="capBul" title="Bullet">•</button>
+          <button class="fmt" id="capTask" title="To-do">☐</button>
+          <button class="fmt wide" id="capNew" title="New (divider + fresh line)">＋ New</button>
+          <button class="capsave" id="capSave">Save to Unsorted</button>
+        </div>
       </div>
     </section>
 
@@ -322,35 +330,40 @@ h1.big{font-size:32px;font-weight:700;letter-spacing:-.022em;margin:1px 0 2px}
 
   </div>
 
-  <button class="fab" id="fab">＋</button>
+  <button class="menubtn" id="menuBtn" title="Menu">☰</button>
 
   <nav class="tabbar">
-    <button class="on" data-p="lists"><span class="i">▤</span>Lists</button>
+    <button class="on" data-p="capture"><span class="i">✎</span>Capture</button>
     <button data-p="today"><span class="i">◔</span>Today</button>
   </nav>
 </div>
 
+<!-- ============ MENU (Lists lives in here) ============ -->
+<div class="pushScreen" id="listsOverlay">
+  <div class="pushHead">
+    <button class="back" id="listsBack">← Done</button>
+    <span class="crumb">Menu</span>
+  </div>
+  <div class="pushBody">
+    <div class="inner">
+      <div class="eyebrow">Structure</div>
+      <h1 class="big">Lists</h1>
+      <div class="sub">Lists can hold lists. Lists hold notes. That's the only filing system —
+        no tags, no separate "projects". You never have to come in here to capture.</div>
+      <div id="listTree"></div>
+      <button class="addsection" id="addRootList">＋ New list</button>
+      <div class="openPanel" id="openPanelLists"></div>
+    </div>
+  </div>
+</div>
+
 <!-- ============ NOTE OVERLAY (push screen) ============ -->
-<div class="noteOverlay" id="noteOverlay">
-  <div class="noteHead">
+<div class="pushScreen" id="noteOverlay">
+  <div class="pushHead">
     <button class="back" id="noteBack">← Lists</button>
     <span class="crumb" id="noteCrumb"></span>
   </div>
   <div class="noteBody" id="noteBody"></div>
-</div>
-
-<!-- ============ CAPTURE SHEET ============ -->
-<div class="overlay" id="capOverlay">
-  <div class="sheet">
-    <div class="grab"></div>
-    <div class="capDoc" id="capDoc"></div>
-    <div class="capbar">
-      <button class="fmt" id="capBul" title="Bullet">•</button>
-      <button class="fmt" id="capTask" title="To-do">☐</button>
-      <button class="fmt" id="capNew" title="New (divider + fresh line)" style="width:auto;padding:0 12px">＋ New</button>
-      <button class="capsave" id="capSave">Save to Unsorted</button>
-    </div>
-  </div>
 </div>
 
 <div class="toast" id="toast"><span id="toastText"></span></div>
@@ -772,8 +785,11 @@ function renderAll(){
   if(currentNoteId) renderNoteBody();
 }
 
-/* ===================== nav (deck) ===================== */
-const PANES = ['lists','today'];
+/* ===================== nav (deck) =====================
+   Capture is the home destination and Today is one move away — the model signed off in
+   uxbo2-hub.html. Lists is not a peer of those two; it lives behind the menu, because
+   filing is opt-in and capture must never route you through structure. */
+const PANES = ['capture','today'];
 let cur = 0;
 function go(i){
   i = Math.max(0, Math.min(PANES.length-1, i));
@@ -784,17 +800,18 @@ function go(i){
   });
   document.querySelectorAll('[data-p]').forEach(b => b.classList.toggle('on', b.dataset.p === PANES[i]));
   if(prev !== i){ document.getElementById('p-'+PANES[i]).scrollTop = 0; renderAll(); }
+  // capture always hands you a live caret — that is the whole point of it being home
+  if(PANES[i] === 'capture'){ const last = capBlocks().pop(); if(last) capCaretEnd(last.querySelector('.btx')); }
 }
 document.querySelectorAll('[data-p]').forEach(b => b.addEventListener('click', () => go(PANES.indexOf(b.dataset.p))));
 
-/* ===================== capture sheet — the locked capture editor =====================
+/* ===================== capture — the locked capture editor =====================
    Behaviour copied from note.html / note.js ("Notes · v9"), which is the version we
    finalised. Raw capture, Apple-style: a blank page and no instructions. Blocks live in
    the DOM and are mutated in place (never re-rendered from an array) so the caret never
    jumps. "- " -> bullet, "[] " -> to-do, Tab / Shift-Tab nests, "+ New" drops a divider
-   and starts another note in the same sheet. Only the save step is new: it walks the DOM
+   and starts another note on the same page. Only the save step is new: it walks the DOM
    and files each divider-separated note under Unsorted. */
-const capOverlay = document.getElementById('capOverlay');
 const capDoc = document.getElementById('capDoc');
 
 function capBlocks(){ return [...capDoc.querySelectorAll('.blk')]; }
@@ -808,7 +825,7 @@ function capMake(type, text, indent, isTitle){
   if(text) btx.textContent = text;
   capIndent(blk); capMarker(blk);
   btx.addEventListener('keydown', e => capKey(e, blk, btx));
-  btx.addEventListener('input', () => { capShortcut(blk, btx); capPh(); });
+  btx.addEventListener('input', () => { capShortcut(blk, btx); capPh(); capSaveState(); });
   return blk;
 }
 function capIndent(blk){ blk.style.marginLeft = (parseInt(blk.dataset.indent || 0) * 20) + 'px'; }
@@ -910,15 +927,18 @@ capDoc.addEventListener('mousedown', e => {
   if(last){ e.preventDefault(); capCaretEnd(last.querySelector('.btx')); }
 });
 
-function openCapture(){
+// The capture page is never "opened" or "closed" — it is the home screen. This just
+// clears it back to one empty title block, which is its resting state.
+function capSaveState(){
+  const any = capBlocks().some(b => b.querySelector('.btx').textContent.trim().length);
+  document.getElementById('capSave').disabled = !any;
+}
+function capReset(){
   capDoc.innerHTML = '';
   capDoc.appendChild(capMake('text', '', 0, true));
-  capPh();
-  capOverlay.classList.add('on');
+  capPh(); capSaveState();
   requestAnimationFrame(() => { const el = capDoc.querySelector('.btx'); if(el) el.focus(); });
 }
-function closeCapture(){ capOverlay.classList.remove('on'); }
-capOverlay.addEventListener('mousedown', e => { if(e.target === capOverlay) closeCapture(); });
 
 document.getElementById('capSave').onclick = () => {
   // one note per divider-separated group
@@ -954,16 +974,22 @@ document.getElementById('capSave').onclick = () => {
     made++;
   });
 
-  closeCapture();
   if(!made) return;
+  capReset();              // stay on the page, ready for the next one
   renderAll();
   toast(made === 1 ? 'Captured — filed under Unsorted' : made + ' notes captured — filed under Unsorted');
 };
 
-document.getElementById('fab').onclick = openCapture;
-document.getElementById('railCap').onclick = openCapture;
+/* ===================== menu (Lists) ===================== */
+const listsOverlay = document.getElementById('listsOverlay');
+function openLists(){ listsOverlay.classList.add('on'); renderLists(); }
+function closeLists(){ listsOverlay.classList.remove('on'); }
+document.getElementById('menuBtn').onclick = openLists;
+document.getElementById('railLists').onclick = openLists;
+document.getElementById('listsBack').onclick = closeLists;
 
 /* ===================== boot ===================== */
+capReset();
 renderAll();
 </script>
 </body></html>
