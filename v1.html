@@ -211,11 +211,21 @@ h1.big{font-size:32px;font-weight:700;letter-spacing:-.022em;margin:1px 0 2px}
 .spill .d{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
 .spill .cv{font-size:9px;opacity:.5}
 .spill.edited{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-ink)}
+/* the two pills stack on the right: which list, and when */
+.spills{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex:0 0 auto}
+.spill.sched{color:var(--ink-mid);font-weight:600}
+.spill.sched .cal{font-size:11px;opacity:.7}
+.spill.sched.set{border-color:var(--evening);background:var(--accent-soft);color:var(--ink)}
+.spill.sched.set .cal{opacity:1}
 
 /* the unfold: lists open under the thought, never over it */
 .unfold{max-height:0;overflow:hidden;border-bottom:.5px solid var(--rule);
   transition:max-height .26s cubic-bezier(.32,.72,0,1)}
-.unfold.on{max-height:260px}
+.unfold.on{max-height:560px}
+.uflabel{width:100%;font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--ink-faint);margin:8px 0 7px}
+.uflabel:first-child{margin-top:2px}
+.lchip.dchip.on{border-color:var(--evening);border-width:1.5px;background:var(--accent-soft);color:var(--ink)}
 .unfold.snap{transition:none}
 .unfold .ui{padding:2px 13px 12px}
 .lchip{display:inline-flex;align-items:center;gap:7px;border:.5px solid var(--rule);background:var(--bg);
@@ -297,6 +307,8 @@ h1.big{font-size:32px;font-weight:700;letter-spacing:-.022em;margin:1px 0 2px}
 .trow.done .ttext{color:var(--ink-mid);text-decoration:line-through}
 .trow .crumb{font-size:12.5px;color:var(--ink-mid);margin-top:3px;overflow:hidden;text-overflow:ellipsis;
   white-space:nowrap}
+.trow .due{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:650;
+  color:var(--evening);background:var(--accent-soft);border-radius:8px;padding:2px 7px;margin-top:5px}
 .tright{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:0 0 auto}
 .statusPill{font-size:11.5px;font-weight:650;padding:6px 11px;border-radius:20px;border:0;cursor:pointer;
   background:var(--bg);color:var(--ink-mid);white-space:nowrap}
@@ -923,6 +935,7 @@ function todayRow(e){
         <div class="kind">${kindLabel(e.kind)}</div>
         <div class="ttext">${esc(itemText(e, item))}</div>
         <div class="crumb">${esc(itemCrumb(e))}</div>
+        ${(DB.notes[e.noteId] && DB.notes[e.noteId].due) ? `<div class="due">🗓 ${esc(dueLabel(DB.notes[e.noteId].due))}</div>` : ''}
       </div>
       <div class="tright">
         <button class="statusPill ${item.status==='in-progress'?'in-progress':''}" onclick="advanceStatus('${e.id}')">${item.status==='in-progress'?'In progress':'Start'}</button>
@@ -1351,9 +1364,43 @@ function unsortedThoughts(){
 }
 
 let sortAssign = {};              // key -> listId
+let sortSchedule = {};            // key -> iso date string 'YYYY-MM-DD' (optional)
 const sortEdited = new Set();     // keys the user changed by hand
 let sortOpenKey = null;           // the one unfolded row
 let sortUndo = null;              // enough to put the last batch back
+
+/* ---------- scheduling: a thought can carry a date as well as a list ----------
+   Added 2026-08-16 (Anshul). The date is optional; filing still only needs a list.
+   Display mirrors Apple Notes: relative where it reads clearly (Today / Tomorrow /
+   a weekday), a short DD/MM/YY otherwise. */
+function startOfDay(d){ const x = new Date(d); x.setHours(0,0,0,0); return x; }
+function isoDay(d){
+  const x = startOfDay(d);
+  return x.getFullYear() + '-' + String(x.getMonth()+1).padStart(2,'0') + '-' + String(x.getDate()).padStart(2,'0');
+}
+function whenOptions(){
+  const today = startOfDay(new Date());
+  const dow = today.getDay();
+  const tomorrow = new Date(today); tomorrow.setDate(today.getDate()+1);
+  const sat = new Date(today); sat.setDate(today.getDate() + ((6 - dow + 7) % 7 || 7));
+  const mon = new Date(today); mon.setDate(today.getDate() + ((8 - dow) % 7 || 7));
+  return [
+    { label:'Today',        iso: isoDay(today) },
+    { label:'Tomorrow',     iso: isoDay(tomorrow) },
+    { label:'This weekend', iso: isoDay(sat) },
+    { label:'Next week',    iso: isoDay(mon) }
+  ];
+}
+function dueLabel(iso){
+  if(!iso) return '';
+  const d = startOfDay(new Date(iso + 'T00:00:00'));
+  const diff = Math.round((d - startOfDay(new Date())) / 86400000);
+  if(diff === 0) return 'Today';
+  if(diff === 1) return 'Tomorrow';
+  if(diff === -1) return 'Yesterday';
+  if(diff > 1 && diff < 7) return d.toLocaleDateString(undefined, { weekday:'short' });
+  return d.toLocaleDateString(undefined, { day:'2-digit', month:'2-digit', year:'2-digit' });
+}
 
 function sortPrime(){
   const items = unsortedThoughts();
@@ -1403,6 +1450,10 @@ function renderSort(){
     e.stopPropagation();
     sortPick(c.dataset.set, c.dataset.l);
   });
+  body.querySelectorAll('[data-when]').forEach(c => c.onclick = e => {
+    e.stopPropagation();
+    sortSetWhen(c.dataset.when, c.dataset.v);
+  });
   document.getElementById('fileAll').onclick = sortCommit;
 }
 
@@ -1418,15 +1469,27 @@ function sortRowHTML(i, targets){
   const l = DB.lists[cur];
   const edited = sortEdited.has(i.key);
   const open = sortOpenKey === i.key;
+  const due = sortSchedule[i.key];
+  const opts = whenOptions();
   return `<div class="srow${edited?' changed':''}${open?' open':''}" data-k="${i.key}">
       <div class="stx">${esc(i.text)}${i.why && !edited ? `<div class="swhy">${esc(i.why)}</div>` : ''}</div>
-      <span class="spill${edited?' edited':''}">
-        <span class="d" style="background:${listColour(cur)}"></span>${esc(l ? l.name : 'Pick a list')}<span class="cv">▾</span></span>
+      <div class="spills">
+        <span class="spill${edited?' edited':''}">
+          <span class="d" style="background:${listColour(cur)}"></span>${esc(l ? l.name : 'Pick a list')}<span class="cv">▾</span></span>
+        <span class="spill sched${due?' set':''}">
+          <span class="cal">🗓</span>${due ? esc(dueLabel(due)) : 'Schedule'}<span class="cv">▾</span></span>
+      </div>
     </div>
     <div class="unfold${open?' on':''}" id="uf-${i.key}"><div class="ui">
+      <div class="uflabel">File in list</div>
       ${targets.map(t => `<button class="lchip${t.id===cur?' on':''}" data-set="${i.key}" data-l="${t.id}">
         <span class="d" style="background:${listColour(t.id)}"></span>${esc(t.name)}</button>`).join('')}
       <button class="lchip newl" data-set="${i.key}" data-l="__new">＋ New list</button>
+      <div class="uflabel">Schedule <span style="font-weight:600;text-transform:none;letter-spacing:0;color:var(--ink-faint)">· optional</span></div>
+      ${opts.map(o => `<button class="lchip dchip${due===o.iso?' on':''}" data-when="${i.key}" data-v="${o.iso}">
+        <span class="d" style="background:var(--evening)"></span>${o.label}</button>`).join('')}
+      <button class="lchip dchip newl" data-when="${i.key}" data-v="__pick">📅 Pick a date…</button>
+      ${due ? `<button class="lchip dchip newl" data-when="${i.key}" data-v="__clear">✕ Clear date</button>` : ''}
     </div></div>`;
 }
 
@@ -1467,9 +1530,28 @@ function sortPick(key, listId){
   const guess = item ? guessFor(item.text).listId : null;
   sortAssign[key] = listId;
   listId === guess ? sortEdited.delete(key) : sortEdited.add(key);
-  sortOpenKey = null;
+  // stay open: list and date live in the same panel, so you can set both in one go
   renderSort();
   renderLists();
+}
+
+/* Set (or clear) the date on a thought. The row stays open so you can also touch the
+   list without re-opening. "__pick" opens the OS date picker; "__clear" removes it. */
+function sortSetWhen(key, val){
+  if(val === '__clear'){ delete sortSchedule[key]; renderSort(); return; }
+  if(val === '__pick'){ sortPickCustom(key); return; }
+  sortSchedule[key] = val;
+  renderSort();
+}
+function sortPickCustom(key){
+  const inp = document.createElement('input');
+  inp.type = 'date';
+  inp.value = sortSchedule[key] || isoDay(new Date());
+  inp.style.cssText = 'position:fixed;left:16px;bottom:120px;opacity:0;pointer-events:none';
+  document.body.appendChild(inp);
+  inp.addEventListener('change', () => { if(inp.value) sortSchedule[key] = inp.value; renderSort(); inp.remove(); });
+  inp.addEventListener('blur', () => setTimeout(() => inp.remove(), 250));
+  if(inp.showPicker) inp.showPicker(); else { inp.style.pointerEvents = 'auto'; inp.focus(); inp.click(); }
 }
 
 /* Move everything where it says it is going. A section becomes its own note in the target
@@ -1478,17 +1560,32 @@ function sortCommit(){
   const items = unsortedThoughts();
   if(!items.length) return;
   const moves = [];
+  const addedToday = [];          // Today pointers created by a "Today" schedule — for undo
+  const todayIso = isoDay(new Date());
+
+  // a thing that was filed and dated today should show up in Today, without duplicating
+  const promoteIfToday = (kind, noteId, sectionId, due) => {
+    if(due !== todayIso) return;
+    if(isPromoted(kind, { noteId, sectionId })) return;
+    const tid = uid('t');
+    TODAY.push({ id: tid, kind, noteId, sectionId: sectionId || null, blockId: null });
+    addedToday.push(tid);
+  };
 
   items.forEach(i => {
     const listId = sortAssign[i.key];
     if(!listId || !DB.lists[listId]) return;
+    const due = sortSchedule[i.key] || null;
     if(i.kind === 'note'){
       const note = DB.notes[i.noteId];
       const from = note.listId;
+      const prevDue = note.due || null;
       DB.lists[from].noteIds = DB.lists[from].noteIds.filter(x => x !== note.id);
       note.listId = listId;
+      if(due) note.due = due;
       DB.lists[listId].noteIds.push(note.id);
-      moves.push({ kind:'note', noteId: note.id, from, to: listId });
+      promoteIfToday('note', note.id, null, due);
+      moves.push({ kind:'note', noteId: note.id, from, to: listId, prevDue });
     } else {
       const sec = DB.sections[i.sectionId];
       const oldNote = DB.notes[i.noteId];
@@ -1496,9 +1593,11 @@ function sortCommit(){
       oldNote.sectionIds = oldNote.sectionIds.filter(x => x !== sec.id);
       sec.noteId = newNoteId;
       sec.name = sec.name || '';
+      if(due) DB.notes[newNoteId].due = due;
       DB.notes[newNoteId].sectionIds.push(sec.id);
       // anything already promoted to Today points at this section — repoint, do not drop
       TODAY.forEach(t => { if(t.sectionId === sec.id) t.noteId = newNoteId; });
+      promoteIfToday('section', newNoteId, sec.id, due);
       moves.push({ kind:'section', sectionId: sec.id, fromNote: oldNote.id, newNote: newNoteId,
                    to: listId, name: sec.name });
     }
@@ -1524,8 +1623,9 @@ function sortCommit(){
   if(emptied.some(e => e.id === capNoteId)) capNoteId = null;
 
   const spread = new Set(moves.map(m => m.to)).size;
-  sortUndo = { moves, emptied, unsortedId, assign: {...sortAssign}, edited: new Set(sortEdited) };
-  sortAssign = {}; sortEdited.clear(); sortOpenKey = null;
+  sortUndo = { moves, emptied, unsortedId, addedToday, schedule: {...sortSchedule},
+               assign: {...sortAssign}, edited: new Set(sortEdited) };
+  sortAssign = {}; sortSchedule = {}; sortEdited.clear(); sortOpenKey = null;
 
   renderSort(); renderAll();
   toast(`${moves.length} filed across ${spread} ${spread === 1 ? 'list' : 'lists'}`);
@@ -1536,13 +1636,16 @@ function sortCommit(){
 
 function sortUndoLast(){
   if(!sortUndo) return;
-  const { moves, emptied, unsortedId } = sortUndo;
+  const { moves, emptied, unsortedId, addedToday } = sortUndo;
+  // pull back any Today pointers the "Today" schedule created
+  if(addedToday && addedToday.length) TODAY = TODAY.filter(t => !addedToday.includes(t.id));
   emptied.forEach(e => { if(DB.notes[e.id]) DB.lists[unsortedId].noteIds.push(e.id); });
   moves.slice().reverse().forEach(m => {
     if(m.kind === 'note'){
       const note = DB.notes[m.noteId];
       DB.lists[m.to].noteIds = DB.lists[m.to].noteIds.filter(x => x !== note.id);
       note.listId = m.from;
+      if('prevDue' in m){ if(m.prevDue) note.due = m.prevDue; else delete note.due; }
       DB.lists[m.from].noteIds.push(note.id);
     } else {
       const sec = DB.sections[m.sectionId];
@@ -1556,7 +1659,7 @@ function sortUndoLast(){
       }
     }
   });
-  sortAssign = sortUndo.assign; sortEdited.clear();
+  sortAssign = sortUndo.assign; sortSchedule = sortUndo.schedule || {}; sortEdited.clear();
   sortUndo.edited.forEach(k => sortEdited.add(k));
   sortUndo = null;
   renderSort(); renderAll();
