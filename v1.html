@@ -185,6 +185,60 @@ h1.big{font-size:32px;font-weight:700;letter-spacing:-.022em;margin:1px 0 2px}
   color:var(--ink-mid);font-size:14px;font-weight:600;cursor:pointer;margin-top:2px}
 .addsection:hover{border-color:var(--accent);color:var(--accent)}
 
+/* ---------- sort (the brain screen) ----------
+   Chosen 2026-08-16 from sort-list.html: the whole pile as one list, every thought already
+   carrying a list, and tapping a row unfolds the lists inline underneath it. No overlay, so
+   the thought stays on screen while you choose. */
+#sortOverlay{z-index:39}
+.sortWrap{max-width:640px;margin:0 auto;padding:0 14px 20px;width:100%}
+.sumStrip{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 12px}
+.sumStrip .s{display:inline-flex;align-items:center;gap:6px;background:var(--surface);
+  box-shadow:var(--shadow);border-radius:9px;padding:5px 9px;font-size:12px;font-weight:650}
+.sumStrip .s .d{width:7px;height:7px;border-radius:50%}
+.sumStrip .s b{color:var(--ink-faint);font-weight:700}
+
+.sortCard{background:var(--surface);border-radius:14px;box-shadow:var(--shadow);overflow:hidden}
+.srow{display:flex;align-items:flex-start;gap:10px;padding:12px 13px;cursor:pointer;position:relative;
+  border-bottom:.5px solid var(--rule);transition:background .15s}
+.srow:hover{background:var(--accent-soft)}
+.srow.open{background:var(--accent-soft)}
+.srow .stx{flex:1;font-size:15px;letter-spacing:-.005em;min-width:0}
+.srow .swhy{font-size:11px;color:var(--ink-faint);margin-top:2px}
+.srow.changed::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent)}
+.spill{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;border:.5px solid var(--rule);
+  background:var(--bg);color:var(--ink);font:inherit;font-size:12.5px;font-weight:650;padding:5px 9px;
+  border-radius:9px;cursor:pointer;white-space:nowrap;margin-top:1px}
+.spill .d{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
+.spill .cv{font-size:9px;opacity:.5}
+.spill.edited{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-ink)}
+
+/* the unfold: lists open under the thought, never over it */
+.unfold{max-height:0;overflow:hidden;border-bottom:.5px solid var(--rule);
+  transition:max-height .26s cubic-bezier(.32,.72,0,1)}
+.unfold.on{max-height:260px}
+.unfold.snap{transition:none}
+.unfold .ui{padding:2px 13px 12px}
+.lchip{display:inline-flex;align-items:center;gap:7px;border:.5px solid var(--rule);background:var(--bg);
+  color:var(--ink);font:inherit;font-size:13px;font-weight:600;padding:7px 11px;border-radius:10px;
+  cursor:pointer;margin:0 6px 6px 0}
+.lchip:hover{border-color:var(--accent)}
+.lchip .d{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
+.lchip.on{border-color:var(--accent);border-width:1.5px;background:var(--accent-soft);color:var(--accent-ink)}
+.lchip.newl{border-style:dashed;color:var(--ink-mid)}
+
+.sortFoot{flex:0 0 auto;padding:10px 14px calc(12px + env(safe-area-inset-bottom));
+  border-top:.5px solid var(--rule);background:var(--chrome);
+  backdrop-filter:saturate(180%) blur(22px);-webkit-backdrop-filter:saturate(180%) blur(22px)}
+.sortFoot .wrap{max-width:640px;margin:0 auto}
+.fileAll{width:100%;border:0;border-radius:13px;padding:13px;font:inherit;font-size:15.5px;
+  font-weight:650;cursor:pointer;background:var(--accent);color:#fff;letter-spacing:-.005em}
+.fileAll[disabled]{opacity:.4;cursor:default}
+.footHint{font-size:11.5px;color:var(--ink-mid);text-align:center;margin-top:7px}
+.sortEmpty{text-align:center;padding:56px 30px;color:var(--ink-mid)}
+.sortEmpty .big{font-size:42px}
+.sortEmpty h4{font-size:19px;font-weight:700;color:var(--ink);letter-spacing:-.02em;margin-top:6px}
+.sortEmpty p{font-size:14px;margin-top:3px}
+
 /* ---------- today ---------- */
 .strip{display:flex;align-items:center;gap:11px;padding:0 4px 14px}
 .strip .pbar{flex:1;height:5px;border-radius:99px;background:var(--rule);overflow:hidden}
@@ -323,6 +377,10 @@ h1.big{font-size:32px;font-weight:700;letter-spacing:-.022em;margin:1px 0 2px}
   background:var(--surface);color:var(--ink);border-radius:22px;padding:10px 18px;box-shadow:0 6px 30px rgba(0,0,0,.22);
   font-size:14.5px;font-weight:600;opacity:0;pointer-events:none;transition:.25s cubic-bezier(.32,.72,0,1);z-index:60}
 .toast.on{opacity:1;transform:translate(-50%,0)}
+.toast .tundo{display:none;border:0;background:none;color:var(--accent);font:inherit;font-size:14px;
+  font-weight:700;cursor:pointer;margin-left:12px;padding:0}
+.toast.undoable{pointer-events:auto}
+.toast.undoable .tundo{display:inline}
 
 /* ---------- desktop: rail ---------- */
 @media(min-width:860px){
@@ -436,6 +494,16 @@ h1.big{font-size:32px;font-weight:700;letter-spacing:-.022em;margin:1px 0 2px}
   </div>
 </div>
 
+<!-- ============ SORT (what the brain opens) ============ -->
+<div class="pushScreen" id="sortOverlay">
+  <div class="pushHead">
+    <button class="back" id="sortBack">← Capture</button>
+    <span class="crumb">Unsorted</span>
+  </div>
+  <div class="pushBody" id="sortBody"></div>
+  <div class="sortFoot"><div class="wrap" id="sortFoot"></div></div>
+</div>
+
 <!-- ============ NOTE OVERLAY (push screen) ============ -->
 <div class="pushScreen" id="noteOverlay">
   <div class="pushHead">
@@ -445,7 +513,7 @@ h1.big{font-size:32px;font-weight:700;letter-spacing:-.022em;margin:1px 0 2px}
   <div class="noteBody" id="noteBody"></div>
 </div>
 
-<div class="toast" id="toast"><span id="toastText"></span></div>
+<div class="toast" id="toast"><span id="toastText"></span><button class="tundo" id="toastUndo">Undo</button></div>
 
 <script>
 /* ===================== state — single source of truth ===================== */
@@ -584,6 +652,8 @@ function unpromote(entryId){ TODAY = TODAY.filter(e => e.id !== entryId); render
 let toastTimer;
 function toast(msg){
   const el = document.getElementById('toast');
+  el.classList.remove('undoable');      // an undo must not outlive its own toast
+  document.getElementById('toastUndo').onclick = null;
   document.getElementById('toastText').textContent = msg;
   el.classList.add('on');
   clearTimeout(toastTimer);
@@ -1203,6 +1273,301 @@ function capReset(){
   capPh();
   requestAnimationFrame(() => { const el = capDoc.querySelector('.btx'); if(el) el.focus(); });
 }
+/* ===================== sort — what the brain opens =====================
+   Chosen by Anshul 2026-08-16 from sort-list.html, variant 2 ("unfold").
+
+   The whole of Unsorted as one list, in capture order, every thought already carrying a
+   guessed destination. Tap a row and the lists open INLINE underneath it, so the thought
+   you are deciding about never leaves the screen. Nothing actually moves until "File all".
+
+   Known cost of this design, which Anshul accepted: unfolding a row pushes the rows below
+   it down. Mitigated here — a row that is already open collapses without animation and the
+   scroll is corrected in the same frame, so the row you tapped never moves under your thumb.
+
+   A "thought" is one section inside a capture note, or a bare note with no sections. Filing
+   one gives it its own note in the target list, carrying its blocks with it. */
+
+const GUESS_RULES = [
+  { re:/backtest|sharpe|equity curve|drawdown|tsm|factor|option|swing/i, list:'Trading',        why:'trading language' },
+  { re:/star story|promo(tion)?|interview|principal|staff eng/i,        list:'Career',          why:'career language' },
+  { re:/alert|dispatch|pilot|sme|radar|threshold/i,                     list:'SME BI Engine',   why:'the SME BI pilot' },
+  { re:/stretch|yoga|tai chi|walk|sleep|neck|wrist|shoulder|exercise/i, list:'Health',          why:'something you track under Health' },
+  { re:/review|spec|deploy|migration|ticket|standup|policy/i,           list:'Work',            why:'work language' },
+  { re:/hotel|flight|trip|book |order|buy |renew|glasses|pooja|grocer/i,list:'Personal',        why:'personal admin' }
+];
+function listIdByName(name){
+  const hit = Object.values(DB.lists).find(l => l.name === name);
+  return hit ? hit.id : null;
+}
+// every list except Unsorted, flattened, parents before children
+function sortTargets(){
+  const out = [];
+  const walk = (id, depth) => {
+    const l = DB.lists[id];
+    if(l.name !== 'Unsorted') out.push({ id, name: l.name, depth });
+    l.listIds.forEach(c => walk(c, depth + 1));
+  };
+  ROOT.forEach(id => walk(id, 0));
+  return out;
+}
+function guessFor(text){
+  for(const r of GUESS_RULES){
+    if(r.re.test(text)){
+      const id = listIdByName(r.list);
+      if(id) return { listId: id, why: r.why };
+    }
+  }
+  // no signal: fall back to whichever list already holds the most, and say so
+  const t = sortTargets();
+  if(!t.length) return { listId: null, why: '' };
+  const busiest = t.slice().sort((a,b) =>
+    (DB.lists[b.id].noteIds.length) - (DB.lists[a.id].noteIds.length))[0];
+  return { listId: busiest.id, why: 'no strong signal — your busiest list' };
+}
+
+// One row per unsorted thought, in capture order.
+function unsortedThoughts(){
+  const uid_ = ROOT.find(id => DB.lists[id].name === 'Unsorted');
+  if(!uid_) return [];
+  const out = [];
+  DB.lists[uid_].noteIds.forEach(nid => {
+    const note = DB.notes[nid];
+    // a day's capture note is a container; any other note in Unsorted has a real title of its own
+    const isCapture = /^Capture · /.test(note.title || '');
+    if(note.sectionIds.length){
+      note.sectionIds.forEach(sid => {
+        const sec = DB.sections[sid];
+        if(!sec) return;
+        const text = sec.name
+          || (!isCapture && note.sectionIds.length === 1 ? note.title : '')
+          || (sec.blocks[0] && sec.blocks[0].text) || 'Untitled';
+        out.push({ key: sid, kind:'section', noteId: nid, sectionId: sid, text });
+      });
+    } else {
+      out.push({ key: nid, kind:'note', noteId: nid, sectionId: null, text: note.title || 'Untitled note' });
+    }
+  });
+  return out;
+}
+
+let sortAssign = {};              // key -> listId
+const sortEdited = new Set();     // keys the user changed by hand
+let sortOpenKey = null;           // the one unfolded row
+let sortUndo = null;              // enough to put the last batch back
+
+function sortPrime(){
+  const items = unsortedThoughts();
+  items.forEach(i => {
+    if(!sortAssign[i.key]){
+      const g = guessFor(i.text);
+      sortAssign[i.key] = g.listId;
+      i.why = g.why;
+    }
+  });
+  // forget assignments for thoughts that no longer exist
+  const live = new Set(items.map(i => i.key));
+  Object.keys(sortAssign).forEach(k => { if(!live.has(k)) delete sortAssign[k]; });
+  return items;
+}
+
+function renderSort(){
+  const items = sortPrime();
+  const body = document.getElementById('sortBody');
+  const foot = document.getElementById('sortFoot');
+
+  if(!items.length){
+    body.innerHTML = `<div class="sortEmpty"><div class="big">🧠</div>
+      <h4>Clear head</h4><p>Nothing sitting in Unsorted.</p></div>`;
+    foot.innerHTML = `<button class="fileAll" disabled>Nothing to file</button>`;
+    return;
+  }
+
+  const by = {};
+  items.forEach(i => { const l = sortAssign[i.key]; if(l) by[l] = (by[l] || 0) + 1; });
+  const targets = sortTargets();
+
+  body.innerHTML = `<div class="sortWrap">
+    <div class="eyebrow" style="padding-top:14px">${items.length} unsorted</div>
+    <h1 class="big">Sort</h1>
+    <div class="sub">Every thought already has a list. Tap one to change it. Nothing moves until you file.</div>
+    <div class="sumStrip">${targets.filter(t => by[t.id]).map(t =>
+      `<span class="s"><span class="d" style="background:${listColour(t.id)}"></span>${esc(t.name)} <b>${by[t.id]}</b></span>`).join('')}</div>
+    <div class="sortCard">${items.map(i => sortRowHTML(i, targets)).join('')}</div>
+  </div>`;
+
+  foot.innerHTML = `<button class="fileAll" id="fileAll">File all ${items.length}</button>
+    <div class="footHint">${sortEdited.size ? sortEdited.size + ' changed by hand · ' : ''}nothing moves until you press it</div>`;
+
+  body.querySelectorAll('[data-k]').forEach(r => r.onclick = () => sortToggle(r.dataset.k));
+  body.querySelectorAll('[data-set]').forEach(c => c.onclick = e => {
+    e.stopPropagation();
+    sortPick(c.dataset.set, c.dataset.l);
+  });
+  document.getElementById('fileAll').onclick = sortCommit;
+}
+
+// stable colour per list, so the same list always reads the same on the strip and the pills
+const SORT_COLOURS = ['#5E5CE6','#30B0C7','#FF9F0A','#34C759','#FF375F','#AF52DE','#0A84FF','#FF9500','#8E8E93'];
+function listColour(listId){
+  const t = sortTargets(); const i = t.findIndex(x => x.id === listId);
+  return SORT_COLOURS[(i < 0 ? 0 : i) % SORT_COLOURS.length];
+}
+
+function sortRowHTML(i, targets){
+  const cur = sortAssign[i.key];
+  const l = DB.lists[cur];
+  const edited = sortEdited.has(i.key);
+  const open = sortOpenKey === i.key;
+  return `<div class="srow${edited?' changed':''}${open?' open':''}" data-k="${i.key}">
+      <div class="stx">${esc(i.text)}${i.why && !edited ? `<div class="swhy">${esc(i.why)}</div>` : ''}</div>
+      <span class="spill${edited?' edited':''}">
+        <span class="d" style="background:${listColour(cur)}"></span>${esc(l ? l.name : 'Pick a list')}<span class="cv">▾</span></span>
+    </div>
+    <div class="unfold${open?' on':''}" id="uf-${i.key}"><div class="ui">
+      ${targets.map(t => `<button class="lchip${t.id===cur?' on':''}" data-set="${i.key}" data-l="${t.id}">
+        <span class="d" style="background:${listColour(t.id)}"></span>${esc(t.name)}</button>`).join('')}
+      <button class="lchip newl" data-set="${i.key}" data-l="__new">＋ New list</button>
+    </div></div>`;
+}
+
+/* Open one row, close any other. The row you tapped must not move: a panel above it
+   collapses with no animation and the scroll is corrected in the same frame. */
+function sortToggle(key){
+  const body = document.getElementById('sortBody');
+  const row = body.querySelector(`.srow[data-k="${key}"]`);
+  const openEl = body.querySelector('.unfold.on');
+
+  if(openEl && row){
+    const above = openEl.getBoundingClientRect().top < row.getBoundingClientRect().top;
+    const h = openEl.scrollHeight;
+    openEl.classList.add('snap');
+    openEl.classList.remove('on');
+    if(above) body.scrollTop -= h;
+    void openEl.offsetWidth;
+    openEl.classList.remove('snap');
+    const prevRow = openEl.previousElementSibling;
+    if(prevRow) prevRow.classList.remove('open');
+  }
+
+  const same = sortOpenKey === key;
+  sortOpenKey = same ? null : key;
+  if(!same){
+    document.getElementById('uf-' + key).classList.add('on');
+    row.classList.add('open');
+  }
+}
+
+function sortPick(key, listId){
+  if(listId === '__new'){
+    const name = prompt('New list name');
+    if(!name || !name.trim()) return;
+    listId = mkList(name.trim());
+  }
+  const item = unsortedThoughts().find(i => i.key === key);
+  const guess = item ? guessFor(item.text).listId : null;
+  sortAssign[key] = listId;
+  listId === guess ? sortEdited.delete(key) : sortEdited.add(key);
+  sortOpenKey = null;
+  renderSort();
+  renderLists();
+}
+
+/* Move everything where it says it is going. A section becomes its own note in the target
+   list; a bare note just changes list. Today entries are repointed, never dropped. */
+function sortCommit(){
+  const items = unsortedThoughts();
+  if(!items.length) return;
+  const moves = [];
+
+  items.forEach(i => {
+    const listId = sortAssign[i.key];
+    if(!listId || !DB.lists[listId]) return;
+    if(i.kind === 'note'){
+      const note = DB.notes[i.noteId];
+      const from = note.listId;
+      DB.lists[from].noteIds = DB.lists[from].noteIds.filter(x => x !== note.id);
+      note.listId = listId;
+      DB.lists[listId].noteIds.push(note.id);
+      moves.push({ kind:'note', noteId: note.id, from, to: listId });
+    } else {
+      const sec = DB.sections[i.sectionId];
+      const oldNote = DB.notes[i.noteId];
+      const newNoteId = mkNote(listId, i.text);   // same text the row showed, so nothing is renamed
+      oldNote.sectionIds = oldNote.sectionIds.filter(x => x !== sec.id);
+      sec.noteId = newNoteId;
+      sec.name = sec.name || '';
+      DB.notes[newNoteId].sectionIds.push(sec.id);
+      // anything already promoted to Today points at this section — repoint, do not drop
+      TODAY.forEach(t => { if(t.sectionId === sec.id) t.noteId = newNoteId; });
+      moves.push({ kind:'section', sectionId: sec.id, fromNote: oldNote.id, newNote: newNoteId,
+                   to: listId, name: sec.name });
+    }
+  });
+
+  // capture notes that are now empty leave with their last thought
+  const unsortedId = ROOT.find(id => DB.lists[id].name === 'Unsorted');
+  const emptied = [];
+  if(unsortedId){
+    DB.lists[unsortedId].noteIds.slice().forEach(nid => {
+      const n = DB.notes[nid];
+      if(n && !n.sectionIds.length){
+        emptied.push({ id: nid, title: n.title });
+        DB.lists[unsortedId].noteIds = DB.lists[unsortedId].noteIds.filter(x => x !== nid);
+      }
+    });
+  }
+  // the capture page still holds these groups in the DOM; leave them there and the next
+  // autosave would re-create them in Unsorted. They have moved out, so the page lets go.
+  const filedSids = moves.filter(m => m.kind === 'section').map(m => m.sectionId);
+  capGroups().forEach(g => { if(filedSids.includes(g.dataset.sid)) g.remove(); });
+  if(!capGroups().length) capReset();
+  if(emptied.some(e => e.id === capNoteId)) capNoteId = null;
+
+  const spread = new Set(moves.map(m => m.to)).size;
+  sortUndo = { moves, emptied, unsortedId, assign: {...sortAssign}, edited: new Set(sortEdited) };
+  sortAssign = {}; sortEdited.clear(); sortOpenKey = null;
+
+  renderSort(); renderAll();
+  toast(`${moves.length} filed across ${spread} ${spread === 1 ? 'list' : 'lists'}`);
+  const t = document.getElementById('toast');
+  t.classList.add('undoable');
+  document.getElementById('toastUndo').onclick = () => { t.classList.remove('on'); sortUndoLast(); };
+}
+
+function sortUndoLast(){
+  if(!sortUndo) return;
+  const { moves, emptied, unsortedId } = sortUndo;
+  emptied.forEach(e => { if(DB.notes[e.id]) DB.lists[unsortedId].noteIds.push(e.id); });
+  moves.slice().reverse().forEach(m => {
+    if(m.kind === 'note'){
+      const note = DB.notes[m.noteId];
+      DB.lists[m.to].noteIds = DB.lists[m.to].noteIds.filter(x => x !== note.id);
+      note.listId = m.from;
+      DB.lists[m.from].noteIds.push(note.id);
+    } else {
+      const sec = DB.sections[m.sectionId];
+      const back = DB.notes[m.fromNote];
+      DB.lists[m.to].noteIds = DB.lists[m.to].noteIds.filter(x => x !== m.newNote);
+      delete DB.notes[m.newNote];
+      if(back){
+        sec.noteId = back.id;
+        back.sectionIds.push(sec.id);
+        TODAY.forEach(t => { if(t.sectionId === sec.id) t.noteId = back.id; });
+      }
+    }
+  });
+  sortAssign = sortUndo.assign; sortEdited.clear();
+  sortUndo.edited.forEach(k => sortEdited.add(k));
+  sortUndo = null;
+  renderSort(); renderAll();
+  toast('Put back in Unsorted');
+}
+
+const sortOverlay = document.getElementById('sortOverlay');
+function openSort(){ sortOpenKey = null; renderSort(); sortOverlay.classList.add('on'); }
+function closeSort(){ sortOverlay.classList.remove('on'); }
+document.getElementById('sortBack').onclick = closeSort;
+
 /* ===================== the brain =====================
    One number drives it: how much is sitting in Unsorted. Capturing raises it — the brain
    fills and shakes. Sorting lowers it — the brain drains, springs, and walks back down the
@@ -1258,7 +1623,8 @@ function brainPulse(kind){
   brain.classList.add(kind);
   setTimeout(() => brain.classList.remove(kind), 600);
 }
-document.getElementById('brain').onclick = () => openLists();
+// the brain opens the pile it is showing you, not the Lists tree — browsing is not sorting
+document.getElementById('brain').onclick = () => openSort();
 
 /* ===================== menu (Lists) ===================== */
 const listsOverlay = document.getElementById('listsOverlay');
